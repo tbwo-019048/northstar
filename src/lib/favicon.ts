@@ -7,11 +7,26 @@ function originOf(siteUrl: string): string | null {
   }
 }
 
-/** The site's own favicon.ico — usually the real icon, but only exists if
- * the site actually serves one there (and isn't gated behind auth). */
-export function directFaviconUrl(siteUrl: string): string | null {
+// There's no way to read a cross-origin page's <head> from the browser
+// without a server-side proxy (fetching its HTML hits CORS on almost every
+// site), so the real <link rel="icon"> a site declares is invisible to us.
+// The next best thing is trying every filename convention in common use —
+// classic favicon.ico, Vite/CRA's favicon.svg or .png (this app included —
+// NorthStar itself only ships favicon.svg, no .ico), and the Next.js App
+// Router's icon.png/svg.
+const COMMON_FAVICON_PATHS = [
+  '/favicon.ico',
+  '/favicon.svg',
+  '/favicon.png',
+  '/icon.svg',
+  '/icon.png',
+  '/apple-touch-icon.png',
+  '/favicon-32x32.png',
+]
+
+export function candidateFaviconUrls(siteUrl: string): string[] {
   const origin = originOf(siteUrl)
-  return origin ? `${origin}/favicon.ico` : null
+  return origin ? COMMON_FAVICON_PATHS.map((p) => `${origin}${p}`) : []
 }
 
 /** Google's public favicon proxy. Reliable for well-known, previously-
@@ -28,7 +43,7 @@ export function googleFaviconUrl(siteUrl: string, size = 128): string | null {
 function loadedSize(url: string): Promise<{ w: number; h: number } | null> {
   return new Promise((resolve) => {
     const img = new Image()
-    const timer = setTimeout(() => resolve(null), 5000)
+    const timer = setTimeout(() => resolve(null), 4000)
     img.onload = () => {
       clearTimeout(timer)
       resolve({ w: img.naturalWidth, h: img.naturalHeight })
@@ -41,15 +56,17 @@ function loadedSize(url: string): Promise<{ w: number; h: number } | null> {
   })
 }
 
-/** Tries the site's own favicon.ico first (an <img src> load, so no CORS
- * issue — reading pixels would need CORS, just displaying doesn't), then
- * falls back to Google's proxy. Returns null if neither responds with a
- * favicon that's actually theirs (e.g. the site needs auth, like a
- * protected Vercel preview, or Google has never crawled it). */
+/** Tries every common favicon filename on the site itself first (an <img
+ * src> load each time, so no CORS issue — reading pixels would need CORS,
+ * just displaying doesn't), then falls back to Google's proxy. Returns null
+ * if nothing responds with a favicon that's actually theirs (e.g. the site
+ * needs auth, like a protected Vercel preview, or Google has never crawled
+ * it and the site uses a filename not in the common list). */
 export async function resolveFaviconUrl(siteUrl: string): Promise<string | null> {
-  const direct = directFaviconUrl(siteUrl)
-  const directSize = direct ? await loadedSize(direct) : null
-  if (directSize && directSize.w > 1 && directSize.h > 1) return direct
+  for (const candidate of candidateFaviconUrls(siteUrl)) {
+    const size = await loadedSize(candidate)
+    if (size && size.w > 1 && size.h > 1) return candidate
+  }
 
   const google = googleFaviconUrl(siteUrl)
   const googleSize = google ? await loadedSize(google) : null
