@@ -20,25 +20,19 @@ export function Landing() {
       <Suspense fallback={null}>
         <GhostCursor color="#4aacff" trailLength={40} bloomStrength={0.15} zIndex={0} />
       </Suspense>
-      <header className="relative z-10 mx-auto flex h-12 max-w-5xl items-center justify-between px-4">
-        <div className="flex items-center gap-2 font-semibold">
-          <NorthStarIcon className="size-4 text-primary" />
-          NorthStar
-        </div>
+
+      <div className="fixed right-4 top-4 z-10">
         <ThemeToggle />
-      </header>
+      </div>
 
       <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-start gap-6 px-4 pt-24">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Project intelligence
-        </p>
+        <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <NorthStarIcon className="size-3.5 text-primary" />
+          NorthStar
+        </div>
         <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          One compact console for every project you run.
+          Projects — run with Intelligence and Efficiency.
         </h1>
-        <p className="max-w-xl text-sm text-muted-foreground">
-          Website, app, physical, written or other — track people, to-dos, features, details, requests
-          and pipelines in a single dense workspace that autosaves and syncs across your devices.
-        </p>
         <Link
           to={session && gateOpen ? '/app' : '/login'}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -46,20 +40,6 @@ export function Landing() {
           {session && gateOpen ? 'Open workspace' : 'Login'}
           <ArrowRight className="size-4" />
         </Link>
-
-        <div className="mt-16 grid w-full grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border text-sm sm:grid-cols-4">
-          {[
-            ['People', 'Credentials, roles & notes'],
-            ['To-dos', 'Drag between states'],
-            ['Pipelines', 'Plan, export, promote'],
-            ['Analysis', 'Live project summary'],
-          ].map(([t, d]) => (
-            <div key={t} className="bg-background p-3">
-              <div className="font-medium">{t}</div>
-              <div className="text-xs text-muted-foreground">{d}</div>
-            </div>
-          ))}
-        </div>
       </main>
     </div>
   )
