@@ -13,6 +13,7 @@ import { DetailsTab } from '@/pages/project/DetailsTab'
 import { RequestsTab } from '@/pages/project/RequestsTab'
 import { PipelineTab } from '@/pages/project/PipelineTab'
 import { AnalysisTab } from '@/pages/project/AnalysisTab'
+import { GitTab } from '@/pages/project/GitTab'
 
 const TABS = [
   { key: 'users', label: 'Users' },
@@ -21,6 +22,7 @@ const TABS = [
   { key: 'details', label: 'Details' },
   { key: 'requests', label: 'Requests' },
   { key: 'pipeline', label: 'Pipeline' },
+  { key: 'git', label: 'Git' },
   { key: 'analysis', label: 'Analysis' },
 ] as const
 
@@ -135,6 +137,7 @@ export function Project() {
         {active === 'details' && <DetailsTab projectId={id} />}
         {active === 'requests' && <RequestsTab projectId={id} />}
         {active === 'pipeline' && <PipelineTab projectId={id} />}
+        {active === 'git' && <GitTab projectId={id} />}
         {active === 'analysis' && project && <AnalysisTab project={project} />}
       </div>
     </div>

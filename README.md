@@ -4,7 +4,7 @@ A compact, card-free project console. React + Vite + Tailwind v4 + **VeloBits UI
 **Supabase** for auth, storage, autosave and cross-device sync.
 
 Landing → login (env access token + Supabase email/password) → overview table of projects →
-per-project tabs: **Users, To-Do, Features, Details, Requests, Pipeline, Analysis**.
+per-project tabs: **Users, To-Do, Features, Details, Requests, Pipeline, Git, Analysis**.
 
 ## 1. Configure environment
 
@@ -71,3 +71,18 @@ in the Vercel project settings, then deploy. Set the same values for Preview and
   name, type, summary, hours worked and logo URL — import matches existing projects by name.
 - **Pipelines** — pressing Enter inside a bullet commits it and inserts a new one right after,
   focused, so you can keep typing points without touching the mouse.
+- **Git history** — add a GitHub personal access token once in **Settings** (gear icon in the
+  header), then link a repo (`owner/repo`) on any project's **Git** tab to see its commit history,
+  paginated, pulled straight from the GitHub REST API with that token. The token is stored in the
+  `app_settings` table — see the security note below.
+
+## GitHub integration
+
+- Token needs at least read access to the repo's contents/metadata (a fine-grained PAT scoped to
+  just the repos you'll link is the least-privilege option; `public_repo` on a classic token also
+  works for public repos).
+- **This app has no per-user data isolation** — every signed-in user shares one workspace and one
+  `app_settings` row, so the token is visible to anyone who can log in here. Don't use a token with
+  broader access than you're comfortable handing to every other person with an account.
+- Nothing is proxied through a server: commit history is fetched directly from
+  `api.github.com` in the browser using the stored token.

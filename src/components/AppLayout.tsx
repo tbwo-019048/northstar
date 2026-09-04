@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { LogOut, Settings as SettingsIcon } from 'lucide-react'
 import { useAuth } from '@/store/useAuth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
@@ -36,6 +36,13 @@ export function AppLayout() {
           {initials || 'U'}
         </div>
         <ThemeToggle />
+        <Link
+          to="/app/settings"
+          title="Settings"
+          className="grid size-7 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <SettingsIcon className="size-4" />
+        </Link>
         <button
           type="button"
           onClick={onLogout}

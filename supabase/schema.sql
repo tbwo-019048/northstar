@@ -61,11 +61,13 @@ create table if not exists projects (
   hours_worked numeric not null default 0,
   position    integer not null default 0,
   logo_url    text,
+  github_repo text,                      -- "owner/repo" this project tracks
   created_by  uuid references auth.users(id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 alter table projects add column if not exists logo_url text;
+alter table projects add column if not exists github_repo text;
 drop trigger if exists trg_projects_updated on projects;
 create trigger trg_projects_updated before update on projects
   for each row execute function set_updated_at();
@@ -207,6 +209,17 @@ create table if not exists pipeline_items (
 );
 
 -- ---------------------------------------------------------------------------
+-- App settings — a single shared row (e.g. the GitHub token used to fetch
+-- commit history). Shared-workspace app: readable/writable by any signed-in
+-- user, same as everything else here.
+-- ---------------------------------------------------------------------------
+create table if not exists app_settings (
+  id           text primary key default 'default',
+  github_token text,
+  updated_at   timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security — shared workspace: any authenticated user, full access
 -- ---------------------------------------------------------------------------
 do $$
@@ -214,7 +227,7 @@ declare t text;
 begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','todos','todo_comments',
-    'features','details','requests','pipelines','pipeline_items'
+    'features','details','requests','pipelines','pipeline_items','app_settings'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);

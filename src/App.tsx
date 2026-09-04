@@ -5,6 +5,7 @@ import { Landing } from '@/pages/Landing'
 import { Login } from '@/pages/Login'
 import { Overview } from '@/pages/Overview'
 import { Project } from '@/pages/Project'
+import { Settings } from '@/pages/Settings'
 import { AppLayout } from '@/components/AppLayout'
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export default function App() {
         }
       >
         <Route path="/app" element={<Overview />} />
+        <Route path="/app/settings" element={<Settings />} />
         <Route path="/app/project/:id" element={<Project />} />
         <Route path="/app/project/:id/:tab" element={<Project />} />
       </Route>
