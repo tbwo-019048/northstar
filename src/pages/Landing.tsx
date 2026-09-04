@@ -31,15 +31,28 @@ export function Landing() {
           NorthStar
         </div>
         <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Projects — run with Intelligence and Efficiency.
+          Project Management - leading the way with Intelligence and Efficiency.
         </h1>
-        <Link
-          to={session && gateOpen ? '/app' : '/login'}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          {session && gateOpen ? 'Open workspace' : 'Login'}
-          <ArrowRight className="size-4" />
-        </Link>
+        <div className="space-y-2">
+          <Link
+            to={session && gateOpen ? '/app' : '/login'}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            {session && gateOpen ? 'OPEN WORKSPACE' : 'Login'}
+            <ArrowRight className="size-4" />
+          </Link>
+          <p className="text-xs text-muted-foreground">
+            This is a Halcyon Aegis Product. To find out more reach out to{' '}
+            <a
+              href="https://www.halcyon-aegis.org"
+              target="_blank"
+              rel="noreferrer"
+              className="text-link underline"
+            >
+              www.Halcyon-Aegis.org
+            </a>
+          </p>
+        </div>
       </main>
     </div>
   )
