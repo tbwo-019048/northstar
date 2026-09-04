@@ -13,16 +13,18 @@ function originOf(siteUrl: string): string | null {
 // The next best thing is trying every filename convention in common use —
 // classic favicon.ico, Vite/CRA's favicon.svg or .png (this app included —
 // NorthStar itself only ships favicon.svg, no .ico), and the Next.js App
-// Router's icon.png/svg. Any image format an <img> can decode (.ico, .png,
-// .svg, ...) is accepted the same way — nothing here is format-specific.
+// Router's icon.ico/png/svg. Any image format an <img> can decode (.ico,
+// .png, .svg, ...) is accepted the same way — nothing here is format-specific.
 const COMMON_FAVICON_PATHS = [
   '/favicon.ico',
   '/favicon.svg',
   '/favicon.png',
+  '/icon.ico',
   '/icon.svg',
   '/icon.png',
   '/apple-touch-icon.png',
   '/favicon-32x32.png',
+  '/favicon-16x16.png',
 ]
 
 export function candidateFaviconUrls(siteUrl: string): string[] {
