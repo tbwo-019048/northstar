@@ -7,44 +7,12 @@ import { Chip, Input } from '@/components/ui-lite'
 import { resolveFaviconUrl } from '@/lib/favicon'
 import type { Project } from '@/lib/types'
 
+type SiteField = 'website_url' | 'test_site_url'
+
 export function SummaryTab({ project }: { project: Project }) {
   const rows = useProjectData((s) => s.rows)
-  const { update } = useProjects()
   const nav = useNavigate()
   const { id } = useParams()
-  const [editingSite, setEditingSite] = useState(false)
-  const [siteDraft, setSiteDraft] = useState(project.website_url ?? '')
-  const [siteError, setSiteError] = useState<string | null>(null)
-  const [faviconBusy, setFaviconBusy] = useState(false)
-
-  const saveSite = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSiteError(null)
-    const { error } = await update(project.id, { website_url: siteDraft.trim() || null })
-    if (error) {
-      setSiteError(error)
-      return
-    }
-    setEditingSite(false)
-  }
-
-  const useFavicon = async () => {
-    if (!project.website_url) return
-    setSiteError(null)
-    setFaviconBusy(true)
-    const url = await resolveFaviconUrl(project.website_url)
-    setFaviconBusy(false)
-    if (!url) {
-      setSiteError(
-        "Couldn't load a favicon from that site — it may require sign-in (e.g. a protected " +
-          "Vercel preview) or not serve one at /favicon.ico. Try the production URL, or upload " +
-          "a logo directly on the project header instead.",
-      )
-      return
-    }
-    const { error } = await update(project.id, { logo_url: url })
-    if (error) setSiteError(error)
-  }
 
   const stats = useMemo(() => {
     const todos = asTodos(rows.todos)
@@ -73,81 +41,10 @@ export function SummaryTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-4">
-      {editingSite || !project.website_url ? (
-        <div className="space-y-1">
-          <form onSubmit={saveSite} className="flex items-center gap-1.5">
-            <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
-            <Input
-              autoFocus={editingSite}
-              value={siteDraft}
-              onChange={(e) => setSiteDraft(e.target.value)}
-              placeholder="Live site URL (e.g. https://example.com)"
-              className="max-w-sm"
-            />
-            <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-              Save
-            </button>
-            {editingSite && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingSite(false)
-                  setSiteError(null)
-                }}
-                className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
-              >
-                Cancel
-              </button>
-            )}
-          </form>
-          {siteError && (
-            <p className="flex items-center gap-1 text-xs text-destructive">
-              <AlertTriangle className="size-3 shrink-0" /> {siteError}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-sm">
-            <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="text-muted-foreground">Live Site:</span>
-            <a
-              href={project.website_url}
-              target="_blank"
-              rel="noreferrer"
-              className="min-w-0 truncate text-link underline"
-            >
-              {project.website_url}
-            </a>
-            <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
-            <button
-              type="button"
-              onClick={() => {
-                setSiteDraft(project.website_url ?? '')
-                setSiteError(null)
-                setEditingSite(true)
-              }}
-              className="ml-1 shrink-0 text-muted-foreground hover:text-foreground"
-            >
-              <Pencil className="size-3" />
-            </button>
-            <button
-              type="button"
-              onClick={useFavicon}
-              disabled={faviconBusy}
-              title="Use this site's favicon as the project logo"
-              className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-            >
-              <ImageDown className="size-3" /> {faviconBusy ? 'Checking…' : 'Use as logo'}
-            </button>
-          </div>
-          {siteError && (
-            <p className="flex items-center gap-1 text-xs text-destructive">
-              <AlertTriangle className="size-3 shrink-0" /> {siteError}
-            </p>
-          )}
-        </div>
-      )}
+      <div className="space-y-2">
+        <SiteLinkRow project={project} field="website_url" label="Live Site" />
+        <SiteLinkRow project={project} field="test_site_url" label="Test Site" />
+      </div>
 
       {project.summary && (
         <p className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
@@ -196,6 +93,129 @@ export function SummaryTab({ project }: { project: Project }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/** One editable "Live Site" / "Test Site" row: shows the link once set (with
+ * a favicon-as-logo shortcut), or an inline form to set/change it. */
+function SiteLinkRow({
+  project,
+  field,
+  label,
+}: {
+  project: Project
+  field: SiteField
+  label: string
+}) {
+  const { update } = useProjects()
+  const value = project[field]
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const [faviconBusy, setFaviconBusy] = useState(false)
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    const { error: err } = await update(project.id, { [field]: draft.trim() || null })
+    if (err) {
+      setError(err)
+      return
+    }
+    setEditing(false)
+  }
+
+  const useFavicon = async () => {
+    if (!value) return
+    setError(null)
+    setFaviconBusy(true)
+    const url = await resolveFaviconUrl(value)
+    setFaviconBusy(false)
+    if (!url) {
+      setError(
+        "Couldn't load a favicon from that site — it may require sign-in (e.g. a protected " +
+          'Vercel preview) or not serve one at a common path. Try the production URL, or upload ' +
+          'a logo directly on the project header instead.',
+      )
+      return
+    }
+    const { error: err } = await update(project.id, { logo_url: url })
+    if (err) setError(err)
+  }
+
+  if (editing || !value) {
+    return (
+      <div className="space-y-1">
+        <form onSubmit={save} className="flex items-center gap-1.5">
+          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+          <Input
+            autoFocus={editing}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={`${label} URL (e.g. https://example.com)`}
+            className="max-w-sm"
+          />
+          <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+            Save
+          </button>
+          {editing && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false)
+                setError(null)
+              }}
+              className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+            >
+              Cancel
+            </button>
+          )}
+        </form>
+        {error && (
+          <p className="flex items-center gap-1 text-xs text-destructive">
+            <AlertTriangle className="size-3 shrink-0" /> {error}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1.5 text-sm">
+        <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="text-muted-foreground">{label}:</span>
+        <a href={value} target="_blank" rel="noreferrer" className="min-w-0 truncate text-link underline">
+          {value}
+        </a>
+        <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(value ?? '')
+            setError(null)
+            setEditing(true)
+          }}
+          className="ml-1 shrink-0 text-muted-foreground hover:text-foreground"
+        >
+          <Pencil className="size-3" />
+        </button>
+        <button
+          type="button"
+          onClick={useFavicon}
+          disabled={faviconBusy}
+          title="Use this site's favicon as the project logo"
+          className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          <ImageDown className="size-3" /> {faviconBusy ? 'Checking…' : 'Use as logo'}
+        </button>
+      </div>
+      {error && (
+        <p className="flex items-center gap-1 text-xs text-destructive">
+          <AlertTriangle className="size-3 shrink-0" /> {error}
+        </p>
+      )}
     </div>
   )
 }

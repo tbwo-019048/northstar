@@ -16,6 +16,7 @@ export interface Project {
   position: number
   logo_url: string | null
   website_url: string | null
+  test_site_url: string | null
   github_repo: string | null
   verification_token: string | null
   platform_project_id: string | null

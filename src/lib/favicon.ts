@@ -13,7 +13,8 @@ function originOf(siteUrl: string): string | null {
 // The next best thing is trying every filename convention in common use —
 // classic favicon.ico, Vite/CRA's favicon.svg or .png (this app included —
 // NorthStar itself only ships favicon.svg, no .ico), and the Next.js App
-// Router's icon.png/svg.
+// Router's icon.png/svg. Any image format an <img> can decode (.ico, .png,
+// .svg, ...) is accepted the same way — nothing here is format-specific.
 const COMMON_FAVICON_PATHS = [
   '/favicon.ico',
   '/favicon.svg',
@@ -40,6 +41,11 @@ export function googleFaviconUrl(siteUrl: string, size = 128): string | null {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=${size}`
 }
 
+/** Loads `url` bypassing the browser's HTTP cache, so re-running the check
+ * (e.g. clicking "Use as logo" again after updating the site's favicon)
+ * actually re-fetches instead of replaying a cached hit or miss. The cache
+ * buster is only used for this probe — the URL handed back / persisted as
+ * logo_url is always the clean one. */
 function loadedSize(url: string): Promise<{ w: number; h: number } | null> {
   return new Promise((resolve) => {
     const img = new Image()
@@ -52,7 +58,8 @@ function loadedSize(url: string): Promise<{ w: number; h: number } | null> {
       clearTimeout(timer)
       resolve(null)
     }
-    img.src = url
+    const bust = `${url.includes('?') ? '&' : '?'}_=${Date.now()}`
+    img.src = url + bust
   })
 }
 
@@ -61,7 +68,9 @@ function loadedSize(url: string): Promise<{ w: number; h: number } | null> {
  * just displaying doesn't), then falls back to Google's proxy. Returns null
  * if nothing responds with a favicon that's actually theirs (e.g. the site
  * needs auth, like a protected Vercel preview, or Google has never crawled
- * it and the site uses a filename not in the common list). */
+ * it and the site uses a filename not in the common list). Always re-probes
+ * live rather than trusting a previous result, so calling it again after the
+ * site's favicon changed (or was added) picks that up. */
 export async function resolveFaviconUrl(siteUrl: string): Promise<string | null> {
   for (const candidate of candidateFaviconUrls(siteUrl)) {
     const size = await loadedSize(candidate)

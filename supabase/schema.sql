@@ -62,6 +62,7 @@ create table if not exists projects (
   position    integer not null default 0,
   logo_url    text,
   website_url text,                      -- live site link, shown in Summary
+  test_site_url text,                    -- staging/test site link, shown in Summary
   github_repo text,                      -- "owner/repo" this project tracks
   verification_token   text,             -- app/website verification token, if any
   platform_project_id  text,             -- id of this project on its platform (e.g. Firebase/Vercel project id)
@@ -75,6 +76,7 @@ create table if not exists projects (
 );
 alter table projects add column if not exists logo_url text;
 alter table projects add column if not exists website_url text;
+alter table projects add column if not exists test_site_url text;
 alter table projects add column if not exists github_repo text;
 alter table projects add column if not exists verification_token text;
 alter table projects add column if not exists platform_project_id text;
