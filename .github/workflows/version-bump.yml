@@ -1,0 +1,43 @@
+name: Bump version
+
+# Runs on every push to main and increments src/version.json by 0.01, then
+# pushes that change back. The commit it creates includes "[skip ci]", which
+# GitHub treats specially: it will not trigger any workflow run for that
+# commit — including this one — so this can't loop on itself.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version.json
+        id: bump
+        run: |
+          set -euo pipefail
+          CURRENT=$(python3 -c "import json; print(json.load(open('src/version.json'))['version'])")
+          NEW=$(python3 -c "from decimal import Decimal; print(Decimal('$CURRENT') + Decimal('0.01'))")
+          python3 -c "
+          import json
+          with open('src/version.json', 'w') as f:
+              json.dump({'version': '$NEW'}, f, indent=2)
+              f.write('\n')
+          "
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/version.json
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new }} [skip ci]"
+          git push

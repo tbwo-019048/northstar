@@ -5,6 +5,7 @@ import { useAuth } from '@/store/useAuth'
 import { APP_ACCESS_TOKEN } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
+import versionData from '@/version.json'
 
 export function Login() {
   const nav = useNavigate()
@@ -40,6 +41,9 @@ export function Login() {
     <div className="grid min-h-svh place-items-center bg-background px-4 text-foreground">
       <div className="fixed right-4 top-4">
         <ThemeToggle />
+      </div>
+      <div className="fixed bottom-3 right-4 text-[11px] tabular-nums text-muted-foreground/70">
+        v{versionData.version}
       </div>
       <div className="w-full max-w-xs">
         <div className="mb-6">
