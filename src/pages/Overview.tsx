@@ -1,25 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search } from 'lucide-react'
+import { AlertTriangle, Plus, Search, X } from 'lucide-react'
 import { useProjects } from '@/store/useProjects'
 import { PROJECT_TYPES, type ProjectType } from '@/lib/types'
-import { Input, Select, Chip } from '@/components/ui-lite'
+import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 
-const TYPE_TONE: Record<ProjectType, string> = {
+const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   website: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
   app: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
   physical: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   written: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
   other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
 }
+const FALLBACK_TONE = 'bg-muted text-muted-foreground'
 
 export function Overview() {
-  const { projects, loaded, load, create, subscribe } = useProjects()
+  const { projects, loaded, load, create, subscribe, error, clearError } = useProjects()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<ProjectType | 'all'>('all')
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<ProjectType>('website')
+  const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loaded) load()
@@ -34,10 +36,24 @@ export function Overview() {
     )
   }, [projects, q, filter])
 
+  // A project's `type` can hold a value the current build doesn't know about
+  // (e.g. the database enum hasn't been migrated yet) — keep it selectable
+  // instead of silently dropping it from the dropdowns.
+  const legacyTypes = useMemo(
+    () => [...new Set(projects.map((p) => p.type))].filter((t) => !PROJECT_TYPES.includes(t)),
+    [projects],
+  )
+  const allTypes = [...PROJECT_TYPES, ...legacyTypes]
+
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
-    await create(name.trim(), type)
+    const { error: err } = await create(name.trim(), type)
+    if (err) {
+      setFormError(err)
+      return
+    }
+    setFormError(null)
     setName('')
     setType('website')
     setAdding(false)
@@ -45,6 +61,16 @@ export function Overview() {
 
   return (
     <div className="space-y-3">
+      {error && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <IconButton onClick={clearError} className="hover:text-destructive">
+            <X className="size-3.5" />
+          </IconButton>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <h1 className="text-sm font-semibold">Projects</h1>
         <span className="text-xs text-muted-foreground">{projects.length}</span>
@@ -60,7 +86,7 @@ export function Overview() {
         </div>
         <Select value={filter} onChange={(e) => setFilter(e.target.value as ProjectType | 'all')}>
           <option value="all">All types</option>
-          {PROJECT_TYPES.map((t) => (
+          {allTypes.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
@@ -78,7 +104,7 @@ export function Overview() {
       {adding && (
         <form
           onSubmit={onCreate}
-          className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2"
+          className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/30 p-2"
         >
           <Input
             autoFocus
@@ -99,11 +125,21 @@ export function Overview() {
           </button>
           <button
             type="button"
-            onClick={() => setAdding(false)}
+            onClick={() => {
+              setAdding(false)
+              setFormError(null)
+            }}
             className="h-7 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
           >
             Cancel
           </button>
+          {formError && (
+            <span className="w-full text-xs text-destructive">
+              {formError}
+              {formError.toLowerCase().includes('invalid input value for enum') &&
+                ' — the database hasn’t been migrated to the new project types yet. Re-run supabase/schema.sql.'}
+            </span>
+          )}
         </form>
       )}
 
@@ -129,7 +165,7 @@ export function Overview() {
                   )}
                 </td>
                 <td className="px-3 py-1.5">
-                  <Chip className={TYPE_TONE[p.type]}>{p.type}</Chip>
+                  <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
                   {p.hours_worked || 0}

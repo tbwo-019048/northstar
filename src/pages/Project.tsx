@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useProjects } from '@/store/useProjects'
@@ -28,6 +28,7 @@ export function Project() {
   const nav = useNavigate()
   const { projects, loaded, load: loadProjects, update } = useProjects()
   const { load, reset, subscribe } = useProjectData()
+  const [typeError, setTypeError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loaded) loadProjects()
@@ -76,16 +77,29 @@ export function Project() {
         {project && (
           <Select
             value={project.type}
-            onChange={(e) => update(project.id, { type: e.target.value as ProjectType })}
+            onChange={async (e) => {
+              setTypeError(null)
+              const { error } = await update(project.id, { type: e.target.value as ProjectType })
+              if (error) setTypeError(error)
+            }}
           >
-            {PROJECT_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
+            {[...PROJECT_TYPES, ...(PROJECT_TYPES.includes(project.type) ? [] : [project.type])].map(
+              (t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ),
+            )}
           </Select>
         )}
       </div>
+      {typeError && (
+        <p className="text-xs text-destructive">
+          {typeError}
+          {typeError.toLowerCase().includes('invalid input value for enum') &&
+            ' — re-run supabase/schema.sql to add the new project types to the database.'}
+        </p>
+      )}
 
       <nav className="flex items-center gap-0.5 border-b border-border">
         {TABS.map((t) => (

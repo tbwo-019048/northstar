@@ -23,10 +23,9 @@ export function DetailsTab({ projectId }: { projectId: string }) {
     return [...m.entries()]
   }, [details])
 
-  const [summary, setSummary, sumStatus] = useDebouncedSave(
-    project?.summary ?? '',
-    (v) => update(projectId, { summary: v }),
-  )
+  const [summary, setSummary, sumStatus] = useDebouncedSave(project?.summary ?? '', async (v) => {
+    await update(projectId, { summary: v })
+  })
 
   const addRow = (section: string) =>
     add('details', { project_id: projectId, section, label: 'Label', value: '', sort: details.length })
