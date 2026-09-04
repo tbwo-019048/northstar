@@ -18,9 +18,9 @@ export function Landing() {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <Suspense fallback={null}>
-        <GhostCursor color="#4aacff" trailLength={40} bloomStrength={0.15} />
+        <GhostCursor color="#4aacff" trailLength={40} bloomStrength={0.15} zIndex={0} />
       </Suspense>
-      <header className="mx-auto flex h-12 max-w-5xl items-center justify-between px-4">
+      <header className="relative z-10 mx-auto flex h-12 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-2 font-semibold">
           <NorthStarIcon className="size-4 text-primary" />
           NorthStar
@@ -28,7 +28,7 @@ export function Landing() {
         <ThemeToggle />
       </header>
 
-      <main className="mx-auto flex max-w-5xl flex-col items-start gap-6 px-4 pt-24">
+      <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-start gap-6 px-4 pt-24">
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Project intelligence
         </p>
