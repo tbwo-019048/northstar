@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/store/useAuth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
+import { Lightning } from '@/components/Lightning'
 
 // three.js is a heavy dependency purely for this decorative effect — load it
 // only when someone actually lands on this page, not in the main app bundle.
@@ -16,7 +17,12 @@ export function Landing() {
   const gateOpen = useAuth((s) => s.gateOpen)
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
+    <div className="relative min-h-svh overflow-hidden bg-background text-foreground">
+      {/* Background stack — Lightning behind, Ghost Cursor's trail on top of
+          it, both behind the page content (z-10). */}
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <Lightning hue={205} intensity={0.6} size={1.4} speed={0.8} />
+      </div>
       <Suspense fallback={null}>
         <GhostCursor color="#4aacff" trailLength={40} bloomStrength={0.15} zIndex={0} />
       </Suspense>
