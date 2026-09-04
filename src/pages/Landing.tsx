@@ -24,7 +24,13 @@ export function Landing() {
         <Lightning hue={205} intensity={0.6} size={1.4} speed={0.8} />
       </div>
       <Suspense fallback={null}>
-        <GhostCursor color="#4aacff" trailLength={40} bloomStrength={0.15} zIndex={0} />
+        <GhostCursor
+          color="#4aacff"
+          trailLength={40}
+          brightness={0.55}
+          bloomStrength={0.08}
+          zIndex={0}
+        />
       </Suspense>
 
       <div className="fixed right-4 top-4 z-10">
@@ -37,7 +43,7 @@ export function Landing() {
           NorthStar
         </div>
         <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Project Management - leading the way with Intelligence and Efficiency.
+          Project Management - leading with Intelligence and Efficiency.
         </h1>
         <div className="space-y-2">
           <Link
