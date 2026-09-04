@@ -2,16 +2,18 @@ import { useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useProjectData, asDetails } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
-import { EditableText, IconButton, Input } from '@/components/ui-lite'
+import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
+import type { Project } from '@/lib/types'
 
-export function DetailsTab({ projectId }: { projectId: string }) {
+export function DetailsTab({ project }: { project: Project }) {
+  const projectId = project.id
   const rows = useProjectData((s) => s.rows.details)
   const { add, patch, del } = useProjectData()
-  const { projects, update } = useProjects()
-  const project = projects.find((p) => p.id === projectId)
+  const { update } = useProjects()
   const details = asDetails(rows)
   const [newSection, setNewSection] = useState('')
+  const isAppOrSite = project.type === 'website' || project.type === 'app'
 
   const grouped = useMemo(() => {
     const m = new Map<string, typeof details>()
@@ -23,7 +25,7 @@ export function DetailsTab({ projectId }: { projectId: string }) {
     return [...m.entries()]
   }, [details])
 
-  const [summary, setSummary, sumStatus] = useDebouncedSave(project?.summary ?? '', async (v) => {
+  const [summary, setSummary, sumStatus] = useDebouncedSave(project.summary ?? '', async (v) => {
     await update(projectId, { summary: v })
   })
 
@@ -50,12 +52,60 @@ export function DetailsTab({ projectId }: { projectId: string }) {
           <Input
             type="number"
             step="0.5"
-            value={project?.hours_worked ?? 0}
+            value={project.hours_worked ?? 0}
             onChange={(e) => update(projectId, { hours_worked: Number(e.target.value) || 0 })}
             className="mt-1 w-28"
           />
         </label>
       </div>
+
+      {isAppOrSite && (
+        <div className="overflow-hidden rounded-md border border-border">
+          <div className="border-b border-border bg-muted/40 px-2 py-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Credentials &amp; IDs
+            </span>
+          </div>
+          <div className="grid gap-3 p-2 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Project ID</span>
+              <SecretField
+                className="mt-1"
+                value={project.platform_project_id ?? ''}
+                placeholder="e.g. the platform's project identifier"
+                onChange={(e) => update(projectId, { platform_project_id: e.target.value })}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">
+                Verification token
+              </span>
+              <SecretField
+                className="mt-1"
+                value={project.verification_token ?? ''}
+                placeholder="if the platform requires one"
+                onChange={(e) => update(projectId, { verification_token: e.target.value })}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Public token</span>
+              <SecretField
+                className="mt-1"
+                value={project.public_token ?? ''}
+                onChange={(e) => update(projectId, { public_token: e.target.value })}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Private token</span>
+              <SecretField
+                className="mt-1"
+                value={project.private_token ?? ''}
+                onChange={(e) => update(projectId, { private_token: e.target.value })}
+              />
+            </label>
+          </div>
+        </div>
+      )}
 
       {grouped.map(([section, items]) => (
         <div key={section} className="overflow-hidden rounded-md border border-border">

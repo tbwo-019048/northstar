@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ExternalLink, GitCommitHorizontal, Pencil } from 'lucide-react'
+import { AlertTriangle, ExternalLink, GitBranch, GitCommitHorizontal, Pencil } from 'lucide-react'
 import { useProjects } from '@/store/useProjects'
 import { useSettings, getGithubToken } from '@/store/useSettings'
-import { fetchCommits, type GithubCommit } from '@/lib/github'
+import {
+  fetchBranches,
+  fetchCommits,
+  fetchDefaultBranch,
+  type GithubBranch,
+  type GithubCommit,
+} from '@/lib/github'
 import { Input } from '@/components/ui-lite'
+import { GitTree } from '@/components/GitTree'
 
 function timeAgo(iso: string) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
@@ -22,6 +29,8 @@ export function GitTab({ projectId }: { projectId: string }) {
 
   const [editing, setEditing] = useState(false)
   const [repoDraft, setRepoDraft] = useState(project?.github_repo ?? '')
+  const [branches, setBranches] = useState<GithubBranch[]>([])
+  const [branch, setBranch] = useState<string | null>(null)
   const [commits, setCommits] = useState<GithubCommit[]>([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -32,7 +41,33 @@ export function GitTab({ projectId }: { projectId: string }) {
     if (!settingsLoaded) loadSettings()
   }, [settingsLoaded, loadSettings])
 
-  const load = async (repo: string, targetPage: number, append: boolean) => {
+  // Load branches + default branch once a repo/token is available.
+  useEffect(() => {
+    setBranch(null)
+    setBranches([])
+    if (!project?.github_repo || !githubTokenSet) return
+    let cancelled = false
+    ;(async () => {
+      const token = await getGithubToken()
+      if (!token) return
+      try {
+        const [list, def] = await Promise.all([
+          fetchBranches(project.github_repo!, token),
+          fetchDefaultBranch(project.github_repo!, token),
+        ])
+        if (cancelled) return
+        setBranches(list)
+        setBranch(def)
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load branches.')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [project?.github_repo, githubTokenSet])
+
+  const load = async (repo: string, ref: string, targetPage: number, append: boolean) => {
     setLoading(true)
     setError(null)
     const token = await getGithubToken()
@@ -42,7 +77,7 @@ export function GitTab({ projectId }: { projectId: string }) {
       return
     }
     try {
-      const { commits: page1, hasMore: more } = await fetchCommits(repo, token, targetPage)
+      const { commits: page1, hasMore: more } = await fetchCommits(repo, token, targetPage, 25, ref)
       setCommits((prev) => (append ? [...prev, ...page1] : page1))
       setHasMore(more)
       setPage(targetPage)
@@ -53,11 +88,11 @@ export function GitTab({ projectId }: { projectId: string }) {
   }
 
   useEffect(() => {
-    if (project?.github_repo && githubTokenSet) {
-      void load(project.github_repo, 1, false)
+    if (project?.github_repo && githubTokenSet && branch) {
+      void load(project.github_repo, branch, 1, false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project?.github_repo, githubTokenSet])
+  }, [project?.github_repo, githubTokenSet, branch])
 
   if (!project) return null
 
@@ -145,41 +180,66 @@ export function GitTab({ projectId }: { projectId: string }) {
       )}
 
       {project.github_repo && !editing && (
-        <div className="divide-y divide-border rounded-md border border-border">
-          {commits.map((c) => (
-            <a
-              key={c.sha}
-              href={c.url}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex items-center gap-2 px-2 py-1 text-sm hover:bg-muted/40"
-            >
-              <GitCommitHorizontal className="size-3.5 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate group-hover:underline">{c.message}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{c.authorLogin ?? c.authorName}</span>
-              <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
-                {timeAgo(c.date)}
-              </span>
-              <code className="shrink-0 text-[11px] text-muted-foreground">{c.sha.slice(0, 7)}</code>
-            </a>
-          ))}
-          {commits.length === 0 && !loading && !error && (
-            <p className="px-2 py-6 text-center text-xs text-muted-foreground">No commits found.</p>
+        <>
+          {branches.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              <GitBranch className="size-3 text-muted-foreground" />
+              {branches.map((b) => (
+                <button
+                  key={b.name}
+                  type="button"
+                  onClick={() => setBranch(b.name)}
+                  className={
+                    'h-6 rounded-md border px-2 text-xs font-medium ' +
+                    (branch === b.name
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border text-muted-foreground hover:bg-muted')
+                  }
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
           )}
-          {loading && (
-            <p className="px-2 py-3 text-center text-xs text-muted-foreground">Loading…</p>
-          )}
-        </div>
-      )}
 
-      {project.github_repo && !editing && hasMore && !loading && (
-        <button
-          type="button"
-          onClick={() => load(project.github_repo!, page + 1, true)}
-          className="h-7 w-full rounded-md border border-border text-xs text-muted-foreground hover:bg-muted"
-        >
-          Load more
-        </button>
+          <GitTree commits={commits.slice(0, 15)} />
+
+          <div className="divide-y divide-border rounded-md border border-border">
+            {commits.map((c) => (
+              <a
+                key={c.sha}
+                href={c.url}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center gap-2 px-2 py-1 text-sm hover:bg-muted/40"
+              >
+                <GitCommitHorizontal className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate group-hover:underline">{c.message}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{c.authorLogin ?? c.authorName}</span>
+                <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
+                  {timeAgo(c.date)}
+                </span>
+                <code className="shrink-0 text-[11px] text-muted-foreground">{c.sha.slice(0, 7)}</code>
+              </a>
+            ))}
+            {commits.length === 0 && !loading && !error && (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">No commits found.</p>
+            )}
+            {loading && (
+              <p className="px-2 py-3 text-center text-xs text-muted-foreground">Loading…</p>
+            )}
+          </div>
+
+          {hasMore && !loading && branch && (
+            <button
+              type="button"
+              onClick={() => load(project.github_repo!, branch, page + 1, true)}
+              className="h-7 w-full rounded-md border border-border text-xs text-muted-foreground hover:bg-muted"
+            >
+              Load more
+            </button>
+          )}
+        </>
       )}
     </div>
   )

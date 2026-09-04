@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -84,10 +85,14 @@ const TYPE_STYLES: Record<string, string> = {
 export function Chip({
   children,
   tone,
+  color,
   className,
 }: {
   children: React.ReactNode
   tone?: 'priority' | 'type' | 'neutral'
+  /** Raw hex override (e.g. from a project's configured position/priority
+   * colors) — takes precedence over `tone`'s built-in palette. */
+  color?: string
   className?: string
 }) {
   const key = String(children).toLowerCase()
@@ -95,14 +100,58 @@ export function Chip({
     tone === 'priority' ? PRIORITY_STYLES : tone === 'type' ? TYPE_STYLES : undefined
   return (
     <span
+      style={color ? { background: color + '26', color } : undefined}
       className={cn(
         'inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium capitalize leading-none',
-        map?.[key] ?? 'bg-muted text-muted-foreground',
+        !color && (map?.[key] ?? 'bg-muted text-muted-foreground'),
         className,
       )}
     >
       {children}
     </span>
+  )
+}
+
+/** A single-line secret field — masked by default, revealed while the eye
+ * button is toggled on. Used for passwords and API tokens alike. */
+export const SecretField = React.forwardRef<
+  HTMLInputElement,
+  Omit<React.ComponentProps<'input'>, 'type'>
+>(({ className, ...props }, ref) => {
+  const [show, setShow] = React.useState(false)
+  return (
+    <div className="relative">
+      <input
+        ref={ref}
+        type={show ? 'text' : 'password'}
+        autoComplete="off"
+        className={cn(
+          'h-7 w-full rounded-md border border-border bg-background px-2 pr-7 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50',
+          className,
+        )}
+        {...props}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((v) => !v)}
+        className="absolute right-1.5 top-1/2 grid size-4 -translate-y-1/2 place-items-center text-muted-foreground hover:text-foreground"
+      >
+        {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+      </button>
+    </div>
+  )
+})
+SecretField.displayName = 'SecretField'
+
+/** Soft color swatch used to represent a hex color inline (e.g. next to a
+ * label in a color picker row). */
+export function ColorDot({ color, className }: { color: string; className?: string }) {
+  return (
+    <span
+      className={cn('inline-block size-3.5 shrink-0 rounded-full border border-black/10', className)}
+      style={{ background: color }}
+    />
   )
 }
 

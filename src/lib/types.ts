@@ -16,6 +16,12 @@ export interface Project {
   position: number
   logo_url: string | null
   github_repo: string | null
+  verification_token: string | null
+  platform_project_id: string | null
+  public_token: string | null
+  private_token: string | null
+  position_colors: Record<string, string>
+  priority_colors: Partial<Record<Priority, string>>
   created_by: string | null
   created_at: string
   updated_at: string
@@ -30,6 +36,7 @@ export interface Person {
   position: string
   notes: string
   extra: Record<string, string>
+  avatar_url: string | null
   sort: number
   created_at: string
   updated_at: string
@@ -131,4 +138,22 @@ export interface PipelineItem {
   done: boolean
   sort: number
   created_at: string
+}
+
+export const DEFAULT_GROUPS = ['User', 'Admin', 'Advanced'] as const
+
+export interface MemberGroup {
+  name: string
+  permissions: Record<string, boolean>
+  created_at: string
+}
+
+export interface Member {
+  id: string
+  email: string
+  display_name: string
+  group_name: string
+  is_master: boolean
+  created_at: string
+  updated_at: string
 }

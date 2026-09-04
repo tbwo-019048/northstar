@@ -4,7 +4,8 @@ A compact, card-free project console. React + Vite + Tailwind v4 + **VeloBits UI
 **Supabase** for auth, storage, autosave and cross-device sync.
 
 Landing → login (env access token + Supabase email/password) → overview table of projects →
-per-project tabs: **Users, To-Do, Features, Details, Requests, Pipeline, Git, Analysis**.
+per-project tabs: **Summary, Features, Details, Requests, To-Do, Pipeline, Users, Git, Analysis,
+Settings** (Summary opens first).
 
 ## 1. Configure environment
 
@@ -32,7 +33,8 @@ new project types, new columns).
 
 There is no self-serve signup. In the Supabase dashboard → **Authentication → Users → Add user**,
 create an email/password user (disable "Auto Confirm" off, i.e. confirm it). Use those credentials
-on the login screen.
+on the login screen. **The first account ever created becomes Master** (set automatically by
+`schema.sql` — see "Members, groups & the Master role" below).
 
 ## 4. Run
 
@@ -76,13 +78,41 @@ in the Vercel project settings, then deploy. Set the same values for Preview and
   paginated, pulled straight from the GitHub REST API with that token. The token is stored in the
   `app_settings` table — see the security note below.
 
+- **Users** are a compact card grid (photo + name) — click a card for a centered modal with
+  username, position (color-coded per the project's Settings tab), a masked password field (click
+  the eye to reveal), notes, custom fields and comments. Photos upload to the public `avatars`
+  bucket.
+- **Details** — for Website/App projects only, a Credentials & IDs section holds a platform project
+  ID, verification token, public token and private token, each masked the same way as passwords.
+- **Requests** priority dropdown keeps an explicit `bg-background` instead of `bg-transparent` —
+  a transparent native `<select>` makes Chromium render its option popup with the OS default white
+  background regardless of theme, which is unreadable in dark mode. Colors for each priority come
+  from the project's Settings tab.
+- **Git history** renders a branded commit graph (branches as chips at the top, a small SVG tree
+  with parallel lanes for merges, in NorthStar blue) above the existing commit table.
+
 ## GitHub integration
 
 - Token needs at least read access to the repo's contents/metadata (a fine-grained PAT scoped to
   just the repos you'll link is the least-privilege option; `public_repo` on a classic token also
   works for public repos).
-- **This app has no per-user data isolation** — every signed-in user shares one workspace and one
-  `app_settings` row, so the token is visible to anyone who can log in here. Don't use a token with
-  broader access than you're comfortable handing to every other person with an account.
+- Only the **Master** can set or change it (see below); everyone else sees whether one is
+  configured but not the value.
 - Nothing is proxied through a server: commit history is fetched directly from
   `api.github.com` in the browser using the stored token.
+
+## Members, groups & the Master role
+
+Global **Settings** (gear icon in the header) has a Members & Groups section, separate from
+Supabase Auth:
+
+- `member_groups` — default groups `User`, `Admin`, `Advanced`, each with a small set of
+  permission toggles. Only the toggles named in the UI are actually enforced anywhere (see below);
+  the rest are descriptive for now.
+- `members` — maps an email to a group. Adding someone here does **not** create their login; you
+  still create the email/password account in the Supabase dashboard first (step 3 above), then add
+  them here so the app knows their group.
+- **Master** — `schema.sql` automatically flags the earliest-created Supabase Auth user as Master.
+  Enforced by Postgres RLS (not just hidden in the UI): only the Master can INSERT/UPDATE/DELETE
+  `member_groups`, `members`, or the GitHub token in `app_settings`. Everyone signed in can read
+  all three.

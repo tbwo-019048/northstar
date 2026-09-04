@@ -62,12 +62,24 @@ create table if not exists projects (
   position    integer not null default 0,
   logo_url    text,
   github_repo text,                      -- "owner/repo" this project tracks
+  verification_token   text,             -- app/website verification token, if any
+  platform_project_id  text,             -- id of this project on its platform (e.g. Firebase/Vercel project id)
+  public_token         text,
+  private_token         text,
+  position_colors jsonb not null default '{}'::jsonb,  -- { [position label]: hex } for Users cards
+  priority_colors jsonb not null default '{}'::jsonb,  -- { [priority]: hex } for Requests/To-Do chips
   created_by  uuid references auth.users(id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 alter table projects add column if not exists logo_url text;
 alter table projects add column if not exists github_repo text;
+alter table projects add column if not exists verification_token text;
+alter table projects add column if not exists platform_project_id text;
+alter table projects add column if not exists public_token text;
+alter table projects add column if not exists private_token text;
+alter table projects add column if not exists position_colors jsonb not null default '{}'::jsonb;
+alter table projects add column if not exists priority_colors jsonb not null default '{}'::jsonb;
 drop trigger if exists trg_projects_updated on projects;
 create trigger trg_projects_updated before update on projects
   for each row execute function set_updated_at();
@@ -84,11 +96,13 @@ create table if not exists project_people (
   position    text not null default '',
   notes       text not null default '',
   extra       jsonb not null default '{}'::jsonb, -- { [person_columns.id]: value }
+  avatar_url  text,
   sort        integer not null default 0,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 alter table project_people add column if not exists extra jsonb not null default '{}'::jsonb;
+alter table project_people add column if not exists avatar_url text;
 drop trigger if exists trg_people_updated on project_people;
 create trigger trg_people_updated before update on project_people
   for each row execute function set_updated_at();
@@ -210,8 +224,8 @@ create table if not exists pipeline_items (
 
 -- ---------------------------------------------------------------------------
 -- App settings — a single shared row (e.g. the GitHub token used to fetch
--- commit history). Shared-workspace app: readable/writable by any signed-in
--- user, same as everything else here.
+-- commit history). Readable by anyone signed in; writable by the Master
+-- only (see is_master() below).
 -- ---------------------------------------------------------------------------
 create table if not exists app_settings (
   id           text primary key default 'default',
@@ -220,19 +234,96 @@ create table if not exists app_settings (
 );
 
 -- ---------------------------------------------------------------------------
+-- Groups & members — app-level roles, separate from Supabase Auth accounts.
+-- A member row maps a login (by email) to a group. The earliest-created
+-- auth user is flagged is_master and is the only one who can edit member_groups,
+-- members, or the GitHub token in app_settings. Creating the actual login
+-- (email + password) still happens in the Supabase dashboard — this is
+-- authorization on top of that, not account creation.
+-- ---------------------------------------------------------------------------
+create table if not exists member_groups (
+  name        text primary key,
+  permissions jsonb not null default '{}'::jsonb,
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists members (
+  id           uuid primary key default gen_random_uuid(),
+  email        text not null unique,
+  display_name text not null default '',
+  group_name   text not null default 'User' references member_groups(name),
+  is_master    boolean not null default false,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+drop trigger if exists trg_members_updated on members;
+create trigger trg_members_updated before update on members
+  for each row execute function set_updated_at();
+
+insert into member_groups (name, permissions) values
+  ('User', '{}'::jsonb),
+  ('Admin', '{}'::jsonb),
+  ('Advanced', '{}'::jsonb)
+on conflict (name) do nothing;
+
+-- Designate the earliest-created Supabase Auth user as Master (idempotent —
+-- re-running never demotes an existing Master or duplicates a member row).
+do $$
+declare first_user record;
+begin
+  if not exists (select 1 from members where is_master) then
+    select id, email into first_user from auth.users order by created_at asc limit 1;
+    if first_user.email is not null then
+      insert into members (email, display_name, group_name, is_master)
+      values (first_user.email, split_part(first_user.email, '@', 1), 'Admin', true)
+      on conflict (email) do update set is_master = true, group_name = 'Admin';
+    end if;
+  end if;
+end $$;
+
+create or replace function is_master() returns boolean
+language sql stable security definer set search_path = public, auth as $$
+  select exists (
+    select 1 from members m
+    join auth.users u on u.email = m.email
+    where u.id = auth.uid() and m.is_master
+  );
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security — shared workspace: any authenticated user, full access
+-- to project data. Groups/members/app_settings are readable by everyone
+-- signed in but writable only by the Master.
 -- ---------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','todos','todo_comments',
-    'features','details','requests','pipelines','pipeline_items','app_settings'
+    'features','details','requests','pipelines','pipeline_items'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
     execute format(
       'create policy "auth full access" on %I for all to authenticated using (true) with check (true)', t);
+  end loop;
+
+  foreach t in array array['app_settings', 'member_groups', 'members'] loop
+    execute format('alter table %I enable row level security', t);
+    -- drop the old blanket policy from earlier schema versions, if present
+    execute format('drop policy if exists "auth full access" on %I', t);
+    execute format('drop policy if exists "%s select" on %I', t, t);
+    execute format('drop policy if exists "%s insert master" on %I', t, t);
+    execute format('drop policy if exists "%s update master" on %I', t, t);
+    execute format('drop policy if exists "%s delete master" on %I', t, t);
+    execute format(
+      'create policy "%s select" on %I for select to authenticated using (true)', t, t);
+    execute format(
+      'create policy "%s insert master" on %I for insert to authenticated with check (is_master())', t, t);
+    execute format(
+      'create policy "%s update master" on %I for update to authenticated using (is_master()) with check (is_master())', t, t);
+    execute format(
+      'create policy "%s delete master" on %I for delete to authenticated using (is_master())', t, t);
   end loop;
 end $$;
 
@@ -251,13 +342,20 @@ begin
     exception when duplicate_object then null;
     end;
   end loop;
+
+  foreach t in array array['member_groups', 'members'] loop
+    begin
+      execute format('alter publication supabase_realtime add table %I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
 end $$;
 
 -- ---------------------------------------------------------------------------
--- Storage — public bucket for project logos
+-- Storage — public buckets for project logos and person avatars
 -- ---------------------------------------------------------------------------
 insert into storage.buckets (id, name, public)
-values ('project-logos', 'project-logos', true)
+values ('project-logos', 'project-logos', true), ('avatars', 'avatars', true)
 on conflict (id) do nothing;
 
 drop policy if exists "project logos public read" on storage.objects;
@@ -269,3 +367,13 @@ create policy "project logos auth write" on storage.objects
   for all to authenticated
   using (bucket_id = 'project-logos')
   with check (bucket_id = 'project-logos');
+
+drop policy if exists "avatars public read" on storage.objects;
+create policy "avatars public read" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+drop policy if exists "avatars auth write" on storage.objects;
+create policy "avatars auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'avatars')
+  with check (bucket_id = 'avatars');

@@ -1,15 +1,25 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Check, ChevronRight, Plus, Trash2, Undo2 } from 'lucide-react'
 import { useProjectData, asRequests } from '@/store/useProjectData'
-import { PRIORITIES } from '@/lib/types'
+import { PRIORITIES, type Priority, type Project } from '@/lib/types'
 import { EditableText, IconButton, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 
-export function RequestsTab({ projectId }: { projectId: string }) {
+const FALLBACK_PRIORITY_COLOR: Record<Priority, string> = {
+  urgent: '#ef4444',
+  high: '#f97316',
+  medium: '#f59e0b',
+  low: '#0ea5e9',
+}
+
+export function RequestsTab({ project }: { project: Project }) {
+  const projectId = project.id
   const rows = useProjectData((s) => s.rows.requests)
   const { add, patch, del } = useProjectData()
   const requests = asRequests(rows)
   const [open, setOpen] = useState<string | null>(null)
+
+  const colorFor = (p: Priority) => project.priority_colors[p] ?? FALLBACK_PRIORITY_COLOR[p]
 
   const { openList, doneList } = useMemo(
     () => ({
@@ -30,20 +40,26 @@ export function RequestsTab({ projectId }: { projectId: string }) {
 
   const Row = ({ r }: { r: (typeof requests)[number] }) => (
     <Fragment>
-      <tr className="border-b border-border last:border-0 hover:bg-muted/30">
+      <tr
+        style={{ boxShadow: `inset 3px 0 0 ${colorFor(r.priority)}` }}
+        className="border-b border-border last:border-0 hover:bg-muted/30"
+      >
         <td className="w-6 px-1">
           <IconButton onClick={() => setOpen(open === r.id ? null : r.id)}>
             <ChevronRight className={'size-3.5 transition-transform ' + (open === r.id ? 'rotate-90' : '')} />
           </IconButton>
         </td>
         <td className="w-24 px-1 py-0.5">
+          {/* bg-background (not transparent) keeps the native option popup
+              themed instead of falling back to the OS default white list. */}
           <Select
             value={r.priority}
             onChange={(e) => patch('requests', r.id, { priority: e.target.value })}
-            className="h-5 w-full border-0 bg-transparent px-0"
+            style={{ color: colorFor(r.priority) }}
+            className="h-5 w-full border-0 bg-background px-0 font-medium"
           >
             {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
+              <option key={p} value={p} style={{ color: colorFor(p) }}>
                 {p}
               </option>
             ))}
@@ -108,6 +124,9 @@ export function RequestsTab({ projectId }: { projectId: string }) {
           >
             <Plus className="size-3" /> Add
           </button>
+          <span className="text-[11px] text-muted-foreground">
+            Priority colors come from this project's Settings tab.
+          </span>
         </div>
         <div className="overflow-x-auto rounded-md border border-border">
           <table className="w-full min-w-[640px] text-sm">

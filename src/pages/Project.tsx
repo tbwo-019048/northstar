@@ -6,6 +6,7 @@ import { useProjectData } from '@/store/useProjectData'
 import { PROJECT_TYPES, type ProjectType } from '@/lib/types'
 import { EditableText, Select } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
+import { SummaryTab } from '@/pages/project/SummaryTab'
 import { UsersTab } from '@/pages/project/UsersTab'
 import { TodoTab } from '@/pages/project/TodoTab'
 import { FeaturesTab } from '@/pages/project/FeaturesTab'
@@ -14,16 +15,19 @@ import { RequestsTab } from '@/pages/project/RequestsTab'
 import { PipelineTab } from '@/pages/project/PipelineTab'
 import { AnalysisTab } from '@/pages/project/AnalysisTab'
 import { GitTab } from '@/pages/project/GitTab'
+import { ProjectSettingsTab } from '@/pages/project/ProjectSettingsTab'
 
 const TABS = [
-  { key: 'users', label: 'Users' },
-  { key: 'todo', label: 'To-Do' },
+  { key: 'summary', label: 'Summary' },
   { key: 'features', label: 'Features' },
   { key: 'details', label: 'Details' },
   { key: 'requests', label: 'Requests' },
+  { key: 'todo', label: 'To-Do' },
   { key: 'pipeline', label: 'Pipeline' },
+  { key: 'users', label: 'Users' },
   { key: 'git', label: 'Git' },
   { key: 'analysis', label: 'Analysis' },
+  { key: 'settings', label: 'Settings' },
 ] as const
 
 export function Project() {
@@ -48,7 +52,7 @@ export function Project() {
   }, [id, load, reset, subscribe])
 
   const project = useMemo(() => projects.find((p) => p.id === id), [projects, id])
-  const active = tab ?? 'users'
+  const active = tab ?? 'summary'
 
   if (!id) return <Navigate to="/app" replace />
   if (loaded && !project) {
@@ -112,14 +116,14 @@ export function Project() {
         </p>
       )}
 
-      <nav className="flex items-center gap-0.5 border-b border-border">
+      <nav className="flex items-center gap-0.5 overflow-x-auto border-b border-border">
         {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => nav(`/app/project/${id}/${t.key}`)}
             className={
-              'relative h-8 px-2.5 text-xs font-medium transition-colors ' +
+              'relative h-8 shrink-0 px-2.5 text-xs font-medium transition-colors ' +
               (active === t.key
                 ? 'text-foreground after:absolute after:inset-x-1 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary'
                 : 'text-muted-foreground hover:text-foreground')
@@ -131,14 +135,16 @@ export function Project() {
       </nav>
 
       <div className="pt-1">
-        {active === 'users' && <UsersTab projectId={id} />}
-        {active === 'todo' && <TodoTab projectId={id} />}
+        {active === 'summary' && project && <SummaryTab project={project} />}
         {active === 'features' && <FeaturesTab projectId={id} />}
-        {active === 'details' && <DetailsTab projectId={id} />}
-        {active === 'requests' && <RequestsTab projectId={id} />}
+        {active === 'details' && project && <DetailsTab project={project} />}
+        {active === 'requests' && project && <RequestsTab project={project} />}
+        {active === 'todo' && <TodoTab projectId={id} />}
         {active === 'pipeline' && <PipelineTab projectId={id} />}
+        {active === 'users' && project && <UsersTab project={project} />}
         {active === 'git' && <GitTab projectId={id} />}
         {active === 'analysis' && project && <AnalysisTab project={project} />}
+        {active === 'settings' && project && <ProjectSettingsTab project={project} />}
       </div>
     </div>
   )

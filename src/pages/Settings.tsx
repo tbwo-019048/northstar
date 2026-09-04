@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, GitBranch, ShieldAlert } from 'lucide-react'
+import { useAuth } from '@/store/useAuth'
 import { useSettings } from '@/store/useSettings'
 import { Input } from '@/components/ui-lite'
+import { MembersSettings } from '@/components/MembersSettings'
 
 export function Settings() {
+  const isMaster = useAuth((s) => s.isMaster)
   const { githubTokenSet, loaded, load, saveGithubToken, clearGithubToken } = useSettings()
   const [token, setToken] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -65,33 +68,44 @@ export function Settings() {
           </span>
         </div>
 
-        <form onSubmit={onSave} className="flex items-center gap-2">
-          <Input
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder={githubTokenSet ? 'Token saved — enter a new one to replace it' : 'ghp_… or github_pat_…'}
-            className="max-w-sm"
-          />
-          <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-            Save
-          </button>
-          {githubTokenSet && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
-            >
-              Remove
-            </button>
-          )}
-        </form>
-        {githubTokenSet && !status && (
-          <p className="text-xs text-muted-foreground">A token is currently configured.</p>
+        {isMaster ? (
+          <>
+            <form onSubmit={onSave} className="flex items-center gap-2">
+              <Input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder={githubTokenSet ? 'Token saved — enter a new one to replace it' : 'ghp_… or github_pat_…'}
+                className="max-w-sm"
+              />
+              <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+                Save
+              </button>
+              {githubTokenSet && (
+                <button
+                  type="button"
+                  onClick={onClear}
+                  className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+                >
+                  Remove
+                </button>
+              )}
+            </form>
+            {githubTokenSet && !status && (
+              <p className="text-xs text-muted-foreground">A token is currently configured.</p>
+            )}
+            {status && <p className="text-xs text-primary">{status}</p>}
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {githubTokenSet ? 'A token is currently configured.' : 'No token configured.'} Only the
+            Master can change it.
+          </p>
         )}
-        {status && <p className="text-xs text-primary">{status}</p>}
-        {error && <p className="text-xs text-destructive">{error}</p>}
       </section>
+
+      <MembersSettings />
     </div>
   )
 }

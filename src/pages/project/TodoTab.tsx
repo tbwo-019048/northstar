@@ -238,7 +238,7 @@ function TodoRow({
           <Select
             value={todo.priority}
             onChange={(e) => patch('todos', todo.id, { priority: e.target.value })}
-            className="h-5 w-full border-0 bg-transparent px-0"
+            className="h-5 w-full border-0 bg-background px-0"
           >
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -251,7 +251,7 @@ function TodoRow({
           <Select
             value={todo.type}
             onChange={(e) => patch('todos', todo.id, { type: e.target.value })}
-            className="h-5 w-full border-0 bg-transparent px-0"
+            className="h-5 w-full border-0 bg-background px-0"
           >
             {TODO_TYPES.map((p) => (
               <option key={p} value={p}>
