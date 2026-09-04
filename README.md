@@ -122,3 +122,4 @@ Supabase Auth:
   Enforced by Postgres RLS (not just hidden in the UI): only the Master can INSERT/UPDATE/DELETE
   `member_groups`, `members`, or the GitHub token in `app_settings`. Everyone signed in can read
   all three.
+
