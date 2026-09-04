@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowRight, ExternalLink, ImageDown, Link2, Pencil } from 'lucide-react'
+import { AlertTriangle, ArrowRight, ExternalLink, ImageDown, Link2, Pencil } from 'lucide-react'
 import { useProjectData, asTodos, asFeatures, asRequests, asPeople, asPipelines } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { Chip, Input } from '@/components/ui-lite'
-import { faviconUrlFor } from '@/lib/favicon'
+import { resolveFaviconUrl } from '@/lib/favicon'
 import type { Project } from '@/lib/types'
 
 export function SummaryTab({ project }: { project: Project }) {
@@ -14,18 +14,36 @@ export function SummaryTab({ project }: { project: Project }) {
   const { id } = useParams()
   const [editingSite, setEditingSite] = useState(false)
   const [siteDraft, setSiteDraft] = useState(project.website_url ?? '')
+  const [siteError, setSiteError] = useState<string | null>(null)
+  const [faviconBusy, setFaviconBusy] = useState(false)
 
   const saveSite = async (e: React.FormEvent) => {
     e.preventDefault()
-    await update(project.id, { website_url: siteDraft.trim() || null })
+    setSiteError(null)
+    const { error } = await update(project.id, { website_url: siteDraft.trim() || null })
+    if (error) {
+      setSiteError(error)
+      return
+    }
     setEditingSite(false)
   }
 
   const useFavicon = async () => {
     if (!project.website_url) return
-    const url = faviconUrlFor(project.website_url)
-    if (!url) return
-    await update(project.id, { logo_url: url })
+    setSiteError(null)
+    setFaviconBusy(true)
+    const url = await resolveFaviconUrl(project.website_url)
+    setFaviconBusy(false)
+    if (!url) {
+      setSiteError(
+        "Couldn't load a favicon from that site — it may require sign-in (e.g. a protected " +
+          "Vercel preview) or not serve one at /favicon.ico. Try the production URL, or upload " +
+          "a logo directly on the project header instead.",
+      )
+      return
+    }
+    const { error } = await update(project.id, { logo_url: url })
+    if (error) setSiteError(error)
   }
 
   const stats = useMemo(() => {
@@ -56,59 +74,78 @@ export function SummaryTab({ project }: { project: Project }) {
   return (
     <div className="space-y-4">
       {editingSite || !project.website_url ? (
-        <form onSubmit={saveSite} className="flex items-center gap-1.5">
-          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
-          <Input
-            autoFocus={editingSite}
-            value={siteDraft}
-            onChange={(e) => setSiteDraft(e.target.value)}
-            placeholder="Live site URL (e.g. https://example.com)"
-            className="max-w-sm"
-          />
-          <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-            Save
-          </button>
-          {editingSite && (
+        <div className="space-y-1">
+          <form onSubmit={saveSite} className="flex items-center gap-1.5">
+            <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+            <Input
+              autoFocus={editingSite}
+              value={siteDraft}
+              onChange={(e) => setSiteDraft(e.target.value)}
+              placeholder="Live site URL (e.g. https://example.com)"
+              className="max-w-sm"
+            />
+            <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+              Save
+            </button>
+            {editingSite && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingSite(false)
+                  setSiteError(null)
+                }}
+                className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+            )}
+          </form>
+          {siteError && (
+            <p className="flex items-center gap-1 text-xs text-destructive">
+              <AlertTriangle className="size-3 shrink-0" /> {siteError}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-sm">
+            <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="text-muted-foreground">Live Site:</span>
+            <a
+              href={project.website_url}
+              target="_blank"
+              rel="noreferrer"
+              className="min-w-0 truncate text-link underline"
+            >
+              {project.website_url}
+            </a>
+            <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
             <button
               type="button"
-              onClick={() => setEditingSite(false)}
-              className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+              onClick={() => {
+                setSiteDraft(project.website_url ?? '')
+                setSiteError(null)
+                setEditingSite(true)
+              }}
+              className="ml-1 shrink-0 text-muted-foreground hover:text-foreground"
             >
-              Cancel
+              <Pencil className="size-3" />
             </button>
+            <button
+              type="button"
+              onClick={useFavicon}
+              disabled={faviconBusy}
+              title="Use this site's favicon as the project logo"
+              className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              <ImageDown className="size-3" /> {faviconBusy ? 'Checking…' : 'Use as logo'}
+            </button>
+          </div>
+          {siteError && (
+            <p className="flex items-center gap-1 text-xs text-destructive">
+              <AlertTriangle className="size-3 shrink-0" /> {siteError}
+            </p>
           )}
-        </form>
-      ) : (
-        <div className="flex items-center gap-1.5 text-sm">
-          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="text-muted-foreground">Live Site:</span>
-          <a
-            href={project.website_url}
-            target="_blank"
-            rel="noreferrer"
-            className="min-w-0 truncate text-link underline"
-          >
-            {project.website_url}
-          </a>
-          <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
-          <button
-            type="button"
-            onClick={() => {
-              setSiteDraft(project.website_url ?? '')
-              setEditingSite(true)
-            }}
-            className="ml-1 shrink-0 text-muted-foreground hover:text-foreground"
-          >
-            <Pencil className="size-3" />
-          </button>
-          <button
-            type="button"
-            onClick={useFavicon}
-            title="Use this site's favicon as the project logo"
-            className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <ImageDown className="size-3" /> Use as logo
-          </button>
         </div>
       )}
 
