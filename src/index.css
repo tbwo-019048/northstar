@@ -1,0 +1,32 @@
+/*
+ * NorthStar global stylesheet.
+ * @velobitsio/tokens/theme.css is the single entry point — it pulls in
+ * tailwindcss, the raw token layer (light + `.dark`), the glass / control /
+ * texture component layers, tw-animate-css and the `dark` custom variant.
+ */
+@import "@velobitsio/tokens/theme.css";
+@import "@fontsource-variable/geist";
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+  }
+}
