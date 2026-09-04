@@ -15,6 +15,7 @@ export interface Project {
   hours_worked: number
   position: number
   logo_url: string | null
+  website_url: string | null
   github_repo: string | null
   verification_token: string | null
   platform_project_id: string | null

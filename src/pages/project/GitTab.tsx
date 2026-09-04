@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ExternalLink, GitBranch, GitCommitHorizontal, Pencil } from 'lucide-react'
+import { AlertTriangle, ExternalLink, GitBranch, Pencil } from 'lucide-react'
 import { useProjects } from '@/store/useProjects'
 import { useSettings, getGithubToken } from '@/store/useSettings'
 import {
@@ -11,7 +11,7 @@ import {
   type GithubCommit,
 } from '@/lib/github'
 import { Input } from '@/components/ui-lite'
-import { GitTree } from '@/components/GitTree'
+import { computeGitGraph, GitGraphRow, GRAPH_ROW_H } from '@/components/GitTree'
 
 function timeAgo(iso: string) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
@@ -93,6 +93,8 @@ export function GitTab({ projectId }: { projectId: string }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.github_repo, githubTokenSet, branch])
+
+  const graph = useMemo(() => computeGitGraph(commits), [commits])
 
   if (!project) return null
 
@@ -202,24 +204,36 @@ export function GitTab({ projectId }: { projectId: string }) {
             </div>
           )}
 
-          <GitTree commits={commits.slice(0, 15)} />
-
-          <div className="divide-y divide-border rounded-md border border-border">
-            {commits.map((c) => (
+          {/* The graph column shares its coordinate space with the row list
+              below it, GitHub-Desktop / `git log --graph` style: each row is
+              a fixed GRAPH_ROW_H tall so the lane lines line up exactly with
+              the commit it belongs to. */}
+          <div className="overflow-x-auto rounded-md border border-border">
+            {commits.map((c, i) => (
               <a
                 key={c.sha}
                 href={c.url}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-center gap-2 px-2 py-1 text-sm hover:bg-muted/40"
+                style={{ height: GRAPH_ROW_H }}
+                className="group flex items-center gap-2 border-b border-border px-2 last:border-0 hover:bg-muted/40"
               >
-                <GitCommitHorizontal className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate group-hover:underline">{c.message}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">{c.authorLogin ?? c.authorName}</span>
+                <GitGraphRow graph={graph} index={i} />
+                {c.authorAvatar ? (
+                  <img src={c.authorAvatar} alt="" className="size-5 shrink-0 rounded-full" />
+                ) : (
+                  <span className="size-5 shrink-0 rounded-full bg-muted" />
+                )}
+                <span className="min-w-0 flex-1 truncate text-sm group-hover:underline">{c.message}</span>
+                <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                  {c.authorLogin ?? c.authorName}
+                </span>
                 <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
                   {timeAgo(c.date)}
                 </span>
-                <code className="shrink-0 text-[11px] text-muted-foreground">{c.sha.slice(0, 7)}</code>
+                <code className="shrink-0 rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">
+                  {c.sha.slice(0, 7)}
+                </code>
               </a>
             ))}
             {commits.length === 0 && !loading && !error && (

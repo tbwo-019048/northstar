@@ -61,6 +61,7 @@ create table if not exists projects (
   hours_worked numeric not null default 0,
   position    integer not null default 0,
   logo_url    text,
+  website_url text,                      -- live site link, shown in Summary
   github_repo text,                      -- "owner/repo" this project tracks
   verification_token   text,             -- app/website verification token, if any
   platform_project_id  text,             -- id of this project on its platform (e.g. Firebase/Vercel project id)
@@ -73,6 +74,7 @@ create table if not exists projects (
   updated_at  timestamptz not null default now()
 );
 alter table projects add column if not exists logo_url text;
+alter table projects add column if not exists website_url text;
 alter table projects add column if not exists github_repo text;
 alter table projects add column if not exists verification_token text;
 alter table projects add column if not exists platform_project_id text;

@@ -1,14 +1,32 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ExternalLink, ImageDown, Link2, Pencil } from 'lucide-react'
 import { useProjectData, asTodos, asFeatures, asRequests, asPeople, asPipelines } from '@/store/useProjectData'
-import { Chip } from '@/components/ui-lite'
+import { useProjects } from '@/store/useProjects'
+import { Chip, Input } from '@/components/ui-lite'
+import { faviconUrlFor } from '@/lib/favicon'
 import type { Project } from '@/lib/types'
 
 export function SummaryTab({ project }: { project: Project }) {
   const rows = useProjectData((s) => s.rows)
+  const { update } = useProjects()
   const nav = useNavigate()
   const { id } = useParams()
+  const [editingSite, setEditingSite] = useState(false)
+  const [siteDraft, setSiteDraft] = useState(project.website_url ?? '')
+
+  const saveSite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await update(project.id, { website_url: siteDraft.trim() || null })
+    setEditingSite(false)
+  }
+
+  const useFavicon = async () => {
+    if (!project.website_url) return
+    const url = faviconUrlFor(project.website_url)
+    if (!url) return
+    await update(project.id, { logo_url: url })
+  }
 
   const stats = useMemo(() => {
     const todos = asTodos(rows.todos)
@@ -37,6 +55,63 @@ export function SummaryTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-4">
+      {editingSite || !project.website_url ? (
+        <form onSubmit={saveSite} className="flex items-center gap-1.5">
+          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+          <Input
+            autoFocus={editingSite}
+            value={siteDraft}
+            onChange={(e) => setSiteDraft(e.target.value)}
+            placeholder="Live site URL (e.g. https://example.com)"
+            className="max-w-sm"
+          />
+          <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+            Save
+          </button>
+          {editingSite && (
+            <button
+              type="button"
+              onClick={() => setEditingSite(false)}
+              className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+            >
+              Cancel
+            </button>
+          )}
+        </form>
+      ) : (
+        <div className="flex items-center gap-1.5 text-sm">
+          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="text-muted-foreground">Live Site:</span>
+          <a
+            href={project.website_url}
+            target="_blank"
+            rel="noreferrer"
+            className="min-w-0 truncate text-link underline"
+          >
+            {project.website_url}
+          </a>
+          <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+          <button
+            type="button"
+            onClick={() => {
+              setSiteDraft(project.website_url ?? '')
+              setEditingSite(true)
+            }}
+            className="ml-1 shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="size-3" />
+          </button>
+          <button
+            type="button"
+            onClick={useFavicon}
+            title="Use this site's favicon as the project logo"
+            className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ImageDown className="size-3" /> Use as logo
+          </button>
+        </div>
+      )}
+
       {project.summary && (
         <p className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
           {project.summary}

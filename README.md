@@ -78,8 +78,9 @@ in the Vercel project settings, then deploy. Set the same values for Preview and
   paginated, pulled straight from the GitHub REST API with that token. The token is stored in the
   `app_settings` table — see the security note below.
 
-- **Users** are a compact card grid (photo + name) — click a card for a centered modal with
-  username, position (color-coded per the project's Settings tab), a masked password field (click
+- **Users** toggle between a compact card grid (photo + name, click for a centered modal) and a
+  dense inline-editable table — same as Overview's table/grid toggle, remembered per browser. Both
+  share: position badges color-coded per the project's Settings tab, a masked password field (click
   the eye to reveal), notes, custom fields and comments. Photos upload to the public `avatars`
   bucket.
 - **Details** — for Website/App projects only, a Credentials & IDs section holds a platform project
@@ -88,8 +89,13 @@ in the Vercel project settings, then deploy. Set the same values for Preview and
   a transparent native `<select>` makes Chromium render its option popup with the OS default white
   background regardless of theme, which is unreadable in dark mode. Colors for each priority come
   from the project's Settings tab.
-- **Git history** renders a branded commit graph (branches as chips at the top, a small SVG tree
-  with parallel lanes for merges, in NorthStar blue) above the existing commit table.
+- **Git history** — branches as chips at the top; each commit row leads with its own slice of a
+  shared SVG graph (parallel lanes for merges, NorthStar blue), so the graph and the message/
+  author/sha sit in the same row, GitHub-Desktop / `git log --graph` style, rather than a separate
+  graph floating above a separate list.
+- **Summary** shows a "Live Site" link once you set one — paste a URL, then "Use as logo" pulls
+  that site's favicon (via Google's public favicon proxy, so no CORS issues) straight into the
+  project logo.
 
 ## GitHub integration
 
