@@ -6,7 +6,8 @@ import { PROJECT_TYPES, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip } from '@/components/ui-lite'
 
 const TYPE_TONE: Record<ProjectType, string> = {
-  software: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
+  website: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
+  app: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
   physical: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   written: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
   other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
@@ -18,7 +19,7 @@ export function Overview() {
   const [filter, setFilter] = useState<ProjectType | 'all'>('all')
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
-  const [type, setType] = useState<ProjectType>('software')
+  const [type, setType] = useState<ProjectType>('website')
 
   useEffect(() => {
     if (!loaded) load()
@@ -38,7 +39,7 @@ export function Overview() {
     if (!name.trim()) return
     await create(name.trim(), type)
     setName('')
-    setType('software')
+    setType('website')
     setAdding(false)
   }
 

@@ -1,10 +1,10 @@
-export type ProjectType = 'software' | 'physical' | 'written' | 'other'
+export type ProjectType = 'website' | 'app' | 'physical' | 'written' | 'other'
 export type TodoStatus = 'todo' | 'completed'
 export type Priority = 'urgent' | 'high' | 'medium' | 'low'
 export type PipelineStatus = 'active' | 'completed' | 'archived'
 
 export const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low']
-export const PROJECT_TYPES: ProjectType[] = ['software', 'physical', 'written', 'other']
+export const PROJECT_TYPES: ProjectType[] = ['website', 'app', 'physical', 'written', 'other']
 export const TODO_TYPES = ['feature', 'bug', 'chore', 'idea', 'research', 'other']
 
 export interface Project {

@@ -25,7 +25,7 @@ export function Landing() {
           One compact console for every project you run.
         </h1>
         <p className="max-w-xl text-sm text-muted-foreground">
-          Software, physical, written or other — track people, to-dos, features, details, requests
+          Website, app, physical, written or other — track people, to-dos, features, details, requests
           and pipelines in a single dense workspace that autosaves and syncs across your devices.
         </p>
         <Link
