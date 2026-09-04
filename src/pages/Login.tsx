@@ -42,9 +42,12 @@ export function Login() {
         <ThemeToggle />
       </div>
       <div className="w-full max-w-xs">
-        <div className="mb-6 flex items-center gap-2 font-semibold">
-          <NorthStarIcon className="size-4 text-primary" />
-          NorthStar
+        <div className="mb-6">
+          <div className="flex items-center gap-2 font-semibold">
+            <NorthStarIcon className="size-4 text-primary" />
+            NorthStar
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">Leading The Way</p>
         </div>
 
         {needGate ? (
