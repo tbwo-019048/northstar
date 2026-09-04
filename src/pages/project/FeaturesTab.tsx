@@ -24,7 +24,7 @@ export function FeaturesTab({ projectId }: { projectId: string }) {
 
       <div className="divide-y divide-border rounded-md border border-border">
         {features.map((f) => (
-          <div key={f.id} className="group flex items-start gap-2 px-2 py-1.5">
+          <div key={f.id} className="group flex items-start gap-2 px-2 py-1">
             <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
             <div className="min-w-0 flex-1">
               <EditableText

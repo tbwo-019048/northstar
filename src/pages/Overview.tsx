@@ -348,10 +348,10 @@ function ProjectTable({
         {!compact && (
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-3 py-1.5 font-medium">Name</th>
-              <th className="px-3 py-1.5 font-medium">Type</th>
-              <th className="w-20 px-3 py-1.5 text-right font-medium">Hours</th>
-              <th className="w-28 px-3 py-1.5 text-right font-medium">Updated</th>
+              <th className="px-2.5 py-1 font-medium">Name</th>
+              <th className="px-2.5 py-1 font-medium">Type</th>
+              <th className="w-20 px-2.5 py-1 text-right font-medium">Hours</th>
+              <th className="w-28 px-2.5 py-1 text-right font-medium">Updated</th>
             </tr>
           </thead>
         )}
@@ -364,24 +364,24 @@ function ProjectTable({
               onKeyDown={(e) => e.key === 'Enter' && onOpen(p.id)}
               className="group cursor-pointer border-b border-border last:border-0 hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
             >
-              <td className="px-3 py-1.5">
-                <span className="flex items-center gap-2 font-medium group-hover:underline">
-                  <ProjectLogo project={p} size="sm" />
+              <td className="px-2.5 py-1">
+                <span className="flex items-center gap-1.5 font-medium group-hover:underline">
+                  <ProjectLogo project={p} size="xs" />
                   {p.name}
                 </span>
                 {p.summary && (
-                  <span className="ml-8 text-xs text-muted-foreground">{p.summary}</span>
+                  <span className="ml-[22px] text-xs text-muted-foreground">{p.summary}</span>
                 )}
               </td>
               {!compact && (
-                <td className="px-3 py-1.5">
+                <td className="px-2.5 py-1">
                   <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
                 </td>
               )}
-              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+              <td className="px-2.5 py-1 text-right tabular-nums text-muted-foreground">
                 {p.hours_worked || 0}
               </td>
-              <td className="px-3 py-1.5 text-right text-xs text-muted-foreground">
+              <td className="px-2.5 py-1 text-right text-xs text-muted-foreground">
                 {new Date(p.updated_at).toLocaleDateString()}
               </td>
             </tr>

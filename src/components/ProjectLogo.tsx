@@ -17,7 +17,7 @@ export function ProjectLogo({
   className,
 }: {
   project: Pick<Project, 'id' | 'name' | 'logo_url'>
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg'
   editable?: boolean
   onChange?: (url: string) => void
   className?: string
@@ -26,7 +26,8 @@ export function ProjectLogo({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const dims = size === 'lg' ? 'size-16' : size === 'sm' ? 'size-6' : 'size-9'
+  const dims =
+    size === 'lg' ? 'size-16' : size === 'sm' ? 'size-6' : size === 'xs' ? 'size-4' : 'size-9'
 
   const upload = async (file: File) => {
     setBusy(true)
@@ -55,7 +56,14 @@ export function ProjectLogo({
         'grid place-items-center rounded-md bg-muted text-muted-foreground',
       )}
     >
-      <span className="text-xs font-semibold uppercase">{project.name.slice(0, 2)}</span>
+      <span
+        className={cn(
+          'font-semibold uppercase leading-none',
+          size === 'xs' ? 'text-[7px]' : size === 'sm' ? 'text-[9px]' : 'text-xs',
+        )}
+      >
+        {project.name.slice(0, 2)}
+      </span>
     </div>
   )
 

@@ -298,7 +298,7 @@ function PipelineRow({
         }}
         placeholder="Bullet point…"
         className={
-          'h-7 flex-1 rounded border-0 bg-transparent px-1 text-sm outline-none focus:bg-muted/60 ' +
+          'h-6 flex-1 rounded border-0 bg-transparent px-1 text-sm outline-none focus:bg-muted/60 ' +
           (item.done ? 'text-muted-foreground line-through' : '')
         }
       />

@@ -234,11 +234,11 @@ function TodoRow({
             <ChevronRight className={'size-3.5 transition-transform ' + (open ? 'rotate-90' : '')} />
           </IconButton>
         </td>
-        <td className="w-24 px-1 py-1">
+        <td className="w-24 px-1 py-0.5">
           <Select
             value={todo.priority}
             onChange={(e) => patch('todos', todo.id, { priority: e.target.value })}
-            className="h-6 w-full border-0 bg-transparent px-0"
+            className="h-5 w-full border-0 bg-transparent px-0"
           >
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -247,11 +247,11 @@ function TodoRow({
             ))}
           </Select>
         </td>
-        <td className="w-24 px-1 py-1">
+        <td className="w-24 px-1 py-0.5">
           <Select
             value={todo.type}
             onChange={(e) => patch('todos', todo.id, { type: e.target.value })}
-            className="h-6 w-full border-0 bg-transparent px-0"
+            className="h-5 w-full border-0 bg-transparent px-0"
           >
             {TODO_TYPES.map((p) => (
               <option key={p} value={p}>
@@ -260,7 +260,7 @@ function TodoRow({
             ))}
           </Select>
         </td>
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <EditableText
             value={todo.title}
             onSave={(v) => patch('todos', todo.id, { title: v })}
@@ -273,7 +273,7 @@ function TodoRow({
             className="text-xs text-muted-foreground"
           />
         </td>
-        <td className="w-16 px-1 py-1 text-right">
+        <td className="w-16 px-1 py-0.5 text-right">
           <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
             {todo.attachments.length > 0 && (
               <>

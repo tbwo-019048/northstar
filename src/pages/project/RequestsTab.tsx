@@ -36,11 +36,11 @@ export function RequestsTab({ projectId }: { projectId: string }) {
             <ChevronRight className={'size-3.5 transition-transform ' + (open === r.id ? 'rotate-90' : '')} />
           </IconButton>
         </td>
-        <td className="w-24 px-1 py-1">
+        <td className="w-24 px-1 py-0.5">
           <Select
             value={r.priority}
             onChange={(e) => patch('requests', r.id, { priority: e.target.value })}
-            className="h-6 w-full border-0 bg-transparent px-0"
+            className="h-5 w-full border-0 bg-transparent px-0"
           >
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -49,7 +49,7 @@ export function RequestsTab({ projectId }: { projectId: string }) {
             ))}
           </Select>
         </td>
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <EditableText value={r.title} onSave={(v) => patch('requests', r.id, { title: v })} className="font-medium" />
           <EditableText
             value={r.subtitle}
@@ -58,7 +58,7 @@ export function RequestsTab({ projectId }: { projectId: string }) {
             className="text-xs text-muted-foreground"
           />
         </td>
-        <td className="w-36 px-1 py-1">
+        <td className="w-36 px-1 py-0.5">
           <EditableText
             value={r.requested_by}
             placeholder="requested by…"

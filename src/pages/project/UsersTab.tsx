@@ -11,7 +11,7 @@ import type { Person } from '@/lib/types'
 import { IconButton, Input } from '@/components/ui-lite'
 
 const cellInput =
-  'h-6 w-full rounded border border-transparent bg-transparent px-1 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 hover:border-border focus:border-ring focus:bg-background focus:ring-2 focus:ring-ring/30'
+  'h-5 w-full rounded border border-transparent bg-transparent px-1 text-sm leading-5 outline-none transition-colors placeholder:text-muted-foreground/50 hover:border-border focus:border-ring focus:bg-background focus:ring-2 focus:ring-ring/30'
 
 export function UsersTab({ projectId }: { projectId: string }) {
   const rows = useProjectData((s) => s.rows.project_people)
@@ -64,13 +64,13 @@ export function UsersTab({ projectId }: { projectId: string }) {
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-[11px] uppercase text-muted-foreground">
               <th className="w-6" />
-              <th className="px-2 py-1 font-medium">Username</th>
-              <th className="px-2 py-1 font-medium">Name</th>
-              <th className="px-2 py-1 font-medium">Password</th>
-              <th className="px-2 py-1 font-medium">Position</th>
-              <th className="px-2 py-1 font-medium">Notes</th>
+              <th className="px-2 py-0.5 font-medium">Username</th>
+              <th className="px-2 py-0.5 font-medium">Name</th>
+              <th className="px-2 py-0.5 font-medium">Password</th>
+              <th className="px-2 py-0.5 font-medium">Position</th>
+              <th className="px-2 py-0.5 font-medium">Notes</th>
               {columns.map((c) => (
-                <th key={c.id} className="group/col px-2 py-1 font-medium">
+                <th key={c.id} className="group/col px-2 py-0.5 font-medium">
                   <span className="flex items-center gap-1">
                     {c.label}
                     <button
@@ -172,12 +172,12 @@ function UserRow({
         onBlurCapture={onBlurCapture}
         className="border-b border-border last:border-0 hover:bg-muted/30"
       >
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <IconButton onClick={toggle}>
             <ChevronRight className={'size-3.5 transition-transform ' + (open ? 'rotate-90' : '')} />
           </IconButton>
         </td>
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <input
             value={draft.username}
             placeholder="username"
@@ -185,7 +185,7 @@ function UserRow({
             className={cellInput}
           />
         </td>
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <input
             value={draft.name}
             placeholder="name"
@@ -193,7 +193,7 @@ function UserRow({
             className={cellInput}
           />
         </td>
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <input
             value={draft.password}
             placeholder="—"
@@ -201,7 +201,7 @@ function UserRow({
             className={cellInput}
           />
         </td>
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <input
             value={draft.position}
             placeholder="—"
@@ -209,7 +209,7 @@ function UserRow({
             className={cellInput}
           />
         </td>
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <input
             value={draft.notes}
             placeholder="—"
@@ -218,7 +218,7 @@ function UserRow({
           />
         </td>
         {columns.map((c) => (
-          <td key={c.id} className="px-1 py-1">
+          <td key={c.id} className="px-1 py-0.5">
             <input
               value={draft.extra?.[c.id] ?? ''}
               placeholder="—"
@@ -227,7 +227,7 @@ function UserRow({
             />
           </td>
         ))}
-        <td className="px-1 py-1">
+        <td className="px-1 py-0.5">
           <IconButton onClick={onDelete} className="hover:text-destructive">
             <Trash2 className="size-3.5" />
           </IconButton>

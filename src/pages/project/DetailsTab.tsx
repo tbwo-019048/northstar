@@ -75,13 +75,13 @@ export function DetailsTab({ projectId }: { projectId: string }) {
             <tbody>
               {items.map((d) => (
                 <tr key={d.id} className="group border-b border-border last:border-0">
-                  <td className="w-1/3 px-2 py-1 align-top">
+                  <td className="w-1/3 px-2 py-0.5 align-top">
                     <EditableText value={d.label} onSave={(v) => patch('details', d.id, { label: v })} className="text-muted-foreground" />
                   </td>
-                  <td className="px-2 py-1 align-top">
+                  <td className="px-2 py-0.5 align-top">
                     <EditableText value={d.value} placeholder="—" multiline onSave={(v) => patch('details', d.id, { value: v })} />
                   </td>
-                  <td className="w-8 px-1 py-1">
+                  <td className="w-8 px-1 py-0.5">
                     <IconButton onClick={() => del('details', d.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
                       <Trash2 className="size-3.5" />
                     </IconButton>
