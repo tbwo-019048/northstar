@@ -308,9 +308,9 @@ function TodoDetail({ todo, patch }: { todo: Todo; patch: PatchFn }) {
   const { add, del } = useProjectData()
   const email = useAuth((s) => s.user?.email ?? 'unknown')
   const comments = asTodoComments(commentRows).filter((c) => c.todo_id === todo.id)
-  const [desc, setDesc, status] = useDebouncedSave(todo.description, (v) =>
-    patch('todos', todo.id, { description: v }),
-  )
+  const [desc, setDesc, status] = useDebouncedSave(todo.description, async (v) => {
+    await patch('todos', todo.id, { description: v })
+  })
   const [cText, setCText] = useState('')
   const [aName, setAName] = useState('')
   const [aUrl, setAUrl] = useState('')

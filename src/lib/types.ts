@@ -14,6 +14,7 @@ export interface Project {
   summary: string
   hours_worked: number
   position: number
+  logo_url: string | null
   created_by: string | null
   created_at: string
   updated_at: string
@@ -27,9 +28,19 @@ export interface Person {
   password: string
   position: string
   notes: string
+  extra: Record<string, string>
   sort: number
   created_at: string
   updated_at: string
+}
+
+/** A project-defined extra column shown on the Users table. */
+export interface PersonColumn {
+  id: string
+  project_id: string
+  label: string
+  sort: number
+  created_at: string
 }
 
 export interface PersonComment {

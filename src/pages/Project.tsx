@@ -5,6 +5,7 @@ import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
 import { PROJECT_TYPES, type ProjectType } from '@/lib/types'
 import { EditableText, Select } from '@/components/ui-lite'
+import { ProjectLogo } from '@/components/ProjectLogo'
 import { UsersTab } from '@/pages/project/UsersTab'
 import { TodoTab } from '@/pages/project/TodoTab'
 import { FeaturesTab } from '@/pages/project/FeaturesTab'
@@ -65,6 +66,14 @@ export function Project() {
         >
           <ChevronLeft className="size-4" />
         </Link>
+        {project && (
+          <ProjectLogo
+            project={project}
+            size="sm"
+            editable
+            onChange={(url) => update(project.id, { logo_url: url })}
+          />
+        )}
         <div className="min-w-0 flex-1">
           {project && (
             <EditableText

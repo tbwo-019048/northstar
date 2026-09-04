@@ -4,6 +4,7 @@ import type {
   Detail,
   Feature,
   Person,
+  PersonColumn,
   PersonComment,
   Pipeline,
   PipelineItem,
@@ -17,6 +18,7 @@ type Row = { id: string; [k: string]: unknown }
 export type TableName =
   | 'project_people'
   | 'person_comments'
+  | 'person_columns'
   | 'todos'
   | 'todo_comments'
   | 'features'
@@ -27,6 +29,7 @@ export type TableName =
 
 const PROJECT_TABLES: TableName[] = [
   'project_people',
+  'person_columns',
   'todos',
   'features',
   'details',
@@ -41,7 +44,11 @@ interface ProjectDataState {
   load: (projectId: string) => Promise<void>
   reset: () => void
   add: <T extends Row>(table: TableName, values: Record<string, unknown>) => Promise<T | null>
-  patch: (table: TableName, id: string, values: Record<string, unknown>) => Promise<void>
+  patch: (
+    table: TableName,
+    id: string,
+    values: Record<string, unknown>,
+  ) => Promise<{ error: string | null }>
   del: (table: TableName, id: string) => Promise<void>
   reorder: (table: TableName, ordered: { id: string }[]) => Promise<void>
   subscribe: (projectId: string) => () => void
@@ -50,6 +57,7 @@ interface ProjectDataState {
 const empty = (): Record<TableName, Row[]> => ({
   project_people: [],
   person_comments: [],
+  person_columns: [],
   todos: [],
   todo_comments: [],
   features: [],
@@ -115,6 +123,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
   },
 
   patch: async (table, id, values) => {
+    const previous = get().rows[table]
     set((s) => ({
       rows: {
         ...s.rows,
@@ -122,7 +131,12 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       },
     }))
     const { error } = await supabase.from(table).update(values).eq('id', id)
-    if (error) console.error('[NorthStar] patch failed', table, error)
+    if (error) {
+      console.error('[NorthStar] patch failed', table, error)
+      set((s) => ({ rows: { ...s.rows, [table]: previous } })) // roll back
+      return { error: error.message }
+    }
+    return { error: null }
   },
 
   del: async (table, id) => {
@@ -158,6 +172,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     const ALL: TableName[] = [
       'project_people',
       'person_comments',
+      'person_columns',
       'todos',
       'todo_comments',
       'features',
@@ -180,6 +195,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
 // Typed selectors ----------------------------------------------------------
 export const asPeople = (r: Row[]) => r as unknown as Person[]
 export const asPersonComments = (r: Row[]) => r as unknown as PersonComment[]
+export const asPersonColumns = (r: Row[]) => r as unknown as PersonColumn[]
 export const asTodos = (r: Row[]) => r as unknown as Todo[]
 export const asTodoComments = (r: Row[]) => r as unknown as TodoComment[]
 export const asFeatures = (r: Row[]) => r as unknown as Feature[]

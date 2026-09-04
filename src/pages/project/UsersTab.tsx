@@ -1,21 +1,41 @@
-import { Fragment, useState } from 'react'
-import { ChevronRight, MessageSquare, Plus, Trash2 } from 'lucide-react'
-import { useProjectData, asPeople, asPersonComments } from '@/store/useProjectData'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { ChevronRight, MessageSquare, Plus, Trash2, X } from 'lucide-react'
+import {
+  useProjectData,
+  asPeople,
+  asPersonColumns,
+  asPersonComments,
+} from '@/store/useProjectData'
 import { useAuth } from '@/store/useAuth'
-import { EditableText, IconButton, Input } from '@/components/ui-lite'
+import type { Person } from '@/lib/types'
+import { IconButton, Input } from '@/components/ui-lite'
+
+const cellInput =
+  'h-6 w-full rounded border border-transparent bg-transparent px-1 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 hover:border-border focus:border-ring focus:bg-background focus:ring-2 focus:ring-ring/30'
 
 export function UsersTab({ projectId }: { projectId: string }) {
   const rows = useProjectData((s) => s.rows.project_people)
+  const columnRows = useProjectData((s) => s.rows.person_columns)
   const commentRows = useProjectData((s) => s.rows.person_comments)
-  const { add, patch, del } = useProjectData()
-  const people = asPeople(rows)
+  const { add, del } = useProjectData()
+  const people = asPeople(rows).slice().sort((a, b) => a.sort - b.sort)
+  const columns = asPersonColumns(columnRows).slice().sort((a, b) => a.sort - b.sort)
   const comments = asPersonComments(commentRows)
   const [open, setOpen] = useState<string | null>(null)
 
   const addPerson = () =>
     add('project_people', { project_id: projectId, name: 'New person', sort: people.length })
 
-  const cell = 'px-2 py-1 align-top'
+  const addColumn = () => {
+    const label = prompt('New column name')?.trim()
+    if (!label) return
+    add('person_columns', { project_id: projectId, label, sort: columns.length })
+  }
+
+  const removeColumn = (id: string) => {
+    if (!confirm('Remove this column? Its values will be lost.')) return
+    del('person_columns', id)
+  }
 
   return (
     <div className="space-y-2">
@@ -30,6 +50,13 @@ export function UsersTab({ projectId }: { projectId: string }) {
         >
           <Plus className="size-3" /> Add
         </button>
+        <button
+          type="button"
+          onClick={addColumn}
+          className="inline-flex h-6 items-center gap-1 rounded-md border border-dashed border-border px-1.5 text-xs text-muted-foreground hover:bg-muted"
+        >
+          <Plus className="size-3" /> Column
+        </button>
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
@@ -42,58 +69,38 @@ export function UsersTab({ projectId }: { projectId: string }) {
               <th className="px-2 py-1 font-medium">Password</th>
               <th className="px-2 py-1 font-medium">Position</th>
               <th className="px-2 py-1 font-medium">Notes</th>
+              {columns.map((c) => (
+                <th key={c.id} className="group/col px-2 py-1 font-medium">
+                  <span className="flex items-center gap-1">
+                    {c.label}
+                    <button
+                      type="button"
+                      onClick={() => removeColumn(c.id)}
+                      className="opacity-0 hover:text-destructive group-hover/col:opacity-100"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                </th>
+              ))}
               <th className="w-8" />
             </tr>
           </thead>
           <tbody>
-            {people.map((p) => {
-              const mine = comments.filter((c) => c.person_id === p.id)
-              const isOpen = open === p.id
-              return (
-                <Fragment key={p.id}>
-                  <tr className="border-b border-border last:border-0 hover:bg-muted/30">
-                    <td className="px-1 py-1">
-                      <IconButton onClick={() => setOpen(isOpen ? null : p.id)}>
-                        <ChevronRight
-                          className={'size-3.5 transition-transform ' + (isOpen ? 'rotate-90' : '')}
-                        />
-                      </IconButton>
-                    </td>
-                    <td className={cell}>
-                      <EditableText value={p.username} placeholder="username" onSave={(v) => patch('project_people', p.id, { username: v })} />
-                    </td>
-                    <td className={cell}>
-                      <EditableText value={p.name} placeholder="name" onSave={(v) => patch('project_people', p.id, { name: v })} />
-                    </td>
-                    <td className={cell}>
-                      <EditableText value={p.password} placeholder="—" onSave={(v) => patch('project_people', p.id, { password: v })} />
-                    </td>
-                    <td className={cell}>
-                      <EditableText value={p.position} placeholder="—" onSave={(v) => patch('project_people', p.id, { position: v })} />
-                    </td>
-                    <td className={cell}>
-                      <EditableText value={p.notes} placeholder="—" onSave={(v) => patch('project_people', p.id, { notes: v })} />
-                    </td>
-                    <td className="px-1 py-1">
-                      <IconButton onClick={() => del('project_people', p.id)} className="hover:text-destructive">
-                        <Trash2 className="size-3.5" />
-                      </IconButton>
-                    </td>
-                  </tr>
-                  {isOpen && (
-                    <tr className="border-b border-border bg-muted/20">
-                      <td />
-                      <td colSpan={6} className="px-2 py-2">
-                        <PersonComments personId={p.id} comments={mine} />
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              )
-            })}
+            {people.map((p) => (
+              <UserRow
+                key={p.id}
+                person={p}
+                columns={columns}
+                open={open === p.id}
+                toggle={() => setOpen(open === p.id ? null : p.id)}
+                comments={comments.filter((c) => c.person_id === p.id)}
+                onDelete={() => del('project_people', p.id)}
+              />
+            ))}
             {people.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-2 py-6 text-center text-xs text-muted-foreground">
+                <td colSpan={7 + columns.length} className="px-2 py-6 text-center text-xs text-muted-foreground">
                   No users yet.
                 </td>
               </tr>
@@ -102,6 +109,139 @@ export function UsersTab({ projectId }: { projectId: string }) {
         </table>
       </div>
     </div>
+  )
+}
+
+function UserRow({
+  person,
+  columns,
+  open,
+  toggle,
+  comments,
+  onDelete,
+}: {
+  person: Person
+  columns: ReturnType<typeof asPersonColumns>
+  open: boolean
+  toggle: () => void
+  comments: ReturnType<typeof asPersonComments>
+  onDelete: () => void
+}) {
+  const { patch } = useProjectData()
+  const rowRef = useRef<HTMLTableRowElement>(null)
+  const pending = useRef<Record<string, unknown>>({})
+  const [draft, setDraft] = useState(person)
+
+  // Adopt remote changes (realtime / another device) as long as nothing here
+  // is mid-edit — never stomp on unsaved keystrokes.
+  useEffect(() => {
+    if (Object.keys(pending.current).length === 0) setDraft(person)
+  }, [person])
+
+  const setField = (field: keyof Person, value: string) => {
+    setDraft((d) => ({ ...d, [field]: value }))
+    pending.current[field] = value
+  }
+
+  const setExtra = (colId: string, value: string) => {
+    setDraft((d) => ({ ...d, extra: { ...d.extra, [colId]: value } }))
+    const prevExtra = (pending.current.extra as Record<string, string>) ?? draft.extra
+    pending.current.extra = { ...prevExtra, [colId]: value }
+  }
+
+  const commit = () => {
+    if (Object.keys(pending.current).length === 0) return
+    const changes = pending.current
+    pending.current = {}
+    void patch('project_people', person.id, changes)
+  }
+
+  // Commit only when focus truly leaves this row (not just moving between
+  // its own cells with Tab) — that's the "don't save until you click off of
+  // it" behaviour.
+  const onBlurCapture = (e: React.FocusEvent<HTMLTableRowElement>) => {
+    const next = e.relatedTarget as Node | null
+    if (next && rowRef.current?.contains(next)) return
+    commit()
+  }
+
+  return (
+    <Fragment>
+      <tr
+        ref={rowRef}
+        onBlurCapture={onBlurCapture}
+        className="border-b border-border last:border-0 hover:bg-muted/30"
+      >
+        <td className="px-1 py-1">
+          <IconButton onClick={toggle}>
+            <ChevronRight className={'size-3.5 transition-transform ' + (open ? 'rotate-90' : '')} />
+          </IconButton>
+        </td>
+        <td className="px-1 py-1">
+          <input
+            value={draft.username}
+            placeholder="username"
+            onChange={(e) => setField('username', e.target.value)}
+            className={cellInput}
+          />
+        </td>
+        <td className="px-1 py-1">
+          <input
+            value={draft.name}
+            placeholder="name"
+            onChange={(e) => setField('name', e.target.value)}
+            className={cellInput}
+          />
+        </td>
+        <td className="px-1 py-1">
+          <input
+            value={draft.password}
+            placeholder="—"
+            onChange={(e) => setField('password', e.target.value)}
+            className={cellInput}
+          />
+        </td>
+        <td className="px-1 py-1">
+          <input
+            value={draft.position}
+            placeholder="—"
+            onChange={(e) => setField('position', e.target.value)}
+            className={cellInput}
+          />
+        </td>
+        <td className="px-1 py-1">
+          <input
+            value={draft.notes}
+            placeholder="—"
+            onChange={(e) => setField('notes', e.target.value)}
+            className={cellInput}
+          />
+        </td>
+        {columns.map((c) => (
+          <td key={c.id} className="px-1 py-1">
+            <input
+              value={draft.extra?.[c.id] ?? ''}
+              placeholder="—"
+              onChange={(e) => setExtra(c.id, e.target.value)}
+              className={cellInput}
+            />
+          </td>
+        ))}
+        <td className="px-1 py-1">
+          <IconButton onClick={onDelete} className="hover:text-destructive">
+            <Trash2 className="size-3.5" />
+          </IconButton>
+        </td>
+      </tr>
+      {open && (
+        <tr className="border-b border-border bg-muted/20">
+          <td />
+          <td colSpan={6 + columns.length} className="px-2 py-2">
+            <PersonComments personId={person.id} comments={comments} />
+          </td>
+        </tr>
+      )}
+    </Fragment>
   )
 }
 

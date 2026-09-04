@@ -23,8 +23,10 @@ per-project tabs: **Users, To-Do, Features, Details, Requests, Pipeline, Analysi
 ## 2. Create the database
 
 Open the Supabase **SQL editor** and run [`supabase/schema.sql`](supabase/schema.sql). It creates
-all tables, enums, a shared-workspace RLS policy (any authenticated user has full access) and adds
-every table to the `supabase_realtime` publication.
+all tables, enums, a shared-workspace RLS policy (any authenticated user has full access), adds
+every table to the `supabase_realtime` publication, and creates the public `project-logos` Storage
+bucket. It's idempotent — safe to re-run any time you pull an update that changes the schema (e.g.
+new project types, new columns).
 
 ## 3. Create a login
 
@@ -59,3 +61,13 @@ in the Vercel project settings, then deploy. Set the same values for Preview and
   into the Features list and archives the pipeline. Past pipelines stay viewable via the dropdown.
 - **VeloBits** components are vendored under `src/components/ui/velobits/`; tokens come from
   `@velobitsio/tokens/theme.css` (imported in `src/index.css`). Theme toggle sets `.dark` on `<html>`.
+- **Users table** rows are edited in place: local per-row state buffers every field so nothing is
+  written until focus actually leaves the row (tabbing between its own cells does not save early).
+  Projects can add custom columns (stored in `person_columns`, values in `project_people.extra`).
+- **Project logos** upload to the public `project-logos` Storage bucket (via `ProjectLogo`), shown
+  in the project header, the table view and the grid view.
+- **Overview views** — table / grouped-by-type / compact grid, toggled top-right (remembered in
+  `localStorage`). Clicking anywhere in a row/tile opens the project. CSV export/import round-trips
+  name, type, summary, hours worked and logo URL — import matches existing projects by name.
+- **Pipelines** — pressing Enter inside a bullet commits it and inserts a new one right after,
+  focused, so you can keep typing points without touching the mouse.

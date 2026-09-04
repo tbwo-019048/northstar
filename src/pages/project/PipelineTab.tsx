@@ -29,6 +29,7 @@ export function PipelineTab({ projectId }: { projectId: string }) {
   const active = pipelines.filter((p) => p.status === 'active')
   const archived = pipelines.filter((p) => p.status !== 'active')
   const [selected, setSelected] = useState<string | null>(null)
+  const [focusId, setFocusId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!selected || !pipelines.some((p) => p.id === selected)) {
@@ -54,9 +55,31 @@ export function PipelineTab({ projectId }: { projectId: string }) {
     if (p) setSelected((p as { id: string }).id)
   }
 
-  const addItem = () =>
-    current &&
-    add('pipeline_items', { pipeline_id: current.id, body: '', sort: currentItems.length })
+  const addItem = async () => {
+    if (!current) return
+    const created = (await add('pipeline_items', {
+      pipeline_id: current.id,
+      body: '',
+      sort: currentItems.length,
+    })) as PipelineItem | null
+    if (created) setFocusId(created.id)
+  }
+
+  /** Insert a fresh bullet right after `afterId` (Enter inside a point). */
+  const addItemAfter = async (afterId: string) => {
+    if (!current) return
+    const idx = currentItems.findIndex((i) => i.id === afterId)
+    const created = (await add('pipeline_items', {
+      pipeline_id: current.id,
+      body: '',
+      sort: currentItems.length,
+    })) as PipelineItem | null
+    if (!created) return
+    const withNew = [...currentItems]
+    withNew.splice(idx + 1, 0, created)
+    await reorder('pipeline_items', withNew)
+    setFocusId(created.id)
+  }
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active: a, over } = e
@@ -193,8 +216,10 @@ export function PipelineTab({ projectId }: { projectId: string }) {
                     key={it.id}
                     item={it}
                     editable={current.status === 'active'}
+                    autoFocus={focusId === it.id}
                     patch={(v) => patch('pipeline_items', it.id, v)}
                     remove={() => del('pipeline_items', it.id)}
+                    onEnter={() => addItemAfter(it.id)}
                   />
                 ))}
               </ul>
@@ -218,13 +243,17 @@ export function PipelineTab({ projectId }: { projectId: string }) {
 function PipelineRow({
   item,
   editable,
+  autoFocus,
   patch,
   remove,
+  onEnter,
 }: {
   item: PipelineItem
   editable: boolean
+  autoFocus?: boolean
   patch: (v: Record<string, unknown>) => void
   remove: () => void
+  onEnter: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -258,8 +287,15 @@ function PipelineRow({
       <input
         value={draft}
         disabled={!editable}
+        autoFocus={autoFocus}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => draft !== item.body && patch({ body: draft })}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return
+          e.preventDefault()
+          if (draft !== item.body) patch({ body: draft })
+          onEnter()
+        }}
         placeholder="Bullet point…"
         className={
           'h-7 flex-1 rounded border-0 bg-transparent px-1 text-sm outline-none focus:bg-muted/60 ' +

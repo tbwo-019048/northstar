@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Compass } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/store/useAuth'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { NorthStarIcon } from '@/components/NorthStarIcon'
 
 export function Landing() {
   const session = useAuth((s) => s.session)
@@ -11,7 +12,7 @@ export function Landing() {
     <div className="min-h-svh bg-background text-foreground">
       <header className="mx-auto flex h-12 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-2 font-semibold">
-          <Compass className="size-4 text-primary" />
+          <NorthStarIcon className="size-4 text-primary" />
           NorthStar
         </div>
         <ThemeToggle />

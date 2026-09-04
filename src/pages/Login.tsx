@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Compass, KeyRound, Lock } from 'lucide-react'
+import { KeyRound, Lock } from 'lucide-react'
 import { useAuth } from '@/store/useAuth'
 import { APP_ACCESS_TOKEN } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { NorthStarIcon } from '@/components/NorthStarIcon'
 
 export function Login() {
   const nav = useNavigate()
@@ -42,7 +43,7 @@ export function Login() {
       </div>
       <div className="w-full max-w-xs">
         <div className="mb-6 flex items-center gap-2 font-semibold">
-          <Compass className="size-4 text-primary" />
+          <NorthStarIcon className="size-4 text-primary" />
           NorthStar
         </div>
 

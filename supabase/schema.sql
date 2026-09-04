@@ -56,14 +56,16 @@ end $$ language plpgsql;
 create table if not exists projects (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
-  type        project_type not null default 'software',
+  type        project_type not null default 'website',
   summary     text default '',
   hours_worked numeric not null default 0,
   position    integer not null default 0,
+  logo_url    text,
   created_by  uuid references auth.users(id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+alter table projects add column if not exists logo_url text;
 drop trigger if exists trg_projects_updated on projects;
 create trigger trg_projects_updated before update on projects
   for each row execute function set_updated_at();
@@ -79,10 +81,12 @@ create table if not exists project_people (
   password    text not null default '',
   position    text not null default '',
   notes       text not null default '',
+  extra       jsonb not null default '{}'::jsonb, -- { [person_columns.id]: value }
   sort        integer not null default 0,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+alter table project_people add column if not exists extra jsonb not null default '{}'::jsonb;
 drop trigger if exists trg_people_updated on project_people;
 create trigger trg_people_updated before update on project_people
   for each row execute function set_updated_at();
@@ -92,6 +96,16 @@ create table if not exists person_comments (
   person_id   uuid not null references project_people(id) on delete cascade,
   author      text not null default '',
   body        text not null default '',
+  created_at  timestamptz not null default now()
+);
+
+-- Project-defined extra columns for the Users table (values live in
+-- project_people.extra, keyed by this row's id).
+create table if not exists person_columns (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  label       text not null default 'Column',
+  sort        integer not null default 0,
   created_at  timestamptz not null default now()
 );
 
@@ -199,7 +213,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'projects','project_people','person_comments','todos','todo_comments',
+    'projects','project_people','person_comments','person_columns','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items'
   ] loop
     execute format('alter table %I enable row level security', t);
@@ -216,7 +230,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'projects','project_people','person_comments','todos','todo_comments',
+    'projects','project_people','person_comments','person_columns','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items'
   ] loop
     begin
@@ -225,3 +239,20 @@ begin
     end;
   end loop;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Storage — public bucket for project logos
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('project-logos', 'project-logos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "project logos public read" on storage.objects;
+create policy "project logos public read" on storage.objects
+  for select using (bucket_id = 'project-logos');
+
+drop policy if exists "project logos auth write" on storage.objects;
+create policy "project logos auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'project-logos')
+  with check (bucket_id = 'project-logos');
