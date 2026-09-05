@@ -14,7 +14,11 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CheckCircle2, Download, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { GripVertical } from 'lucide-react'
+import { CheckCircleIcon } from '@/components/ui/check-circle'
+import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asPipelines, asPipelineItems } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
@@ -158,7 +162,7 @@ export function PipelineTab({ project }: { project: Project }) {
           onClick={newPipeline}
           className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-border px-2 text-xs hover:bg-muted"
         >
-          <Plus className="size-3" /> New pipeline
+          <PlusIcon size={12} /> New pipeline
         </button>
         {archived.length > 0 && (
           <Select
@@ -210,7 +214,7 @@ export function PipelineTab({ project }: { project: Project }) {
               onClick={exportTxt}
               className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
             >
-              <Download className="size-3" /> .txt
+              <ArrowDownTrayIcon size={12} /> .txt
             </button>
             {current.status === 'active' && (
               <>
@@ -219,14 +223,14 @@ export function PipelineTab({ project }: { project: Project }) {
                   onClick={addItem}
                   className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
                 >
-                  <Plus className="size-3" /> Point
+                  <PlusIcon size={12} /> Point
                 </button>
                 <button
                   type="button"
                   onClick={completePipeline}
                   className="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
                 >
-                  <CheckCircle2 className="size-3" /> Complete
+                  <CheckCircleIcon size={12} /> Complete
                 </button>
               </>
             )}
@@ -331,7 +335,7 @@ function PipelineRow({
       />
       {editable && (
         <IconButton onClick={remove} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
-          <Trash2 className="size-3.5" />
+          <TrashIcon size={14} />
         </IconButton>
       )}
     </li>

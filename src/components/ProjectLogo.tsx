@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { ImageUp, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { PhotoIcon } from '@/components/ui/photo'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/lib/types'
@@ -82,7 +83,7 @@ export function ProjectLogo({
           {busy ? (
             <Loader2 className="size-4 animate-spin text-white" />
           ) : (
-            <ImageUp className="size-4 text-white" />
+            <PhotoIcon size={16} className="text-white" />
           )}
         </span>
       </button>

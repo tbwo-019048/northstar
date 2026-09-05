@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
 import { useEmails } from '@/store/useEmails'
 import { EditableText, IconButton, SecretField } from '@/components/ui-lite'
 
@@ -64,7 +65,7 @@ export function Emails() {
           onClick={newGroup}
           className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-border px-2 text-xs text-muted-foreground hover:bg-muted"
         >
-          <Plus className="size-3" /> Group
+          <PlusIcon size={12} /> Group
         </button>
       </div>
 
@@ -83,14 +84,14 @@ export function Emails() {
               }
               className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
             >
-              <Plus className="size-3" /> Add
+              <PlusIcon size={12} /> Add
             </button>
             <button
               type="button"
               onClick={removeCurrentGroup}
               className="ml-auto inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"
             >
-              <Trash2 className="size-3" /> Delete group
+              <TrashIcon size={12} /> Delete group
             </button>
           </div>
 
@@ -141,7 +142,7 @@ export function Emails() {
                         onClick={() => removeAccount(a.id)}
                         className="opacity-0 group-hover:opacity-100 hover:text-destructive"
                       >
-                        <Trash2 className="size-3.5" />
+                        <TrashIcon size={14} />
                       </IconButton>
                     </td>
                   </tr>

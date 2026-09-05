@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, ExternalLink, ImageDown, Link2, Pencil, Plus, X } from 'lucide-react'
+import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
+import { ArrowRightIcon } from '@/components/ui/arrow-right'
+import { ArrowTopRightOnSquareIcon } from '@/components/ui/arrow-top-right-on-square'
+import { PhotoIcon } from '@/components/ui/photo'
+import { LinkIcon } from '@/components/ui/link'
+import { PencilIcon } from '@/components/ui/pencil'
+import { PlusIcon } from '@/components/ui/plus'
+import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asTodos, asFeatures, asRequests, asPeople, asPipelines } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { useClients } from '@/store/useClients'
@@ -114,7 +121,7 @@ export function SummaryTab({ project }: { project: Project }) {
             onClick={() => nav(`/app/project/${id}/todo`)}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            View all <ArrowRight className="size-3" />
+            View all <ArrowRightIcon size={12} />
           </button>
         </div>
         <div className="divide-y divide-border rounded-md border border-border">
@@ -186,7 +193,7 @@ function SiteLinkRow({
     return (
       <div className="space-y-1">
         <form onSubmit={save} className="flex items-center gap-1.5">
-          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+          <LinkIcon size={14} className="shrink-0 text-muted-foreground" />
           <Input
             autoFocus={editing}
             value={draft}
@@ -212,7 +219,7 @@ function SiteLinkRow({
         </form>
         {error && (
           <p className="flex items-center gap-1 text-xs text-destructive">
-            <AlertTriangle className="size-3 shrink-0" /> {error}
+            <ExclamationTriangleIcon size={12} className="shrink-0" /> {error}
           </p>
         )}
       </div>
@@ -222,12 +229,12 @@ function SiteLinkRow({
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-1.5 text-sm">
-        <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+        <LinkIcon size={14} className="shrink-0 text-muted-foreground" />
         <span className="text-muted-foreground">{label}:</span>
         <a href={value} target="_blank" rel="noreferrer" className="min-w-0 truncate text-link underline">
           {value}
         </a>
-        <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+        <ArrowTopRightOnSquareIcon size={12} className="shrink-0 text-muted-foreground" />
         <button
           type="button"
           onClick={() => {
@@ -237,7 +244,7 @@ function SiteLinkRow({
           }}
           className="ml-1 shrink-0 text-muted-foreground hover:text-foreground"
         >
-          <Pencil className="size-3" />
+          <PencilIcon size={12} />
         </button>
         <button
           type="button"
@@ -246,12 +253,12 @@ function SiteLinkRow({
           title="Use this site's favicon as the project logo"
           className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
         >
-          <ImageDown className="size-3" /> {faviconBusy ? 'Checking…' : 'Use as logo'}
+          <PhotoIcon size={12} /> {faviconBusy ? 'Checking…' : 'Use as logo'}
         </button>
       </div>
       {error && (
         <p className="flex items-center gap-1 text-xs text-destructive">
-          <AlertTriangle className="size-3 shrink-0" /> {error}
+          <ExclamationTriangleIcon size={12} className="shrink-0" /> {error}
         </p>
       )}
     </div>
@@ -282,7 +289,7 @@ function ClientsSection({ projectId }: { projectId: string }) {
           onClick={() => setPickerOpen(true)}
           className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
         >
-          <Plus className="size-3" /> Add
+          <PlusIcon size={12} /> Add
         </button>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -294,7 +301,7 @@ function ClientsSection({ projectId }: { projectId: string }) {
               onClick={() => unlinkFromProject(projectId, c.id)}
               className="opacity-0 hover:text-destructive group-hover/chip:opacity-100"
             >
-              <X className="size-3" />
+              <XMarkIcon size={12} />
             </button>
           </span>
         ))}

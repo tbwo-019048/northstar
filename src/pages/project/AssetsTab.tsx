@@ -1,5 +1,10 @@
 import { useRef, useState } from 'react'
-import { Download, ExternalLink, File, Link2, Plus, Trash2 } from 'lucide-react'
+import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
+import { ArrowTopRightOnSquareIcon } from '@/components/ui/arrow-top-right-on-square'
+import { DocumentIcon } from '@/components/ui/document'
+import { LinkIcon } from '@/components/ui/link'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asAssets } from '@/store/useProjectData'
 import { supabase } from '@/lib/supabase'
 import { Input, IconButton } from '@/components/ui-lite'
@@ -73,7 +78,7 @@ export function AssetsTab({ projectId }: { projectId: string }) {
           onClick={() => setAddingLink((v) => !v)}
           className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
         >
-          <Link2 className="size-3" /> Add link
+          <LinkIcon size={12} /> Add link
         </button>
         <button
           type="button"
@@ -81,7 +86,7 @@ export function AssetsTab({ projectId }: { projectId: string }) {
           onClick={() => fileRef.current?.click()}
           className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted disabled:opacity-50"
         >
-          <Plus className="size-3" /> {busy ? 'Uploading…' : 'Upload file'}
+          <PlusIcon size={12} /> {busy ? 'Uploading…' : 'Upload file'}
         </button>
         <input
           ref={fileRef}
@@ -123,9 +128,9 @@ export function AssetsTab({ projectId }: { projectId: string }) {
         {assets.map((a) => (
           <div key={a.id} className="group flex items-center gap-2 px-2 py-1.5 text-sm">
             {a.kind === 'link' ? (
-              <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+              <LinkIcon size={14} className="shrink-0 text-muted-foreground" />
             ) : (
-              <File className="size-3.5 shrink-0 text-muted-foreground" />
+              <DocumentIcon size={14} className="shrink-0 text-muted-foreground" />
             )}
             <a
               href={a.url}
@@ -140,15 +145,15 @@ export function AssetsTab({ projectId }: { projectId: string }) {
               <span className="shrink-0 text-[11px] text-muted-foreground">{formatSize(a.file_size)}</span>
             )}
             {a.kind === 'link' ? (
-              <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+              <ArrowTopRightOnSquareIcon size={12} className="shrink-0 text-muted-foreground" />
             ) : (
-              <Download className="size-3 shrink-0 text-muted-foreground" />
+              <ArrowDownTrayIcon size={12} className="shrink-0 text-muted-foreground" />
             )}
             <IconButton
               onClick={() => del('project_assets', a.id)}
               className="opacity-0 group-hover:opacity-100 hover:text-destructive"
             >
-              <Trash2 className="size-3.5" />
+              <TrashIcon size={14} />
             </IconButton>
           </div>
         ))}

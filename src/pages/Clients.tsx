@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus, Trash2, X } from 'lucide-react'
+import { ChevronRightIcon } from '@/components/ui/chevron-right'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
+import { XMarkIcon } from '@/components/ui/x-mark'
 import { useClients } from '@/store/useClients'
 import { useProjects } from '@/store/useProjects'
 import { EditableText, IconButton, Input, Textarea } from '@/components/ui-lite'
@@ -51,7 +54,7 @@ export function Clients() {
           onClick={() => setAdding((v) => !v)}
           className="ml-auto inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
         >
-          <Plus className="size-3.5" /> New
+          <PlusIcon size={14} /> New
         </button>
       </div>
 
@@ -81,7 +84,7 @@ export function Clients() {
             <div key={c.id}>
               <div className="flex items-center gap-2 px-2 py-1.5">
                 <IconButton onClick={() => setOpen(isOpen ? null : c.id)}>
-                  <ChevronRight className={'size-3.5 transition-transform ' + (isOpen ? 'rotate-90' : '')} />
+                  <ChevronRightIcon size={14} className={'transition-transform ' + (isOpen ? 'rotate-90' : '')} />
                 </IconButton>
                 <div className="min-w-0 flex-1">
                   <EditableText value={c.name} placeholder="Name" onSave={(v) => update(c.id, { name: v })} className="font-medium" />
@@ -95,7 +98,7 @@ export function Clients() {
                   }}
                   className="hover:text-destructive"
                 >
-                  <Trash2 className="size-3.5" />
+                  <TrashIcon size={14} />
                 </IconButton>
               </div>
               {isOpen && (
@@ -127,7 +130,7 @@ export function Clients() {
                         onClick={() => setPickerFor(c.id)}
                         className="inline-flex h-5 items-center gap-1 rounded px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
-                        <Plus className="size-3" /> Link
+                        <PlusIcon size={12} /> Link
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -144,7 +147,7 @@ export function Clients() {
                             onClick={() => unlinkFromProject(p.id, c.id)}
                             className="opacity-0 hover:text-destructive group-hover/chip:opacity-100"
                           >
-                            <X className="size-3" />
+                            <XMarkIcon size={12} />
                           </button>
                         </span>
                       ))}

@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { Check, LogOut, Save } from 'lucide-react'
 import { useAuth } from '@/store/useAuth'
 import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
@@ -8,6 +7,9 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
 import { Dock } from '@/components/Dock'
 import { Footer } from '@/components/Footer'
+import { CloudArrowDownIcon, type CloudArrowDownIconHandle } from '@/components/ui/cloud-arrow-down'
+import { CheckIcon, type CheckIconHandle } from '@/components/ui/check'
+import { ArrowRightStartOnRectangleIcon } from '@/components/ui/arrow-right-start-on-rectangle'
 
 /** Everything here already autosaves — every field write goes straight to
  * Supabase. This button gives an explicit, reassuring action anyway: it
@@ -16,13 +18,18 @@ import { Footer } from '@/components/Footer'
  * rather than being a no-op. */
 function SaveButton() {
   const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const cloudRef = useRef<CloudArrowDownIconHandle>(null)
+  const checkRef = useRef<CheckIconHandle>(null)
 
   const onClick = async () => {
     setState('saving')
+    cloudRef.current?.startAnimation()
     const projectId = useProjectData.getState().projectId
     if (projectId) await useProjectData.getState().load(projectId)
     else await useProjects.getState().load()
+    cloudRef.current?.stopAnimation()
     setState('saved')
+    checkRef.current?.startAnimation()
     setTimeout(() => setState('idle'), 1200)
   }
 
@@ -35,9 +42,9 @@ function SaveButton() {
       className="grid size-7 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
     >
       {state === 'saved' ? (
-        <Check className="size-4 text-primary" />
+        <CheckIcon ref={checkRef} size={16} className="text-primary" />
       ) : (
-        <Save className={'size-4' + (state === 'saving' ? ' animate-pulse' : '')} />
+        <CloudArrowDownIcon ref={cloudRef} size={16} />
       )}
     </button>
   )
@@ -82,7 +89,7 @@ export function AppLayout() {
           title="Log out"
           className="grid size-7 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          <LogOut className="size-4" />
+          <ArrowRightStartOnRectangleIcon size={16} />
         </button>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-20">

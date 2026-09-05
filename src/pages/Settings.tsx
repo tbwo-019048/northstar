@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, GitBranch, ShieldAlert } from 'lucide-react'
+import { GitBranch } from 'lucide-react'
+import { ChevronLeftIcon } from '@/components/ui/chevron-left'
+import { ShieldExclamationIcon } from '@/components/ui/shield-exclamation'
 import { useAuth } from '@/store/useAuth'
 import { useSettings } from '@/store/useSettings'
 import { Input } from '@/components/ui-lite'
@@ -44,7 +46,7 @@ export function Settings() {
           to="/app"
           className="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeftIcon size={16} />
         </Link>
         <h1 className="text-sm font-semibold">Settings</h1>
       </div>
@@ -60,7 +62,7 @@ export function Settings() {
         </p>
 
         <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
-          <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
+          <ShieldExclamationIcon size={14} className="mt-0.5 shrink-0" />
           <span>
             NorthStar is a shared workspace — this token is stored in the database and readable by
             anyone signed in to this app, not just you. Don't use a token with more access than you'd

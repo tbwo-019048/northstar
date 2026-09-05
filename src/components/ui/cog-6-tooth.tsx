@@ -52,7 +52,7 @@ const Cog6ToothIcon = forwardRef<Cog6ToothIconHandle, Cog6ToothIconProps>(
 
     return (
       <div
-        className={cn(className)}
+        className={cn('flex items-center justify-center', className)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         {...props}

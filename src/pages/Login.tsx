@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { KeyRound, Lock } from 'lucide-react'
+import { KeyIcon } from '@/components/ui/key'
+import { LockClosedIcon } from '@/components/ui/lock-closed'
 import { useAuth } from '@/store/useAuth'
 import { APP_ACCESS_TOKEN } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -57,7 +58,7 @@ export function Login() {
         {needGate ? (
           <form onSubmit={onGate} className="space-y-2.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <KeyRound className="size-3.5" /> Access token
+              <KeyIcon size={14} /> Access token
             </label>
             <input
               autoFocus
@@ -75,7 +76,7 @@ export function Login() {
         ) : (
           <form onSubmit={onLogin} className="space-y-2.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Lock className="size-3.5" /> Sign in
+              <LockClosedIcon size={14} /> Sign in
             </label>
             <input
               autoFocus

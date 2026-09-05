@@ -16,7 +16,12 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDroppable } from '@dnd-kit/core'
-import { ChevronRight, GripVertical, Paperclip, Plus, Trash2, X } from 'lucide-react'
+import { GripVertical } from 'lucide-react'
+import { ChevronRightIcon } from '@/components/ui/chevron-right'
+import { PaperClipIcon } from '@/components/ui/paper-clip'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
+import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asTodos, asTodoComments } from '@/store/useProjectData'
 import { useAuth } from '@/store/useAuth'
 import { PRIORITIES, TODO_TYPES, type Todo, type TodoStatus } from '@/lib/types'
@@ -158,7 +163,7 @@ function TodoList({
             onClick={onAdd}
             className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
           >
-            <Plus className="size-3" /> Add
+            <PlusIcon size={12} /> Add
           </button>
         )}
       </div>
@@ -231,7 +236,7 @@ function TodoRow({
         </td>
         <td className="w-6 px-0">
           <IconButton onClick={toggle}>
-            <ChevronRight className={'size-3.5 transition-transform ' + (open ? 'rotate-90' : '')} />
+            <ChevronRightIcon size={14} className={'transition-transform ' + (open ? 'rotate-90' : '')} />
           </IconButton>
         </td>
         <td className="w-24 px-1 py-0.5">
@@ -277,7 +282,7 @@ function TodoRow({
           <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
             {todo.attachments.length > 0 && (
               <>
-                <Paperclip className="size-3" />
+                <PaperClipIcon size={12} />
                 {todo.attachments.length}
               </>
             )}
@@ -288,7 +293,7 @@ function TodoRow({
             onClick={() => del('todos', todo.id)}
             className="hover:text-destructive"
           >
-            <Trash2 className="size-3.5" />
+            <TrashIcon size={14} />
           </IconButton>
         </td>
       </tr>
@@ -344,7 +349,7 @@ function TodoDetail({ todo, patch }: { todo: Todo; patch: PatchFn }) {
           </span>
           {todo.attachments.map((a, i) => (
             <div key={i} className="flex items-center gap-1.5 text-xs">
-              <Paperclip className="size-3 text-muted-foreground" />
+              <PaperClipIcon size={12} className="text-muted-foreground" />
               <a href={a.url} target="_blank" rel="noreferrer" className="flex-1 truncate text-link underline">
                 {a.name}
               </a>
@@ -356,7 +361,7 @@ function TodoDetail({ todo, patch }: { todo: Todo; patch: PatchFn }) {
                 }
                 className="hover:text-destructive"
               >
-                <X className="size-3" />
+                <XMarkIcon size={12} />
               </IconButton>
             </div>
           ))}
@@ -383,7 +388,7 @@ function TodoDetail({ todo, patch }: { todo: Todo; patch: PatchFn }) {
                 onClick={() => del('todo_comments', c.id)}
                 className="opacity-0 group-hover:opacity-100 hover:text-destructive"
               >
-                <Trash2 className="size-3" />
+                <TrashIcon size={12} />
               </IconButton>
             </div>
           ))}

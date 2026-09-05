@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  AlertTriangle,
-  Download,
-  LayoutGrid,
-  List,
-  Plus,
-  Rows3,
-  Search,
-  Upload,
-  X,
-} from 'lucide-react'
+import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
+import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
+import { Squares2X2Icon } from '@/components/ui/squares-2x2'
+import { ListBulletIcon } from '@/components/ui/list-bullet'
+import { PlusIcon } from '@/components/ui/plus'
+import { Bars3Icon } from '@/components/ui/bars-3'
+import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
+import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
+import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjects } from '@/store/useProjects'
 import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
@@ -155,10 +153,10 @@ export function Overview() {
     <div className="space-y-3">
       {error && (
         <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <ExclamationTriangleIcon size={14} className="mt-0.5 shrink-0" />
           <span className="flex-1">{error}</span>
           <IconButton onClick={clearError} className="hover:text-destructive">
-            <X className="size-3.5" />
+            <XMarkIcon size={14} />
           </IconButton>
         </div>
       )}
@@ -166,7 +164,7 @@ export function Overview() {
         <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs text-muted-foreground">
           <span className="flex-1">{importMsg}</span>
           <IconButton onClick={() => setImportMsg(null)}>
-            <X className="size-3.5" />
+            <XMarkIcon size={14} />
           </IconButton>
         </div>
       )}
@@ -176,7 +174,7 @@ export function Overview() {
         <span className="text-xs text-muted-foreground">{projects.length}</span>
         <div className="flex-1" />
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <MagnifyingGlassIcon size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -199,33 +197,33 @@ export function Overview() {
             onClick={() => setView('table')}
             className={view === 'table' ? 'bg-muted text-foreground' : ''}
           >
-            <List className="size-3.5" />
+            <ListBulletIcon size={14} />
           </IconButton>
           <IconButton
             title="Grouped"
             onClick={() => setView('byType')}
             className={view === 'byType' ? 'bg-muted text-foreground' : ''}
           >
-            <Rows3 className="size-3.5" />
+            <Bars3Icon size={14} />
           </IconButton>
           <IconButton
             title="Grid"
             onClick={() => setView('grid')}
             className={view === 'grid' ? 'bg-muted text-foreground' : ''}
           >
-            <LayoutGrid className="size-3.5" />
+            <Squares2X2Icon size={14} />
           </IconButton>
         </div>
 
         <IconButton title="Export CSV" onClick={exportCsv} className="border border-border">
-          <Download className="size-3.5" />
+          <ArrowDownTrayIcon size={14} />
         </IconButton>
         <IconButton
           title="Import CSV"
           onClick={() => fileRef.current?.click()}
           className="border border-border"
         >
-          <Upload className="size-3.5" />
+          <ArrowUpTrayIcon size={14} />
         </IconButton>
         <input
           ref={fileRef}
@@ -244,7 +242,7 @@ export function Overview() {
           onClick={() => setAdding((v) => !v)}
           className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
         >
-          <Plus className="size-3.5" /> New
+          <PlusIcon size={14} /> New
         </button>
       </div>
 
@@ -320,10 +318,12 @@ export function Overview() {
               className="flex flex-col items-center gap-1.5 rounded-md p-2 text-center hover:bg-muted/60"
             >
               <ProjectLogo project={p} size="lg" />
-              {/* Fixed height (not min-height) — reserves the same room in
-                  every tile regardless of how many lines the name wraps to,
-                  so the state chip below lines up across the whole grid. */}
-              <span className="flex h-8 w-full items-start justify-center break-words text-xs font-medium leading-4">
+              {/* Fixed height + line-clamp (not min-height, and not just an
+                  overflow-visible box) — reserves the exact same room in
+                  every tile no matter how many lines the name wraps to, and
+                  clips a 3rd+ line with an ellipsis instead of letting it
+                  spill down into the state chip below. */}
+              <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
                 {p.name}
               </span>
               <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>

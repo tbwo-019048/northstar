@@ -68,7 +68,7 @@ const HomeIcon = forwardRef<HomeIconHandle, HomeIconProps>(
 
     return (
       <div
-        className={cn(className)}
+        className={cn('flex items-center justify-center', className)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         {...props}

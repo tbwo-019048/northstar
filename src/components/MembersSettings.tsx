@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Crown, Plus, Trash2 } from 'lucide-react'
+import { Crown } from 'lucide-react'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
 import { useAuth } from '@/store/useAuth'
 import { useMembers } from '@/store/useMembers'
 import { Input, Select } from '@/components/ui-lite'
@@ -102,7 +104,7 @@ export function MembersSettings() {
                       onClick={() => removeMember(m.id)}
                       className="grid size-6 place-items-center rounded text-muted-foreground hover:text-destructive"
                     >
-                      <Trash2 className="size-3.5" />
+                      <TrashIcon size={14} />
                     </button>
                   )}
                 </td>
@@ -142,7 +144,7 @@ export function MembersSettings() {
             ))}
           </Select>
           <button className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-            <Plus className="size-3" /> Add member
+            <PlusIcon size={12} /> Add member
           </button>
         </form>
       )}
@@ -188,7 +190,7 @@ export function MembersSettings() {
               className="max-w-[10rem]"
             />
             <button className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted">
-              <Plus className="size-3" /> Add group
+              <PlusIcon size={12} /> Add group
             </button>
           </form>
         )}

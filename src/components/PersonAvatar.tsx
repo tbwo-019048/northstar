@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
-import { ImageUp, Loader2, User as UserIcon } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { PhotoIcon } from '@/components/ui/photo'
+import { UserIcon } from '@/components/ui/user'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +29,7 @@ export function PersonAvatar({
   const [error, setError] = useState<string | null>(null)
 
   const dims = size === 'lg' ? 'size-16' : size === 'sm' ? 'size-6' : 'size-10'
+  const glyphPx = size === 'lg' ? 32 : size === 'sm' ? 12 : 20
 
   const upload = async (file: File) => {
     setBusy(true)
@@ -55,7 +58,7 @@ export function PersonAvatar({
           {name.slice(0, 2)}
         </span>
       ) : (
-        <UserIcon className="size-1/2" />
+        <UserIcon size={glyphPx} />
       )}
     </div>
   )
@@ -75,7 +78,7 @@ export function PersonAvatar({
           {busy ? (
             <Loader2 className="size-4 animate-spin text-white" />
           ) : (
-            <ImageUp className="size-4 text-white" />
+            <PhotoIcon size={16} className="text-white" />
           )}
         </span>
       </button>

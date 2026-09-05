@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRightIcon } from '@/components/ui/arrow-right'
 import { useAuth } from '@/store/useAuth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
@@ -51,7 +51,7 @@ export function Landing() {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             {session && gateOpen ? 'OPEN WORKSPACE' : 'Login'}
-            <ArrowRight className="size-4" />
+            <ArrowRightIcon size={16} />
           </Link>
           <p className="text-xs text-muted-foreground">
             This is a Halcyon Aegis Product. To find out more reach out to{' '}

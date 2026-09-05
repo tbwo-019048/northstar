@@ -1,4 +1,5 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asFeatures } from '@/store/useProjectData'
 import { EditableText, IconButton, Chip } from '@/components/ui-lite'
 
@@ -18,7 +19,7 @@ export function FeaturesTab({ projectId }: { projectId: string }) {
           onClick={() => add('features', { project_id: projectId, title: 'New feature', sort: features.length })}
           className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
         >
-          <Plus className="size-3" /> Add
+          <PlusIcon size={12} /> Add
         </button>
       </div>
 
@@ -43,7 +44,7 @@ export function FeaturesTab({ projectId }: { projectId: string }) {
             </div>
             {f.source === 'pipeline' && <Chip>from pipeline</Chip>}
             <IconButton onClick={() => del('features', f.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
-              <Trash2 className="size-3.5" />
+              <TrashIcon size={14} />
             </IconButton>
           </div>
         ))}

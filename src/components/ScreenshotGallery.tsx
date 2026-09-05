@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ImagePlus, Star, Trash2 } from 'lucide-react'
+import { PlusIcon } from '@/components/ui/plus'
+import { StarIcon } from '@/components/ui/star'
+import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asScreenshots } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { supabase } from '@/lib/supabase'
@@ -167,7 +169,7 @@ export function ScreenshotGallery({ project }: { project: Project }) {
           disabled={busy}
           className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted disabled:opacity-50"
         >
-          <ImagePlus className="size-3" /> Add screenshot
+          <PlusIcon size={12} /> Add screenshot
         </button>
         <input
           ref={fileRef}
@@ -202,11 +204,10 @@ export function ScreenshotGallery({ project }: { project: Project }) {
               title={project.default_screenshot === active.key ? 'Default screenshot' : 'Set as default'}
               className="border border-border bg-background/90 hover:bg-background"
             >
-              <Star
-                className={
-                  'size-3.5 ' +
-                  (project.default_screenshot === active.key ? 'fill-primary text-primary' : '')
-                }
+              <StarIcon
+                size={14}
+                filled={project.default_screenshot === active.key}
+                className={project.default_screenshot === active.key ? 'text-primary' : ''}
               />
             </IconButton>
             {active.deletable && (
@@ -215,7 +216,7 @@ export function ScreenshotGallery({ project }: { project: Project }) {
                 title="Remove"
                 className="border border-border bg-background/90 hover:bg-background hover:text-destructive"
               >
-                <Trash2 className="size-3.5" />
+                <TrashIcon size={14} />
               </IconButton>
             )}
           </div>
@@ -243,7 +244,7 @@ export function ScreenshotGallery({ project }: { project: Project }) {
           disabled={busy}
           className="inline-flex h-10 shrink-0 items-center gap-1 rounded-md border border-dashed border-border px-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
         >
-          <ImagePlus className="size-3" /> Add
+          <PlusIcon size={12} /> Add
         </button>
         <input
           ref={fileRef}

@@ -1,5 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Download, Plus, Trash2, Upload } from 'lucide-react'
+import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
+import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
+import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
 import { useProjects } from '@/store/useProjects'
 import {
   useProjectData,
@@ -86,7 +90,7 @@ export function ProjectSettingsTab({ project }: { project: Project }) {
                   onClick={() => removePosition(label)}
                   className="grid size-6 place-items-center rounded text-muted-foreground hover:text-destructive"
                 >
-                  <Trash2 className="size-3.5" />
+                  <TrashIcon size={14} />
                 </button>
               </div>
             )
@@ -114,7 +118,7 @@ export function ProjectSettingsTab({ project }: { project: Project }) {
             className="max-w-xs"
           />
           <button className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted">
-            <Plus className="size-3" /> Add
+            <PlusIcon size={12} /> Add
           </button>
         </form>
       </section>
@@ -314,14 +318,14 @@ function ImportExportSection({ project }: { project: Project }) {
           onClick={downloadExcel}
           className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted"
         >
-          <Download className="size-3" /> Download Excel
+          <ArrowDownTrayIcon size={12} /> Download Excel
         </button>
         <button
           type="button"
           onClick={downloadUsersCsv}
           className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted"
         >
-          <Download className="size-3" /> Download Users CSV
+          <ArrowDownTrayIcon size={12} /> Download Users CSV
         </button>
         <button
           type="button"
@@ -329,7 +333,7 @@ function ImportExportSection({ project }: { project: Project }) {
           onClick={() => fileRef.current?.click()}
           className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted disabled:opacity-50"
         >
-          <Upload className="size-3" /> {busy ? 'Importing…' : 'Upload (.xlsx or .csv)'}
+          <ArrowUpTrayIcon size={12} /> {busy ? 'Importing…' : 'Upload (.xlsx or .csv)'}
         </button>
         <input
           ref={fileRef}
@@ -346,7 +350,7 @@ function ImportExportSection({ project }: { project: Project }) {
       {result && <p className="text-xs text-primary">{result}</p>}
       {error && (
         <p className="flex items-center gap-1 text-xs text-destructive">
-          <AlertTriangle className="size-3 shrink-0" /> {error}
+          <ExclamationTriangleIcon size={12} className="shrink-0" /> {error}
         </p>
       )}
     </section>

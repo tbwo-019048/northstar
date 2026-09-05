@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ExternalLink, GitBranch, Pencil } from 'lucide-react'
+import { GitBranch } from 'lucide-react'
+import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
+import { ArrowTopRightOnSquareIcon } from '@/components/ui/arrow-top-right-on-square'
+import { PencilIcon } from '@/components/ui/pencil'
 import { useProjects } from '@/store/useProjects'
 import { useSettings, getGithubToken } from '@/store/useSettings'
 import {
@@ -107,7 +110,7 @@ export function GitTab({ projectId }: { projectId: string }) {
   if (!githubTokenSet) {
     return (
       <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+        <ExclamationTriangleIcon size={14} className="mt-0.5 shrink-0" />
         <span>
           No GitHub token configured. Add one in{' '}
           <Link to="/app/settings" className="text-link underline">
@@ -134,7 +137,7 @@ export function GitTab({ projectId }: { projectId: string }) {
               rel="noreferrer"
               className="text-muted-foreground hover:text-foreground"
             >
-              <ExternalLink className="size-3" />
+              <ArrowTopRightOnSquareIcon size={12} />
             </a>
             <button
               type="button"
@@ -144,7 +147,7 @@ export function GitTab({ projectId }: { projectId: string }) {
               }}
               className="text-muted-foreground hover:text-foreground"
             >
-              <Pencil className="size-3" />
+              <PencilIcon size={12} />
             </button>
           </>
         )}
@@ -176,7 +179,7 @@ export function GitTab({ projectId }: { projectId: string }) {
 
       {error && (
         <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <ExclamationTriangleIcon size={14} className="mt-0.5 shrink-0" />
           {error}
         </div>
       )}

@@ -1,4 +1,5 @@
-import { Moon, Sun } from 'lucide-react'
+import { MoonIcon } from '@/components/ui/moon'
+import { SunIcon } from '@/components/ui/sun'
 import { useTheme } from '@/store/useTheme'
 
 export function ThemeToggle() {
@@ -11,7 +12,7 @@ export function ThemeToggle() {
       title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
       className="grid size-7 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
-      {theme === 'dark' ? <Moon className="size-4" /> : <Sun className="size-4" />}
+      {theme === 'dark' ? <MoonIcon size={16} /> : <SunIcon size={16} />}
     </button>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeftIcon } from '@/components/ui/chevron-left'
 import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
 import { PROJECT_TYPES, type ProjectType } from '@/lib/types'
@@ -72,7 +72,7 @@ export function Project() {
           to="/app"
           className="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeftIcon size={16} />
         </Link>
         {project && (
           <ProjectLogo

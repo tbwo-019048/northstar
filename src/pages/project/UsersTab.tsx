@@ -1,5 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { ChevronRight, LayoutGrid, List, MessageSquare, Plus, Trash2, X } from 'lucide-react'
+import { ChevronRightIcon } from '@/components/ui/chevron-right'
+import { Squares2X2Icon } from '@/components/ui/squares-2x2'
+import { ListBulletIcon } from '@/components/ui/list-bullet'
+import { ChatBubbleLeftIcon } from '@/components/ui/chat-bubble-left'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
+import { XMarkIcon } from '@/components/ui/x-mark'
 import {
   useProjectData,
   asPeople,
@@ -78,7 +84,7 @@ export function UsersTab({ project }: { project: Project }) {
           onClick={addPerson}
           className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
         >
-          <Plus className="size-3" /> Add
+          <PlusIcon size={12} /> Add
         </button>
         <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
           <IconButton
@@ -86,14 +92,14 @@ export function UsersTab({ project }: { project: Project }) {
             onClick={() => setView('table')}
             className={view === 'table' ? 'bg-muted text-foreground' : ''}
           >
-            <List className="size-3.5" />
+            <ListBulletIcon size={14} />
           </IconButton>
           <IconButton
             title="Cards"
             onClick={() => setView('card')}
             className={view === 'card' ? 'bg-muted text-foreground' : ''}
           >
-            <LayoutGrid className="size-3.5" />
+            <Squares2X2Icon size={14} />
           </IconButton>
         </div>
         <div className="flex flex-1 flex-wrap items-center justify-end gap-1">
@@ -108,7 +114,7 @@ export function UsersTab({ project }: { project: Project }) {
                 onClick={() => removeColumn(c.id)}
                 className="opacity-0 hover:text-destructive group-hover/col:opacity-100"
               >
-                <X className="size-3" />
+                <XMarkIcon size={12} />
               </button>
             </span>
           ))}
@@ -117,7 +123,7 @@ export function UsersTab({ project }: { project: Project }) {
             onClick={addColumn}
             className="inline-flex h-6 items-center gap-1 rounded-md border border-dashed border-border px-1.5 text-xs text-muted-foreground hover:bg-muted"
           >
-            <Plus className="size-3" /> Field
+            <PlusIcon size={12} /> Field
           </button>
         </div>
       </div>
@@ -159,7 +165,7 @@ export function UsersTab({ project }: { project: Project }) {
                   }}
                   className="hover:text-destructive"
                 >
-                  <Trash2 className="size-4" />
+                  <TrashIcon size={16} />
                 </IconButton>
               </div>
             </DialogHeader>
@@ -386,7 +392,7 @@ function UserRow({
         </td>
         <td className="px-1 py-0.5">
           <IconButton onClick={toggle}>
-            <ChevronRight className={'size-3.5 transition-transform ' + (open ? 'rotate-90' : '')} />
+            <ChevronRightIcon size={14} className={'transition-transform ' + (open ? 'rotate-90' : '')} />
           </IconButton>
         </td>
         <td className="px-1 py-0.5">
@@ -447,7 +453,7 @@ function UserRow({
         ))}
         <td className="px-1 py-0.5">
           <IconButton onClick={onDelete} className="hover:text-destructive">
-            <Trash2 className="size-3.5" />
+            <TrashIcon size={14} />
           </IconButton>
         </td>
       </tr>
@@ -501,7 +507,7 @@ function PersonComments({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1 text-[11px] font-medium uppercase text-muted-foreground">
-        <MessageSquare className="size-3" /> Comments
+        <ChatBubbleLeftIcon size={12} /> Comments
       </div>
       {comments.map((c) => (
         <div key={c.id} className="group flex items-start gap-2 text-sm">
@@ -514,7 +520,7 @@ function PersonComments({
             onClick={() => del('person_comments', c.id)}
             className="opacity-0 group-hover:opacity-100 hover:text-destructive"
           >
-            <Trash2 className="size-3" />
+            <TrashIcon size={12} />
           </IconButton>
         </div>
       ))}

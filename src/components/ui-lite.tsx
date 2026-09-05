@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { EyeIcon } from '@/components/ui/eye'
+import { EyeSlashIcon } from '@/components/ui/eye-slash'
 import { cn } from '@/lib/utils'
 
 /**
@@ -137,7 +138,7 @@ export const SecretField = React.forwardRef<
         onClick={() => setShow((v) => !v)}
         className="absolute right-1.5 top-1/2 grid size-4 -translate-y-1/2 place-items-center text-muted-foreground hover:text-foreground"
       >
-        {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+        {show ? <EyeSlashIcon size={14} /> : <EyeIcon size={14} />}
       </button>
     </div>
   )

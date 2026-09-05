@@ -1,5 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
-import { Download, Plus, Search, Trash2, Upload, X } from 'lucide-react'
+import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
+import { PlusIcon } from '@/components/ui/plus'
+import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
+import { TrashIcon } from '@/components/ui/trash'
+import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
+import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asDetails, asEnvVars } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { EditableText, IconButton, Input, Select, SecretField } from '@/components/ui-lite'
@@ -148,7 +153,7 @@ export function DetailsTab({ project }: { project: Project }) {
               onClick={() => addRow(section)}
               className="inline-flex h-5 items-center gap-1 rounded px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <Plus className="size-3" /> Row
+              <PlusIcon size={12} /> Row
             </button>
           </div>
           <table className="w-full text-sm">
@@ -163,7 +168,7 @@ export function DetailsTab({ project }: { project: Project }) {
                   </td>
                   <td className="w-8 px-1 py-0.5">
                     <IconButton onClick={() => del('details', d.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
-                      <Trash2 className="size-3.5" />
+                      <TrashIcon size={14} />
                     </IconButton>
                   </td>
                 </tr>
@@ -190,7 +195,7 @@ export function DetailsTab({ project }: { project: Project }) {
           className="max-w-xs"
         />
         <button className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted">
-          <Plus className="size-3" /> Section
+          <PlusIcon size={12} /> Section
         </button>
       </form>
     </div>
@@ -238,7 +243,7 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
           onClick={() => fileRef.current?.click()}
           className="inline-flex h-5 items-center gap-1 rounded px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <Upload className="size-3" /> Upload .env
+          <ArrowUpTrayIcon size={12} /> Upload .env
         </button>
         <input
           ref={fileRef}
@@ -257,7 +262,7 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
             onClick={downloadEnv}
             className="inline-flex h-5 items-center gap-1 rounded px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <Download className="size-3" /> Download
+            <ArrowDownTrayIcon size={12} /> Download
           </button>
         )}
         <button
@@ -265,7 +270,7 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
           onClick={() => add('env_vars', { project_id: projectId, key: 'KEY', value: '', sort: vars.length })}
           className="inline-flex h-5 items-center gap-1 rounded px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <Plus className="size-3" /> Row
+          <PlusIcon size={12} /> Row
         </button>
       </div>
       <table className="w-full text-sm">
@@ -288,7 +293,7 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
               </td>
               <td className="w-8 px-1 py-0.5">
                 <IconButton onClick={() => del('env_vars', v.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
-                  <Trash2 className="size-3.5" />
+                  <TrashIcon size={14} />
                 </IconButton>
               </td>
             </tr>
@@ -327,7 +332,7 @@ function TechStackSection({ project }: { project: Project }) {
           onClick={() => setPickerOpen(true)}
           className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
         >
-          <Plus className="size-3" /> Add
+          <PlusIcon size={12} /> Add
         </button>
       </div>
 
@@ -344,7 +349,7 @@ function TechStackSection({ project }: { project: Project }) {
                 onClick={() => toggle(id)}
                 className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-white opacity-0 group-hover:opacity-100"
               >
-                <X className="size-3" />
+                <XMarkIcon size={12} />
               </button>
             </div>
           )
@@ -377,7 +382,7 @@ function TechPicker({ selected, onToggle }: { selected: string[]; onToggle: (id:
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <MagnifyingGlassIcon size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
           autoFocus
           value={q}

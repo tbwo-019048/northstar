@@ -1,5 +1,9 @@
 import { Fragment, useMemo, useState } from 'react'
-import { Check, ChevronRight, Plus, Trash2, Undo2 } from 'lucide-react'
+import { CheckIcon } from '@/components/ui/check'
+import { ChevronRightIcon } from '@/components/ui/chevron-right'
+import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
+import { ArrowUturnLeftIcon } from '@/components/ui/arrow-uturn-left'
 import { useProjectData, asRequests } from '@/store/useProjectData'
 import { PRIORITIES, type Priority, type Project } from '@/lib/types'
 import { EditableText, IconButton, Select } from '@/components/ui-lite'
@@ -46,7 +50,7 @@ export function RequestsTab({ project }: { project: Project }) {
       >
         <td className="w-6 px-1">
           <IconButton onClick={() => setOpen(open === r.id ? null : r.id)}>
-            <ChevronRight className={'size-3.5 transition-transform ' + (open === r.id ? 'rotate-90' : '')} />
+            <ChevronRightIcon size={14} className={'transition-transform ' + (open === r.id ? 'rotate-90' : '')} />
           </IconButton>
         </td>
         <td className="w-24 px-1 py-0.5">
@@ -90,12 +94,12 @@ export function RequestsTab({ project }: { project: Project }) {
             className="hover:text-primary"
             title={r.status === 'todo' ? 'Mark done' : 'Reopen'}
           >
-            {r.status === 'todo' ? <Check className="size-3.5" /> : <Undo2 className="size-3.5" />}
+            {r.status === 'todo' ? <CheckIcon size={14} /> : <ArrowUturnLeftIcon size={14} />}
           </IconButton>
         </td>
         <td className="w-8 px-1">
           <IconButton onClick={() => del('requests', r.id)} className="hover:text-destructive">
-            <Trash2 className="size-3.5" />
+            <TrashIcon size={14} />
           </IconButton>
         </td>
       </tr>
@@ -122,7 +126,7 @@ export function RequestsTab({ project }: { project: Project }) {
             onClick={addReq}
             className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
           >
-            <Plus className="size-3" /> Add
+            <PlusIcon size={12} /> Add
           </button>
           <span className="text-[11px] text-muted-foreground">
             Priority colors come from this project's Settings tab.
