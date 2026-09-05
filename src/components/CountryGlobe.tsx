@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { geoCentroid, geoDistance, geoOrthographic, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import type { FeatureCollection, Geometry } from 'geojson'
@@ -20,6 +20,7 @@ const HEIGHT = 570
 const CENTER_X = WIDTH / 2
 const CENTER_Y = 270
 const RADIUS = 168
+const ROTATION = -10
 const COLORS = ['#7dd3fc', '#38bdf8', '#2563eb', '#1d4ed8', '#60a5fa', '#0ea5e9']
 
 const collection = feature(
@@ -27,75 +28,54 @@ const collection = feature(
   atlas.objects.countries as unknown as Parameters<typeof feature>[1],
 ) as unknown as FeatureCollection<Geometry, { name?: string }>
 
+const projection = geoOrthographic()
+  .translate([CENTER_X, CENTER_Y])
+  .scale(RADIUS)
+  .rotate([ROTATION, -12])
+  .clipAngle(90)
+  .precision(0.4)
+
+const drawPath = geoPath(projection)
+const countries = collection.features.map((country) => ({
+  country,
+  path: drawPath(country) ?? '',
+}))
+
 export function CountryGlobe({ entries }: CountryGlobeProps) {
-  const [rotation, setRotation] = useState(-10)
-  const [paused, setPaused] = useState(false)
-
-  useEffect(() => {
-    if (paused) return
-    const timer = window.setInterval(() => setRotation((angle) => (angle + 0.22) % 360), 50)
-    return () => window.clearInterval(timer)
-  }, [paused])
-
   const selectedCountries = useMemo(() => new Set(entries.map((entry) => entry.country)), [entries])
   const countryColor = useMemo(
     () => new Map([...selectedCountries].map((country, index) => [country, COLORS[index % COLORS.length]])),
     [selectedCountries],
   )
 
-  const { projection, countries, visibleEntries } = useMemo(() => {
-    const nextProjection = geoOrthographic()
-      .translate([CENTER_X, CENTER_Y])
-      .scale(RADIUS)
-      .rotate([rotation, -12])
-      .clipAngle(90)
-      .precision(0.4)
-    const drawPath = geoPath(nextProjection)
-    const countryFeatures = collection.features.map((country) => ({
-      country,
-      path: drawPath(country) ?? '',
-    }))
-    const centre: [number, number] = [-rotation, 12]
-    const outbound = entries.flatMap((entry, index) => {
+  const visibleEntries = useMemo(() => {
+    const centre: [number, number] = [-ROTATION, 12]
+    return entries.flatMap((entry, index) => {
       const country = collection.features.find((item) => item.properties?.name === entry.country)
       if (!country) return []
       const centroid = geoCentroid(country)
       if (geoDistance(centroid, centre) >= Math.PI / 2) return []
-      const point = nextProjection(centroid)
+      const point = projection(centroid)
       if (!point) return []
       const occurrences = entries.slice(0, index).filter((item) => item.country === entry.country).length
       const angle = Math.atan2(point[1] - CENTER_Y, point[0] - CENTER_X) + (occurrences - 1) * 0.075
       const endRadius = RADIUS + 34 + occurrences * 7
       return [{ ...entry, point, angle, endRadius, index }]
     })
-    return { projection: nextProjection, countries: countryFeatures, visibleEntries: outbound }
-  }, [entries, rotation])
-
-  const projectCount = entries.filter((entry) => entry.kind === 'project').length
-  const clientCount = entries.length - projectCount
+  }, [entries])
 
   return (
-    <section
-      className="relative flex h-full min-w-0 flex-col overflow-hidden border-l border-blue-300/15 bg-[#040b18]"
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
+    <div
+      className="relative h-full w-full overflow-hidden"
       aria-label="Global client and project activity"
     >
-      <div className="relative z-10 px-5 pt-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-sky-300/60">Global reach</p>
-        <h2 className="mt-1 text-lg font-semibold text-white">Country activity</h2>
-        <p className="mt-1 text-xs leading-relaxed text-slate-400">
-          One outbound signal is drawn for every client and project country entry.
-        </p>
-      </div>
-
-      <div className="relative min-h-0 flex-1">
-        <svg
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          className="absolute inset-0 size-full"
-          role="img"
-          aria-label={`${selectedCountries.size} active countries, ${entries.length} outbound signals`}
-        >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(7,26,56,0.32),transparent_66%)]" />
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        className="absolute inset-0 size-full"
+        role="img"
+        aria-label={`${selectedCountries.size} active countries, ${entries.length} outbound signals`}
+      >
           <defs>
             <radialGradient id="globe-ocean" cx="35%" cy="25%">
               <stop offset="0" stopColor="#12366b" />
@@ -153,24 +133,8 @@ export function CountryGlobe({ entries }: CountryGlobeProps) {
             )
           })}
 
-          <path d={geoPath(projection)({ type: 'Sphere' }) ?? ''} fill="none" stroke="#7dd3fc" strokeOpacity="0.25" />
-        </svg>
-      </div>
-
-      <div className="relative z-10 grid grid-cols-3 border-t border-blue-300/10 bg-[#020817]/80 px-4 py-3 text-center backdrop-blur">
-        <GlobeStat value={selectedCountries.size} label="Countries" />
-        <GlobeStat value={clientCount} label="Clients" color="text-sky-300" />
-        <GlobeStat value={projectCount} label="Projects" color="text-blue-400" />
-      </div>
-    </section>
-  )
-}
-
-function GlobeStat({ value, label, color = 'text-white' }: { value: number; label: string; color?: string }) {
-  return (
-    <div>
-      <div className={`text-lg font-semibold tabular-nums ${color}`}>{value}</div>
-      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
+        <path d={drawPath({ type: 'Sphere' }) ?? ''} fill="none" stroke="#7dd3fc" strokeOpacity="0.25" />
+      </svg>
     </div>
   )
 }

@@ -27,3 +27,10 @@ This folder records completed implementation tasks and durable project context. 
   - Added multi-country selectors to client details and project Details. Country arrays persist in new `countries` JSONB columns, recorded in both the canonical schema and a Supabase migration.
   - The Home globe highlights assigned countries and draws one color-coded outbound signal for every client or project country assignment, with live country/client/project counts.
   - Verification: `npm run build` passed; `npm run lint` produced only pre-existing warnings; `git diff --check` passed; browser QA confirmed a 13-cell real token input, automatic focus/advance, paste-style multi-character entry, enabled submission at full length, the three-part Home/globe layout, and the global Save notification host.
+- 2026-09-06 — Merged the Home globe into the Photon background and removed globe-rendering lag:
+  - Restored Home to one continuous full-viewport Photon Beam canvas instead of three visibly divided panels.
+  - Positioned the transparent country globe over the right-hand third so Photon lines continue behind it.
+  - Removed the “Global reach”, “Country activity”, explanatory copy, panel background/border, and bottom statistics strip.
+  - Removed the 50ms globe rotation loop and precomputed all country geometry once; the globe now recalculates only when client/project country assignments change.
+  - Verification: production build and `git diff --check` passed; lint produced only pre-existing warnings.
+  - Moved the global top-right notification stack down below the app header for clearer spacing.

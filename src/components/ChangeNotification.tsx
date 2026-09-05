@@ -51,7 +51,7 @@ export function ChangeNotificationHost() {
           <ToastClose />
         </Toast>
       )}
-      <ToastViewport className="bottom-auto top-0 p-4 sm:max-w-sm" />
+      <ToastViewport className="bottom-auto top-10 p-4 sm:max-w-sm" />
     </ToastProvider>
   )
 }

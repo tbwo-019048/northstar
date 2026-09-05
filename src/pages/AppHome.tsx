@@ -45,34 +45,33 @@ export function AppHome() {
   )
 
   return (
-    <div className="grid h-[calc(100svh-2.75rem)] w-full grid-cols-3 overflow-hidden bg-[#050708]">
-      <section className="relative col-span-2 overflow-hidden">
-        <Suspense fallback={<div className="absolute inset-0 bg-[#050708]" />}>
-          <div className="absolute inset-0">
-            <PhotonBeam
-              colorBg="#050708"
-              colorLine="#12366b"
-              colorSignal="#7dd3fc"
-              colorSignal2="#1d4ed8"
-              useColor2
-              lineCount={80}
-              spreadHeight={48}
-              signalCount={94}
-              speedGlobal={0.345}
-              trailLength={3}
-              bloomStrength={2.4}
-              bloomRadius={0.5}
-            />
-          </div>
-        </Suspense>
-        <div className="pointer-events-none absolute inset-y-0 left-1/2 border-l border-white/5" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/35 to-transparent" />
-        <div className="pointer-events-none absolute left-6 top-6 text-white sm:left-8 sm:top-8">
-          <p className="text-xs font-medium uppercase tracking-[0.28em] text-white/50">NorthStar</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Leading the way.</h1>
+    <div className="relative h-[calc(100svh-2.75rem)] w-full overflow-hidden bg-[#050708]">
+      <Suspense fallback={<div className="absolute inset-0 bg-[#050708]" />}>
+        <div className="absolute inset-0">
+          <PhotonBeam
+            colorBg="#050708"
+            colorLine="#12366b"
+            colorSignal="#7dd3fc"
+            colorSignal2="#1d4ed8"
+            useColor2
+            lineCount={80}
+            spreadHeight={48}
+            signalCount={94}
+            speedGlobal={0.345}
+            trailLength={3}
+            bloomStrength={2.4}
+            bloomRadius={0.5}
+          />
         </div>
-      </section>
-      <CountryGlobe entries={globeEntries} />
+      </Suspense>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/35 to-transparent" />
+      <div className="pointer-events-none absolute left-6 top-6 z-10 text-white sm:left-8 sm:top-8">
+        <p className="text-xs font-medium uppercase tracking-[0.28em] text-white/50">NorthStar</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Leading the way.</h1>
+      </div>
+      <div className="absolute inset-y-0 right-0 w-1/3 min-w-56">
+        <CountryGlobe entries={globeEntries} />
+      </div>
     </div>
   )
 }
