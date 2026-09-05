@@ -23,7 +23,9 @@ export const TECH_CATALOG: TechEntry[] = [
   { id: 'reactrouter', name: 'React Router', category: 'Frontend', iconUrl: devicon('reactrouter/reactrouter-original.svg') },
   { id: 'framermotion', name: 'Framer Motion', category: 'Frontend', iconUrl: devicon('framermotion/framermotion-original.svg') },
   { id: 'threejs', name: 'Three.js', category: 'Frontend', iconUrl: devicon('threejs/threejs-original.svg') },
+  { id: 'd3', name: 'D3.js', category: 'Frontend', iconUrl: devicon('d3js/d3js-original.svg') },
   { id: 'electron', name: 'Electron', category: 'Frontend', iconUrl: devicon('electron/electron-original.svg') },
+  { id: 'tauri', name: 'Tauri', category: 'Frontend', iconUrl: devicon('tauri/tauri-original.svg') },
   { id: 'flutter', name: 'Flutter', category: 'Frontend', iconUrl: devicon('flutter/flutter-original.svg') },
 
   // Styling / UI
@@ -86,3 +88,25 @@ export const TECH_BY_ID: Record<string, TechEntry> = Object.fromEntries(
 )
 
 export const TECH_CATEGORIES = [...new Set(TECH_CATALOG.map((t) => t.category))]
+
+const TECH_ID_BY_NAME: Record<string, string> = Object.fromEntries(
+  TECH_CATALOG.map((t) => [t.name.toLowerCase(), t.id]),
+)
+
+/** Turn a free-text tech list (comma / semicolon / newline separated, as it
+ * travels in the Excel Project sheet's `tech_stack` column) into known catalog
+ * ids. Accepts either ids or display names, case-insensitive; anything not in
+ * the catalog is dropped, since the picker can't show it anyway. */
+export function resolveTechIds(raw: string): string[] {
+  const out: string[] = []
+  for (const token of raw.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean)) {
+    const id = TECH_BY_ID[token] ? token : TECH_ID_BY_NAME[token.toLowerCase()]
+    if (id && !out.includes(id)) out.push(id)
+  }
+  return out
+}
+
+/** The inverse — catalog ids to their display names, for the Excel export. */
+export function techNames(ids: string[]): string {
+  return ids.map((id) => TECH_BY_ID[id]?.name ?? id).join(', ')
+}

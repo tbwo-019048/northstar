@@ -1,5 +1,6 @@
 import type * as XLSXType from 'xlsx'
 import type { Detail, Feature, Person, Project, RequestItem, Todo } from '@/lib/types'
+import { techNames } from '@/lib/techStack'
 
 /**
  * Full-project Excel workbook — one sheet per flat entity (Project, Users,
@@ -43,6 +44,7 @@ export async function buildProjectWorkbook(
       type: project.type,
       summary: project.summary,
       hours_worked: project.hours_worked,
+      tech_stack: techNames(project.tech_stack),
       website_url: project.website_url ?? '',
       test_site_url: project.test_site_url ?? '',
       github_repo: project.github_repo ?? '',

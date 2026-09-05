@@ -16,6 +16,7 @@ import {
 import { PRIORITIES, PROJECT_TYPES, type Priority, type Project } from '@/lib/types'
 import { ColorDot, Input } from '@/components/ui-lite'
 import { parseCSV, downloadText } from '@/lib/csv'
+import { resolveTechIds } from '@/lib/techStack'
 import {
   SHEET_NAMES,
   buildProjectWorkbook,
@@ -261,6 +262,9 @@ function ImportExportSection({ project }: { project: Project }) {
             patchProject.test_site_url = projectRow.test_site_url || null
           }
           if (typeof projectRow.github_repo === 'string') patchProject.github_repo = projectRow.github_repo || null
+          if (typeof projectRow.tech_stack === 'string' && projectRow.tech_stack.trim()) {
+            patchProject.tech_stack = resolveTechIds(projectRow.tech_stack)
+          }
           await update(project.id, patchProject)
         }
 
@@ -306,11 +310,13 @@ function ImportExportSection({ project }: { project: Project }) {
         Import / Export
       </h2>
       <p className="text-xs text-muted-foreground">
-        Download this project (Users, To-Do, Features, Requests, Details) as an Excel workbook,
-        edit it, and upload it back — rows with an existing id are updated, new rows are created,
-        and nothing is ever deleted by an import. A plain CSV upload is treated as a Users list
-        (matched by name) since a CSV can't hold multiple sheets. Passwords, tokens and
-        environment variables are never included — manage those in their own masked fields.
+        Download this project (Project, Users, To-Do, Features, Requests, Details) as an Excel
+        workbook, edit it, and upload it back — rows with an existing id are updated, new rows are
+        created, and nothing is ever deleted by an import. The Project sheet carries name, type,
+        summary, hours, URLs and the tech stack (comma-separated names, matched against the Tech
+        Stack catalogue on import). A plain CSV upload is treated as a Users list (matched by name)
+        since a CSV can't hold multiple sheets. Passwords, tokens and environment variables are
+        never included — manage those in their own masked fields.
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
         <button
