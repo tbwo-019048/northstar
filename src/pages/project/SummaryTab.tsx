@@ -66,16 +66,16 @@ export function SummaryTab({ project }: { project: Project }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-3">
         {hasSites && (
-          <div className="min-w-0 flex-[7] basis-[70%]">
+          <div className="min-w-0 flex-[7]">
             <ScreenshotGallery project={project} />
           </div>
         )}
         <div
           className={
             'flex flex-1 items-center justify-center ' +
-            (hasSites ? 'flex-[3] basis-[30%]' : '') +
+            (hasSites ? 'flex-[3]' : '') +
             ' ' +
             (STATE_TEXT_CLASS[project.state] ?? '')
           }
