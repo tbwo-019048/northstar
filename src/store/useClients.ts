@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { Client, ProjectClient } from '@/lib/types'
+import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 
 interface ClientsState {
   clients: Client[]
@@ -50,9 +51,11 @@ export const useClients = create<ClientsState>((set, get) => ({
     if (error || !data) {
       console.error('[NorthStar] create client failed', error)
       set({ error: error?.message ?? null })
+      notifySaveError(error?.message)
       return null
     }
     set({ clients: [...get().clients, data as Client] })
+    notifySaved('Client created.')
     return data as Client
   },
 
@@ -62,14 +65,23 @@ export const useClients = create<ClientsState>((set, get) => ({
     const { error } = await supabase.from('clients').update(patch).eq('id', id)
     if (error) {
       set({ clients: previous, error: error.message })
+      notifySaveError(error.message)
       return { error: error.message }
     }
+    notifySaved()
     return { error: null }
   },
 
   remove: async (id) => {
-    set({ clients: get().clients.filter((c) => c.id !== id) })
-    await supabase.from('clients').delete().eq('id', id)
+    const previous = get().clients
+    set({ clients: previous.filter((c) => c.id !== id) })
+    const { error } = await supabase.from('clients').delete().eq('id', id)
+    if (error) {
+      set({ clients: previous, error: error.message })
+      notifySaveError(error.message)
+      return
+    }
+    notifySaved('Client removed.')
   },
 
   linkToProject: async (projectId, clientId) => {
@@ -80,18 +92,22 @@ export const useClients = create<ClientsState>((set, get) => ({
         { project_id: projectId, client_id: clientId, created_at: new Date().toISOString() },
       ],
     })
-    await supabase.from('project_clients').insert({ project_id: projectId, client_id: clientId })
+    const { error } = await supabase.from('project_clients').insert({ project_id: projectId, client_id: clientId })
+    if (error) notifySaveError(error.message)
+    else notifySaved('Client linked to project.')
   },
 
   unlinkFromProject: async (projectId, clientId) => {
     set({
       links: get().links.filter((l) => !(l.project_id === projectId && l.client_id === clientId)),
     })
-    await supabase
+    const { error } = await supabase
       .from('project_clients')
       .delete()
       .eq('project_id', projectId)
       .eq('client_id', clientId)
+    if (error) notifySaveError(error.message)
+    else notifySaved('Client unlinked from project.')
   },
 
   clientsForProject: (projectId) => {

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { EmailAccount, EmailGroup } from '@/lib/types'
+import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 
 interface EmailsState {
   groups: EmailGroup[]
@@ -47,9 +48,11 @@ export const useEmails = create<EmailsState>((set, get) => ({
       .single()
     if (error || !data) {
       set({ error: error?.message ?? null })
+      notifySaveError(error?.message)
       return null
     }
     set({ groups: [...get().groups, data as EmailGroup] })
+    notifySaved('Email group created.')
     return data as EmailGroup
   },
 
@@ -58,7 +61,9 @@ export const useEmails = create<EmailsState>((set, get) => ({
       groups: get().groups.filter((g) => g.id !== id),
       accounts: get().accounts.filter((a) => a.group_id !== id),
     })
-    await supabase.from('email_groups').delete().eq('id', id)
+    const { error } = await supabase.from('email_groups').delete().eq('id', id)
+    if (error) notifySaveError(error.message)
+    else notifySaved('Email group removed.')
   },
 
   addAccount: async (groupId, fields) => {
@@ -73,9 +78,11 @@ export const useEmails = create<EmailsState>((set, get) => ({
       .single()
     if (error || !data) {
       set({ error: error?.message ?? null })
+      notifySaveError(error?.message)
       return null
     }
     set({ accounts: [...get().accounts, data as EmailAccount] })
+    notifySaved('Email account added.')
     return data as EmailAccount
   },
 
@@ -85,14 +92,18 @@ export const useEmails = create<EmailsState>((set, get) => ({
     const { error } = await supabase.from('email_accounts').update(patch).eq('id', id)
     if (error) {
       set({ accounts: previous, error: error.message })
+      notifySaveError(error.message)
       return { error: error.message }
     }
+    notifySaved()
     return { error: null }
   },
 
   removeAccount: async (id) => {
     set({ accounts: get().accounts.filter((a) => a.id !== id) })
-    await supabase.from('email_accounts').delete().eq('id', id)
+    const { error } = await supabase.from('email_accounts').delete().eq('id', id)
+    if (error) notifySaveError(error.message)
+    else notifySaved('Email account removed.')
   },
 
   subscribe: () => {

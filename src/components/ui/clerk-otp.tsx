@@ -1,129 +1,137 @@
-import { useEffect, useState } from 'react'
-import { motion } from 'motion/react'
+import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 
-const generateRandomDigits = () =>
-  Array.from({ length: 6 }, () => Math.floor(Math.random() * 10).toString())
-
 interface ClerkOTPProps {
-  delay?: number
+  value: string
+  onChange: (value: string) => void
+  length?: number
   cardTitle?: string
   cardDescription?: string
-  whileHover?: boolean
   className?: string
+  disabled?: boolean
+  error?: boolean
+  autoFocus?: boolean
 }
 
 export default function ClerkOTP({
-  delay = 3500,
+  value,
+  onChange,
+  length = 6,
   cardTitle = 'Multifactor Authentication',
-  cardDescription = "Each user's self-serve multifactor settings are enforced automatically during sign-in.",
-  whileHover = false,
+  cardDescription = 'Enter the verification code to continue.',
   className,
+  disabled = false,
+  error = false,
+  autoFocus = false,
 }: ClerkOTPProps) {
-  const [animationKey, setAnimationKey] = useState(0)
+  const refs = useRef<Array<HTMLInputElement | null>>([])
+  const safeLength = Math.max(1, length)
 
-  useEffect(() => {
-    const interval = window.setInterval(
-      () => setAnimationKey((previous) => previous + 1),
-      Math.max(delay, 3500),
-    )
-    return () => window.clearInterval(interval)
-  }, [delay])
+  const focus = (index: number) => {
+    const next = Math.max(0, Math.min(index, safeLength - 1))
+    refs.current[next]?.focus()
+    refs.current[next]?.select()
+  }
 
-  return (
-    <OTPCard
-      key={animationKey}
-      cardTitle={cardTitle}
-      cardDescription={cardDescription}
-      whileHover={whileHover}
-      className={className}
-    />
-  )
-}
+  const insert = (index: number, input: string) => {
+    const characters = input.replace(/\s/g, '').split('')
+    if (!characters.length) return
+    const next = Array.from({ length: safeLength }, (_, itemIndex) => value[itemIndex] ?? '')
+    characters.slice(0, safeLength - index).forEach((character, offset) => {
+      next[index + offset] = character
+    })
+    onChange(next.join('').slice(0, safeLength))
+    focus(Math.min(index + characters.length, safeLength - 1))
+  }
 
-function OTPCard({ cardTitle, cardDescription, whileHover, className }: ClerkOTPProps) {
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [fadeOut, setFadeOut] = useState(false)
-  const [digits] = useState(generateRandomDigits)
-  const [hovered, setHovered] = useState(false)
-
-  useEffect(() => {
-    if (activeIndex >= digits.length || (whileHover && !hovered)) return
-
-    const interval = window.setInterval(() => setActiveIndex((previous) => previous + 1), 400)
-    const timeout =
-      activeIndex === digits.length - 1
-        ? window.setTimeout(() => setFadeOut(true), 450)
-        : undefined
-
-    return () => {
-      window.clearInterval(interval)
-      if (timeout !== undefined) window.clearTimeout(timeout)
-    }
-  }, [activeIndex, digits.length, hovered, whileHover])
+  const clearAt = (index: number) => {
+    const next = Array.from({ length: safeLength }, (_, itemIndex) => value[itemIndex] ?? '')
+    next[index] = ''
+    onChange(next.join(''))
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 1 }}
-      onHoverStart={() => setHovered(true)}
-      onHoverEnd={() => setHovered(false)}
+    <div
       className={cn(
-        'relative flex h-56 w-full max-w-[350px] items-center justify-center overflow-hidden rounded-md border border-border bg-panel shadow-lg',
+        'relative flex min-h-56 w-full flex-col justify-between overflow-hidden rounded-xl border bg-panel p-5 shadow-lg',
+        error ? 'border-destructive/60' : 'border-border',
         className,
       )}
     >
-      <div className="absolute left-1/2 top-1/4 -translate-x-1/2">
-        <div className="flex items-center justify-center gap-2.5">
-          {digits.map((digit, index) => {
-            const shouldAnimate = !whileHover || hovered
-            return (
-              <div
-                key={`${digit}-${index}`}
-                className="relative flex h-10 w-8 cursor-default items-center justify-center rounded-md bg-gradient-to-br from-neutral-100 to-white text-primary shadow-md dark:from-neutral-800 dark:to-neutral-900"
-              >
-                {shouldAnimate && (
-                  <motion.div
-                    className="absolute inset-0 rounded-md border border-cyan-400"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 1, 0] }}
-                    transition={{ duration: 0.5, ease: 'easeInOut', delay: 2.25 }}
-                    style={{ boxShadow: 'inset 0 0 12px rgba(34, 211, 238, 0.5)' }}
-                  />
-                )}
-                {activeIndex === index && shouldAnimate && (
-                  <motion.div
-                    className="absolute inset-0 rounded-md border border-cyan-400"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    style={{ boxShadow: 'inset 0 0 12px rgba(34, 211, 238, 0.6)' }}
-                  >
-                    <svg viewBox="0 0 20 20" className="absolute inset-0 size-full" strokeWidth="0.4">
-                      <path d="M 3 19 h 14" className="stroke-cyan-400 dark:stroke-cyan-500" />
-                    </svg>
-                  </motion.div>
-                )}
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: shouldAnimate && !fadeOut ? 1 : 0 }}
-                  transition={{
-                    duration: fadeOut ? 0.1 : 0.2,
-                    ease: 'easeInOut',
-                    delay: fadeOut ? 0 : index * 0.43,
-                  }}
-                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-                >
-                  {digit}
-                </motion.span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      <div className="absolute bottom-4 left-0 w-full px-4">
+      <div>
         <h2 className="text-sm font-semibold text-foreground">{cardTitle}</h2>
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{cardDescription}</p>
       </div>
-    </motion.div>
+
+      <div
+        className="flex w-full items-center justify-center gap-1.5"
+        role="group"
+        aria-label={cardTitle}
+        onPaste={(event) => {
+          event.preventDefault()
+          const activeIndex = refs.current.findIndex((input) => input === document.activeElement)
+          insert(Math.max(activeIndex, 0), event.clipboardData.getData('text'))
+        }}
+      >
+        {Array.from({ length: safeLength }, (_, index) => (
+          <input
+            key={index}
+            ref={(element) => {
+              refs.current[index] = element
+            }}
+            autoFocus={autoFocus && index === 0}
+            autoComplete={index === 0 ? 'one-time-code' : 'off'}
+            autoCapitalize="none"
+            spellCheck={false}
+            disabled={disabled}
+            type="text"
+            inputMode="text"
+            maxLength={safeLength}
+            value={value[index] ?? ''}
+            aria-label={`Verification token character ${index + 1} of ${safeLength}`}
+            className={cn(
+              'h-11 min-w-0 flex-1 rounded-md border bg-background text-center font-mono text-sm font-semibold text-foreground outline-none transition',
+              'focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30',
+              error ? 'border-destructive/60' : 'border-border',
+            )}
+            onFocus={(event) => event.currentTarget.select()}
+            onChange={(event) => {
+              const entered = event.currentTarget.value
+              if (!entered) clearAt(index)
+              else insert(index, entered)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Backspace') {
+                event.preventDefault()
+                if (value[index]) clearAt(index)
+                else if (index > 0) {
+                  clearAt(index - 1)
+                  focus(index - 1)
+                }
+              } else if (event.key === 'Delete') {
+                event.preventDefault()
+                clearAt(index)
+              } else if (event.key === 'ArrowLeft') {
+                event.preventDefault()
+                focus(index - 1)
+              } else if (event.key === 'ArrowRight') {
+                event.preventDefault()
+                focus(index + 1)
+              } else if (event.key === 'Home') {
+                event.preventDefault()
+                focus(0)
+              } else if (event.key === 'End') {
+                event.preventDefault()
+                focus(safeLength - 1)
+              }
+            }}
+          />
+        ))}
+      </div>
+
+      <p className="text-[11px] text-muted-foreground">
+        Type or paste the complete token. Use the arrow keys to move between characters.
+      </p>
+    </div>
   )
 }

@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/velobits/dialog'
+import { CountryPicker } from '@/components/CountryPicker'
 
 export function Clients() {
   const { clients, loaded, load, subscribe, create, update, remove, links, linkToProject, unlinkFromProject, projectIdsForClient } =
@@ -121,6 +122,11 @@ export function Clients() {
                     <span className="text-[11px] font-medium uppercase text-muted-foreground">Notes</span>
                     <Textarea rows={2} value={c.notes} onChange={(e) => update(c.id, { notes: e.target.value })} className="mt-1" />
                   </label>
+
+                  <CountryPicker
+                    selected={c.countries ?? []}
+                    onChange={(countries) => update(c.id, { countries })}
+                  />
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5">

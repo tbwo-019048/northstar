@@ -23,7 +23,7 @@ const ITEMS: DockItem[] = [
   { to: '/app/settings', label: 'Settings', icon: Cog6ToothIcon },
 ]
 
-const DOCK_IDLE_MS = 30_000
+const DOCK_IDLE_MS = 15_000
 
 /** Keep nested project routes associated with the Projects destination. */
 function isRouteActive(pathname: string, to: string, end?: boolean) {

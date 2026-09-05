@@ -73,6 +73,7 @@ create table if not exists projects (
   position_colors jsonb not null default '{}'::jsonb,  -- { [position label]: hex } for Users cards
   priority_colors jsonb not null default '{}'::jsonb,  -- { [priority]: hex } for Requests/To-Do chips
   tech_stack  jsonb not null default '[]'::jsonb,       -- [techStack catalog id, ...] shown in Details
+  countries   jsonb not null default '[]'::jsonb,       -- country names represented by this project
   created_by  uuid references auth.users(id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
@@ -90,6 +91,7 @@ alter table projects add column if not exists private_token text;
 alter table projects add column if not exists position_colors jsonb not null default '{}'::jsonb;
 alter table projects add column if not exists priority_colors jsonb not null default '{}'::jsonb;
 alter table projects add column if not exists tech_stack jsonb not null default '[]'::jsonb;
+alter table projects add column if not exists countries jsonb not null default '[]'::jsonb;
 drop trigger if exists trg_projects_updated on projects;
 create trigger trg_projects_updated before update on projects
   for each row execute function set_updated_at();
@@ -105,6 +107,7 @@ create table if not exists project_people (
   password    text not null default '',
   position    text not null default '',
   notes       text not null default '',
+  countries   jsonb not null default '[]'::jsonb,
   extra       jsonb not null default '{}'::jsonb, -- { [person_columns.id]: value }
   avatar_url  text,
   sort        integer not null default 0,
@@ -469,6 +472,7 @@ create table if not exists clients (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+alter table clients add column if not exists countries jsonb not null default '[]'::jsonb;
 drop trigger if exists trg_clients_updated on clients;
 create trigger trg_clients_updated before update on clients
   for each row execute function set_updated_at();

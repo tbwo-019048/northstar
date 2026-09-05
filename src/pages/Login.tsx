@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { KeyIcon } from '@/components/ui/key'
 import { LockClosedIcon } from '@/components/ui/lock-closed'
 import { useAuth } from '@/store/useAuth'
 import { APP_ACCESS_TOKEN } from '@/lib/supabase'
@@ -33,7 +32,7 @@ export function Login() {
     const { error } = await signIn(email.trim(), password)
     setBusy(false)
     if (error) setErr(error)
-    else nav('/app', { replace: true })
+    else nav('/app/landing', { replace: true })
   }
 
   const field =
@@ -57,31 +56,28 @@ export function Login() {
         </div>
 
         {needGate ? (
-          <div className="space-y-4">
+          <form onSubmit={onGate} className="space-y-4">
             <ClerkOTP
               cardTitle="Verification token"
               cardDescription="Enter the verification token you were given to continue to the secure workspace."
               className="max-w-none"
+              value={token}
+              length={APP_ACCESS_TOKEN.length}
+              error={Boolean(err)}
+              autoFocus
+              onChange={(value) => {
+                setToken(value)
+                if (err) setErr(null)
+              }}
             />
-            <form onSubmit={onGate} className="space-y-2.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <KeyIcon size={14} /> Verification token
-              </label>
-              <input
-                autoFocus
-                type="password"
-                autoComplete="one-time-code"
-                className={field}
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Enter verification token"
-              />
-              {err && <p className="text-xs text-destructive">{err}</p>}
-              <button className="h-8 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                Verify and continue
-              </button>
-            </form>
-          </div>
+            {err && <p className="text-xs text-destructive">{err}</p>}
+            <button
+              disabled={token.length !== APP_ACCESS_TOKEN.length}
+              className="h-8 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Verify and continue
+            </button>
+          </form>
         ) : (
           <form onSubmit={onLogin} className="space-y-2.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">

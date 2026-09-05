@@ -10,6 +10,7 @@ import { Footer } from '@/components/Footer'
 import { CloudArrowDownIcon, type CloudArrowDownIconHandle } from '@/components/ui/cloud-arrow-down'
 import { CheckIcon, type CheckIconHandle } from '@/components/ui/check'
 import { ArrowRightStartOnRectangleIcon } from '@/components/ui/arrow-right-start-on-rectangle'
+import { notifySaved } from '@/store/useChangeNotifications'
 
 /** Everything here already autosaves — every field write goes straight to
  * Supabase. This button gives an explicit, reassuring action anyway: it
@@ -29,6 +30,7 @@ function SaveButton() {
     else await useProjects.getState().load()
     cloudRef.current?.stopAnimation()
     setState('saved')
+    notifySaved('Workspace synced with the server.', true)
     checkRef.current?.startAnimation()
     setTimeout(() => setState('idle'), 1200)
   }

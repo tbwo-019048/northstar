@@ -15,6 +15,7 @@ import type {
   Todo,
   TodoComment,
 } from '@/lib/types'
+import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 
 type Row = { id: string; [k: string]: unknown }
 
@@ -128,9 +129,11 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     const { data, error } = await supabase.from(table).insert(values).select('*').single()
     if (error || !data) {
       console.error('[NorthStar] add failed', table, error)
+      notifySaveError(error?.message)
       return null
     }
     set((s) => ({ rows: { ...s.rows, [table]: [...s.rows[table], data as Row] } }))
+    notifySaved('Item added.')
     return data as never
   },
 
@@ -146,15 +149,24 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     if (error) {
       console.error('[NorthStar] patch failed', table, error)
       set((s) => ({ rows: { ...s.rows, [table]: previous } })) // roll back
+      notifySaveError(error.message)
       return { error: error.message }
     }
+    notifySaved()
     return { error: null }
   },
 
   del: async (table, id) => {
+    const previous = get().rows[table]
     set((s) => ({ rows: { ...s.rows, [table]: s.rows[table].filter((r) => r.id !== id) } }))
     const { error } = await supabase.from(table).delete().eq('id', id)
-    if (error) console.error('[NorthStar] delete failed', table, error)
+    if (error) {
+      console.error('[NorthStar] delete failed', table, error)
+      set((s) => ({ rows: { ...s.rows, [table]: previous } }))
+      notifySaveError(error.message)
+      return
+    }
+    notifySaved('Item removed.')
   },
 
   reorder: async (table, ordered) => {
@@ -170,7 +182,10 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       const others = s.rows[table].filter((r) => !ids.includes(r.id))
       return { rows: { ...s.rows, [table]: [...others, ...moved] } }
     })
-    await Promise.all(ids.map((id, i) => supabase.from(table).update({ sort: i }).eq('id', id)))
+    const results = await Promise.all(ids.map((id, i) => supabase.from(table).update({ sort: i }).eq('id', id)))
+    const error = results.find((result) => result.error)?.error
+    if (error) notifySaveError(error.message)
+    else notifySaved('Order saved.')
   },
 
   subscribe: (projectId) => {

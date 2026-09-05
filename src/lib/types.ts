@@ -48,6 +48,7 @@ export interface Project {
   position_colors: Record<string, string>
   priority_colors: Partial<Record<Priority, string>>
   tech_stack: string[]
+  countries: string[]
   created_by: string | null
   created_at: string
   updated_at: string
@@ -207,6 +208,7 @@ export interface Client {
   email: string
   phone: string
   notes: string
+  countries: string[]
   sort: number
   created_at: string
   updated_at: string

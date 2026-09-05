@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/velobits/dialog'
 import { PROJECT_STATES, type Project, type ProjectState } from '@/lib/types'
 import { formatState } from '@/lib/projectState'
+import { CountryPicker } from '@/components/CountryPicker'
 
 export function DetailsTab({ project }: { project: Project }) {
   const projectId = project.id
@@ -89,6 +90,12 @@ export function DetailsTab({ project }: { project: Project }) {
           placeholder="What is this project, in a sentence or two…"
         />
       </label>
+
+      <CountryPicker
+        selected={project.countries ?? []}
+        onChange={(countries) => update(projectId, { countries })}
+        label="Project countries"
+      />
 
       {isAppOrSite && (
         <div className="overflow-hidden rounded-md border border-border">

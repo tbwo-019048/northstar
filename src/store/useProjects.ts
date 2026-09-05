@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { Project, ProjectType } from '@/lib/types'
+import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 
 interface ProjectsState {
   projects: Project[]
@@ -46,9 +47,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     if (error) {
       console.error('[NorthStar] create project failed', error)
       set({ error: error.message })
+      notifySaveError(error.message)
       return { project: null, error: error.message }
     }
     if (data) set({ projects: [...get().projects, data as Project] })
+    notifySaved('Project created.')
     return { project: (data as Project) ?? null, error: null }
   },
 
@@ -59,14 +62,23 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     if (error) {
       console.error('[NorthStar] update project failed', error)
       set({ projects: previous, error: error.message }) // roll back the optimistic write
+      notifySaveError(error.message)
       return { error: error.message }
     }
+    notifySaved()
     return { error: null }
   },
 
   remove: async (id) => {
-    set({ projects: get().projects.filter((p) => p.id !== id) })
-    await supabase.from('projects').delete().eq('id', id)
+    const previous = get().projects
+    set({ projects: previous.filter((p) => p.id !== id) })
+    const { error } = await supabase.from('projects').delete().eq('id', id)
+    if (error) {
+      set({ projects: previous, error: error.message })
+      notifySaveError(error.message)
+      return
+    }
+    notifySaved('Project removed.')
   },
 
   clearError: () => set({ error: null }),

@@ -18,3 +18,12 @@ This folder records completed implementation tasks and durable project context. 
   - Changed Photon trails/signals and the dock’s active gradient ring to a light-blue/dark-blue palette.
   - The dock lowers fully out of sight after 30 seconds without bottom-center hover/focus and returns when the user approaches that reveal zone; touch also restores it.
   - Verification: production build passed, lint produced only pre-existing warnings, and browser QA confirmed full-screen rendering, blue colors, 30-second hiding, and reveal-zone restoration.
+- 2026-09-05 — Added functional verification, global save feedback, and geographic activity:
+  - Replaced the animated Clerk OTP demonstration with a real segmented verification-token control supporting typing, paste/autofill, backspace/delete, arrow/Home/End navigation, error styling, and form submission.
+  - Successful account sign-in now routes directly to `/app/landing` (Home) instead of Projects.
+  - Added a global HeroUI-style notification surface in the top-right. Successful and failed mutations across projects, project data, clients, members, emails, settings, client/project links, and the explicit Save control now publish coalesced status notices.
+  - Reduced the bottom navigation idle-hide timeout from 30 seconds to 15 seconds.
+  - Split authenticated Home into three equal columns: Photon Beam occupies the left two columns (with a visible midpoint division), and an auto-rotating blue orthographic activity globe occupies the right column.
+  - Added multi-country selectors to client details and project Details. Country arrays persist in new `countries` JSONB columns, recorded in both the canonical schema and a Supabase migration.
+  - The Home globe highlights assigned countries and draws one color-coded outbound signal for every client or project country assignment, with live country/client/project counts.
+  - Verification: `npm run build` passed; `npm run lint` produced only pre-existing warnings; `git diff --check` passed; browser QA confirmed a 13-cell real token input, automatic focus/advance, paste-style multi-character entry, enabled submission at full length, the three-part Home/globe layout, and the global Save notification host.

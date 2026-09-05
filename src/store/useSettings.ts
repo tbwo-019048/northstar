@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 
 interface SettingsState {
   githubTokenSet: boolean
@@ -34,17 +35,23 @@ export const useSettings = create<SettingsState>((set) => ({
       .upsert({ id: 'default', github_token: token, updated_at: new Date().toISOString() })
     if (error) {
       set({ error: error.message })
+      notifySaveError(error.message)
       return { error: error.message }
     }
     set({ githubTokenSet: Boolean(token), error: null })
+    notifySaved('GitHub token saved.')
     return { error: null }
   },
 
   clearGithubToken: async () => {
-    await supabase
+    const { error } = await supabase
       .from('app_settings')
       .upsert({ id: 'default', github_token: null, updated_at: new Date().toISOString() })
-    set({ githubTokenSet: false })
+    if (error) notifySaveError(error.message)
+    else {
+      set({ githubTokenSet: false })
+      notifySaved('GitHub token cleared.')
+    }
   },
 }))
 
