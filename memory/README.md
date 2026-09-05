@@ -31,6 +31,6 @@ This folder records completed implementation tasks and durable project context. 
   - Restored Home to one continuous full-viewport Photon Beam canvas instead of three visibly divided panels.
   - Positioned the transparent country globe over the right-hand third so Photon lines continue behind it.
   - Removed the “Global reach”, “Country activity”, explanatory copy, panel background/border, and bottom statistics strip.
-  - Removed the 50ms globe rotation loop and precomputed all country geometry once; the globe now recalculates only when client/project country assignments change.
+  - Replaced the laggy 50ms React/SVG reconciliation loop with a single throttled canvas renderer. The globe rotates continuously again without updating hundreds of React nodes per frame, and respects reduced-motion preferences.
   - Verification: production build and `git diff --check` passed; lint produced only pre-existing warnings.
   - Moved the global top-right notification stack down below the app header for clearer spacing.
