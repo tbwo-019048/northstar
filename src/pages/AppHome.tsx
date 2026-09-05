@@ -5,14 +5,14 @@ const PhotonBeam = lazy(() => import('@/components/ui/photon-beam'))
 /** Atmospheric authenticated home, distinct from the public marketing page. */
 export function AppHome() {
   return (
-    <div className="relative min-h-[calc(100svh-9rem)] overflow-hidden rounded-xl border border-white/10 bg-[#050708]">
+    <div className="relative h-[calc(100svh-2.75rem)] w-full overflow-hidden bg-[#050708]">
       <Suspense fallback={<div className="absolute inset-0 bg-[#050708]" />}>
         <div className="absolute inset-0">
           <PhotonBeam
             colorBg="#050708"
-            colorLine="#103944"
-            colorSignal="#37d8c5"
-            colorSignal2="#adfa1f"
+            colorLine="#12366b"
+            colorSignal="#7dd3fc"
+            colorSignal2="#1d4ed8"
             useColor2
             lineCount={80}
             spreadHeight={48}

@@ -13,3 +13,8 @@ This folder records completed implementation tasks and durable project context. 
   - Corrected browser metadata and the tab title to `NorthStar`.
   - Project table descriptions are hidden by default and can be enabled with the `Descriptions` checkbox beside Search.
   - Verification: `npm run build` passed; `npm run lint` passed with pre-existing warnings only; browser QA confirmed the tab title, OTP layout, Photon Beam, Safari frame, and gradient dock.
+- 2026-09-05 — Refined the authenticated Home and dock:
+  - Photon Beam now fills the full viewport width and all available height below the app header, with no inset card, border, rounded corners, or Home-page footer.
+  - Changed Photon trails/signals and the dock’s active gradient ring to a light-blue/dark-blue palette.
+  - The dock lowers fully out of sight after 30 seconds without bottom-center hover/focus and returns when the user approaches that reveal zone; touch also restores it.
+  - Verification: production build passed, lint produced only pre-existing warnings, and browser QA confirmed full-screen rendering, blue colors, 30-second hiding, and reveal-zone restoration.

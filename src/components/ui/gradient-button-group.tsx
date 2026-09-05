@@ -100,7 +100,7 @@ export function GradientButtonGroup({
                           className="animate-gold-spin absolute inset-[-60%] origin-center will-change-transform"
                           style={{
                             background:
-                              'conic-gradient(from 220deg, #6ff7cc 0%, #44ebcf 16%, #adfa1f 33%, #c8ff5a 50%, #89f5a0 66%, #37d8c5 82%, #6ff7cc 100%)',
+                              'conic-gradient(from 220deg, #bfdbfe 0%, #7dd3fc 18%, #3b82f6 38%, #1e3a8a 56%, #2563eb 74%, #93c5fd 90%, #bfdbfe 100%)',
                           }}
                         />
                       </motion.span>

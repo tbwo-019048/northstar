@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/store/useAuth'
 import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
@@ -52,7 +52,9 @@ function SaveButton() {
 
 export function AppLayout() {
   const nav = useNavigate()
+  const { pathname } = useLocation()
   const { user, signOut, lockGate } = useAuth()
+  const isHome = pathname === '/app/landing'
 
   const initials = (user?.email ?? '?')
     .split('@')[0]
@@ -92,10 +94,16 @@ export function AppLayout() {
           <ArrowRightStartOnRectangleIcon size={16} />
         </button>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-20">
+      <main
+        className={
+          isHome
+            ? 'w-full flex-1 overflow-hidden'
+            : 'mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-20'
+        }
+      >
         <Outlet />
       </main>
-      <Footer />
+      {!isHome && <Footer />}
       <Dock />
     </div>
   )
