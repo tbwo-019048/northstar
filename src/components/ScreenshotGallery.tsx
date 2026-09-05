@@ -100,10 +100,20 @@ export function ScreenshotGallery({ project }: { project: Project }) {
   const [retryNonce, setRetryNonce] = useState(0)
 
   useEffect(() => {
-    setLoaded(false)
-    setSettled(false)
+    if (!active) return
     setRetryNonce(0)
-    if (!isLiveShot) return
+
+    // If the browser already has this exact URL cached (e.g. flipping back
+    // to a project/site you've already viewed this session), Image.complete
+    // resolves synchronously — skip the skeleton entirely instead of
+    // replaying the loading animation for an image that's already there.
+    const probe = new Image()
+    probe.src = isLiveShot ? `${active.url}&_r=0` : active.url
+    const cached = probe.complete && probe.naturalWidth > 0
+    setLoaded(cached)
+    setSettled(cached)
+    if (!isLiveShot || cached) return
+
     let tries = 0
     const MAX_TRIES = 3
     const id = setInterval(() => {
