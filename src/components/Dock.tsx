@@ -32,7 +32,7 @@ const ITEMS: DockItem[] = [
  * active-route highlight so the two icons don't both light up at once. */
 export function Dock() {
   return (
-    <nav className="fixed inset-x-0 bottom-3 z-30 flex justify-center">
+    <nav className="fixed inset-x-0 bottom-6 z-30 flex justify-center">
       <div className="flex items-center gap-1 rounded-2xl border border-border bg-panel/80 p-1.5 shadow-lg backdrop-blur-md">
         {ITEMS.map(({ to, label, icon: Icon, end, skipActive }) => (
           <Tooltip key={label}>
@@ -42,12 +42,12 @@ export function Dock() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    'grid size-9 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                    'flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
                     isActive && !skipActive && 'bg-primary/10 text-primary',
                   )
                 }
               >
-                <Icon size={18} />
+                <Icon size={18} className="flex items-center justify-center" />
               </NavLink>
             </TooltipTrigger>
             <TooltipContent side="top">{label}</TooltipContent>
