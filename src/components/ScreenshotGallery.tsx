@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import { ImagePlus, Star, Trash2 } from 'lucide-react'
 import { useProjectData, asScreenshots } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { supabase } from '@/lib/supabase'
 import { mshotUrl } from '@/lib/screenshot'
 import { IconButton } from '@/components/ui-lite'
+import { NorthStarIcon } from '@/components/NorthStarIcon'
 import type { Project } from '@/lib/types'
 
 interface Entry {
@@ -12,6 +14,44 @@ interface Entry {
   label: string
   url: string
   deletable: boolean
+}
+
+/** Shown in place of the raw mshots placeholder while a screenshot loads: a
+ * NorthStar mark that spins one way, then the other, next to "Loading" with
+ * dots that fill in one at a time (rather than a continuous one-way spin or
+ * WordPress's own placeholder logo flashing up first). */
+function PreviewSkeleton() {
+  const [dots, setDots] = useState(1)
+  const [angle, setAngle] = useState(0)
+  const dirRef = useRef<1 | -1>(1)
+
+  useEffect(() => {
+    const id = setInterval(() => setDots((d) => (d % 3) + 1), 450)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setAngle((a) => a + dirRef.current * 360)
+      dirRef.current *= -1
+    }, 1100)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div className="flex h-72 w-full items-center justify-center gap-3 bg-muted/30">
+      <motion.div
+        animate={{ rotate: angle }}
+        transition={{ duration: 1.1, ease: 'linear' }}
+      >
+        <NorthStarIcon className="size-6 text-primary" />
+      </motion.div>
+      <p className="text-sm text-muted-foreground">
+        Loading{'.'.repeat(dots)}
+        <span className="invisible">{'.'.repeat(3 - dots)}</span>
+      </p>
+    </div>
+  )
 }
 
 export function ScreenshotGallery({ project }: { project: Project }) {
@@ -44,6 +84,40 @@ export function ScreenshotGallery({ project }: { project: Project }) {
         ? project.default_screenshot!
         : (entries[0]?.key ?? null)
   const active = entries.find((e) => e.key === activeKey) ?? null
+  const isLiveShot = active?.key === 'live' || active?.key === 'test'
+
+  // mshots (Live/Test Site) often serves a "still generating" placeholder on
+  // the first request — a plain onLoad can't tell that apart from the real
+  // screenshot, so for those two entries only: keep the skeleton up and
+  // re-fetch (cache-busted) a few times over ~9s, which is normally enough
+  // for mshots to have rendered the real thing by the time it's revealed.
+  // Uploaded screenshots have no such placeholder, so they just wait for
+  // their one real onLoad.
+  const [loaded, setLoaded] = useState(false)
+  const [settled, setSettled] = useState(false)
+  const [retryNonce, setRetryNonce] = useState(0)
+
+  useEffect(() => {
+    setLoaded(false)
+    setSettled(false)
+    setRetryNonce(0)
+    if (!isLiveShot) return
+    let tries = 0
+    const MAX_TRIES = 3
+    const id = setInterval(() => {
+      tries += 1
+      if (tries >= MAX_TRIES) {
+        setSettled(true)
+        clearInterval(id)
+        return
+      }
+      setRetryNonce((n) => n + 1)
+    }, 3000)
+    return () => clearInterval(id)
+  }, [activeKey, isLiveShot])
+
+  const showSkeleton = !!active && (isLiveShot ? !settled : !loaded)
+  const previewSrc = active ? (isLiveShot ? `${active.url}&_r=${retryNonce}` : active.url) : ''
 
   const upload = async (file: File) => {
     setBusy(true)
@@ -114,7 +188,14 @@ export function ScreenshotGallery({ project }: { project: Project }) {
     <div className="space-y-1.5">
       {active && (
         <div className="relative overflow-hidden rounded-md">
-          <img src={active.url} alt={active.label} className="max-h-72 w-full object-contain" />
+          {showSkeleton && <PreviewSkeleton />}
+          <img
+            src={previewSrc}
+            alt={active.label}
+            onLoad={() => setLoaded(true)}
+            onError={() => setLoaded(true)}
+            className={'max-h-72 w-full object-contain ' + (showSkeleton ? 'hidden' : '')}
+          />
           <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
             <IconButton
               onClick={setAsDefault}
