@@ -206,7 +206,7 @@ export function ScreenshotGallery({ project }: { project: Project }) {
             alt={active.label}
             onLoad={() => setLoaded(true)}
             onError={() => setLoaded(true)}
-            className={'max-h-72 w-full object-contain ' + (showSkeleton ? 'hidden' : '')}
+            className={'h-auto w-full ' + (showSkeleton ? 'hidden' : '')}
           />
           <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
             <IconButton
