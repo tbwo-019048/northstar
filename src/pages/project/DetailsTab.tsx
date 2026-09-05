@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Download, Plus, Search, Trash2, Upload, X } from 'lucide-react'
 import { useProjectData, asDetails, asEnvVars } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
-import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
+import { EditableText, IconButton, Input, Select, SecretField } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { parseDotEnv, serializeDotEnv } from '@/lib/dotenv'
 import { downloadText } from '@/lib/csv'
@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/velobits/dialog'
-import type { Project } from '@/lib/types'
+import { PROJECT_STATES, type Project, type ProjectState } from '@/lib/types'
 
 export function DetailsTab({ project }: { project: Project }) {
   const projectId = project.id
@@ -43,30 +43,46 @@ export function DetailsTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <label className="block">
-          <span className="text-[11px] font-medium uppercase text-muted-foreground">
-            Summary {sumStatus !== 'idle' && <em className="not-italic text-primary">· {sumStatus}</em>}
-          </span>
-          <textarea
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            rows={2}
-            className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
-            placeholder="What is this project, in a sentence or two…"
-          />
-        </label>
-        <label className="block">
-          <span className="text-[11px] font-medium uppercase text-muted-foreground">Hours worked</span>
-          <Input
-            type="number"
-            step="0.5"
-            value={project.hours_worked ?? 0}
-            onChange={(e) => update(projectId, { hours_worked: Number(e.target.value) || 0 })}
-            className="mt-1 w-28"
-          />
-        </label>
-      </div>
+      <label className="block">
+        <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
+        <Select
+          value={project.state}
+          onChange={(e) => update(projectId, { state: e.target.value as ProjectState })}
+          className="mt-1 w-full sm:w-56"
+        >
+          {[...PROJECT_STATES, ...(PROJECT_STATES.includes(project.state) ? [] : [project.state])].map(
+            (s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ),
+          )}
+        </Select>
+      </label>
+
+      <label className="block">
+        <span className="text-[11px] font-medium uppercase text-muted-foreground">Hours worked</span>
+        <Input
+          type="number"
+          step="0.5"
+          value={project.hours_worked ?? 0}
+          onChange={(e) => update(projectId, { hours_worked: Number(e.target.value) || 0 })}
+          className="mt-1 w-full"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-[11px] font-medium uppercase text-muted-foreground">
+          Summary {sumStatus !== 'idle' && <em className="not-italic text-primary">· {sumStatus}</em>}
+        </span>
+        <textarea
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          rows={2}
+          className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+          placeholder="What is this project, in a sentence or two…"
+        />
+      </label>
 
       {isAppOrSite && (
         <div className="overflow-hidden rounded-md border border-border">

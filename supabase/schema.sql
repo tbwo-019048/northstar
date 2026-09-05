@@ -57,12 +57,14 @@ create table if not exists projects (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   type        project_type not null default 'website',
+  state       text not null default 'concept',  -- concept|commenced|development|mvp|revised|final|support
   summary     text default '',
   hours_worked numeric not null default 0,
   position    integer not null default 0,
   logo_url    text,
   website_url text,                      -- live site link, shown in Summary
   test_site_url text,                    -- staging/test site link, shown in Summary
+  default_screenshot text,               -- 'live' | 'test' | a project_screenshots.id
   github_repo text,                      -- "owner/repo" this project tracks
   verification_token   text,             -- app/website verification token, if any
   platform_project_id  text,             -- id of this project on its platform (e.g. Firebase/Vercel project id)
@@ -76,8 +78,10 @@ create table if not exists projects (
   updated_at  timestamptz not null default now()
 );
 alter table projects add column if not exists logo_url text;
+alter table projects add column if not exists state text not null default 'concept';
 alter table projects add column if not exists website_url text;
 alter table projects add column if not exists test_site_url text;
+alter table projects add column if not exists default_screenshot text;
 alter table projects add column if not exists github_repo text;
 alter table projects add column if not exists verification_token text;
 alter table projects add column if not exists platform_project_id text;
@@ -222,13 +226,43 @@ create trigger trg_requests_updated before update on requests
 -- Pipelines
 -- ---------------------------------------------------------------------------
 create table if not exists pipelines (
-  id           uuid primary key default gen_random_uuid(),
-  project_id   uuid not null references projects(id) on delete cascade,
-  name         text not null default 'Pipeline',
-  status       pipeline_status not null default 'active',
-  sort         integer not null default 0,
-  created_at   timestamptz not null default now(),
-  completed_at timestamptz
+  id             uuid primary key default gen_random_uuid(),
+  project_id     uuid not null references projects(id) on delete cascade,
+  name           text not null default 'Pipeline',
+  status         pipeline_status not null default 'active',
+  estimate_hours numeric not null default 0,  -- added to projects.hours_worked on completion
+  sort           integer not null default 0,
+  created_at     timestamptz not null default now(),
+  completed_at   timestamptz
+);
+alter table pipelines add column if not exists estimate_hours numeric not null default 0;
+
+-- ---------------------------------------------------------------------------
+-- Screenshots — manually uploaded, alongside the auto Live/Test Site
+-- snapshots computed client-side from projects.website_url/test_site_url.
+-- ---------------------------------------------------------------------------
+create table if not exists project_screenshots (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  url         text not null,
+  label       text not null default '',
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- Assets — a link to a website, or an uploaded file.
+-- ---------------------------------------------------------------------------
+create table if not exists project_assets (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  kind        text not null default 'link',  -- 'link' | 'file'
+  label       text not null default '',
+  url         text not null default '',
+  file_name   text,
+  file_size   bigint,
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now()
 );
 
 create table if not exists pipeline_items (
@@ -318,7 +352,7 @@ declare t text;
 begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
-    'features','details','requests','pipelines','pipeline_items'
+    'features','details','requests','pipelines','pipeline_items','project_screenshots','project_assets'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
@@ -353,7 +387,7 @@ declare t text;
 begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
-    'features','details','requests','pipelines','pipeline_items'
+    'features','details','requests','pipelines','pipeline_items','project_screenshots','project_assets'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table %I', t);
@@ -395,3 +429,27 @@ create policy "avatars auth write" on storage.objects
   for all to authenticated
   using (bucket_id = 'avatars')
   with check (bucket_id = 'avatars');
+
+insert into storage.buckets (id, name, public)
+values ('project-screenshots', 'project-screenshots', true), ('project-assets', 'project-assets', true)
+on conflict (id) do nothing;
+
+drop policy if exists "project screenshots public read" on storage.objects;
+create policy "project screenshots public read" on storage.objects
+  for select using (bucket_id = 'project-screenshots');
+
+drop policy if exists "project screenshots auth write" on storage.objects;
+create policy "project screenshots auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'project-screenshots')
+  with check (bucket_id = 'project-screenshots');
+
+drop policy if exists "project assets public read" on storage.objects;
+create policy "project assets public read" on storage.objects
+  for select using (bucket_id = 'project-assets');
+
+drop policy if exists "project assets auth write" on storage.objects;
+create policy "project assets auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'project-assets')
+  with check (bucket_id = 'project-assets');

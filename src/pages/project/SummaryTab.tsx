@@ -5,7 +5,10 @@ import { useProjectData, asTodos, asFeatures, asRequests, asPeople, asPipelines 
 import { useProjects } from '@/store/useProjects'
 import { Chip, Input } from '@/components/ui-lite'
 import { resolveFaviconUrl } from '@/lib/favicon'
-import type { Project } from '@/lib/types'
+import { ScreenshotGallery } from '@/components/ScreenshotGallery'
+import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
+import { STATE_TEXT_CLASS } from '@/lib/projectState'
+import { SITE_TYPES, type Project } from '@/lib/types'
 
 type SiteField = 'website_url' | 'test_site_url'
 
@@ -13,6 +16,7 @@ export function SummaryTab({ project }: { project: Project }) {
   const rows = useProjectData((s) => s.rows)
   const nav = useNavigate()
   const { id } = useParams()
+  const hasSites = SITE_TYPES.includes(project.type)
 
   const stats = useMemo(() => {
     const todos = asTodos(rows.todos)
@@ -41,16 +45,25 @@ export function SummaryTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <SiteLinkRow project={project} field="website_url" label="Live Site" />
-        <SiteLinkRow project={project} field="test_site_url" label="Test Site" />
-      </div>
+      {hasSites && (
+        <>
+          <div className="space-y-2">
+            <SiteLinkRow project={project} field="website_url" label="Live Site" />
+            <SiteLinkRow project={project} field="test_site_url" label="Test Site" />
+          </div>
+          <ScreenshotGallery project={project} />
+        </>
+      )}
 
       {project.summary && (
         <p className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
           {project.summary}
         </p>
       )}
+
+      <div className={'flex justify-center rounded-md border border-border py-2 ' + (STATE_TEXT_CLASS[project.state] ?? '')}>
+        <HalfCircleProgress value={statePercent(project.state)} label={project.state} color="currentColor" />
+      </div>
 
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-5">
         {tiles.map(([label, value, tab]) => (

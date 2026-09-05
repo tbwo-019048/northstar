@@ -16,11 +16,13 @@ import { PipelineTab } from '@/pages/project/PipelineTab'
 import { AnalysisTab } from '@/pages/project/AnalysisTab'
 import { GitTab } from '@/pages/project/GitTab'
 import { ProjectSettingsTab } from '@/pages/project/ProjectSettingsTab'
+import { AssetsTab } from '@/pages/project/AssetsTab'
 
 const TABS = [
   { key: 'summary', label: 'Summary' },
   { key: 'features', label: 'Features' },
   { key: 'details', label: 'Details' },
+  { key: 'assets', label: 'Assets' },
   { key: 'requests', label: 'Requests' },
   { key: 'todo', label: 'To-Do' },
   { key: 'pipeline', label: 'Pipeline' },
@@ -138,9 +140,10 @@ export function Project() {
         {active === 'summary' && project && <SummaryTab project={project} />}
         {active === 'features' && <FeaturesTab projectId={id} />}
         {active === 'details' && project && <DetailsTab project={project} />}
+        {active === 'assets' && <AssetsTab projectId={id} />}
         {active === 'requests' && project && <RequestsTab project={project} />}
         {active === 'todo' && <TodoTab projectId={id} />}
-        {active === 'pipeline' && <PipelineTab projectId={id} />}
+        {active === 'pipeline' && project && <PipelineTab project={project} />}
         {active === 'users' && project && <UsersTab project={project} />}
         {active === 'git' && <GitTab projectId={id} />}
         {active === 'analysis' && project && <AnalysisTab project={project} />}

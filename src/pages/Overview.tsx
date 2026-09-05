@@ -12,10 +12,11 @@ import {
   X,
 } from 'lucide-react'
 import { useProjects } from '@/store/useProjects'
-import { PROJECT_TYPES, type Project, type ProjectType } from '@/lib/types'
+import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
 import { parseCSV, toCSV, downloadText } from '@/lib/csv'
+import { STATE_CHIP_CLASS } from '@/lib/projectState'
 
 const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   website: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
@@ -105,8 +106,8 @@ export function Overview() {
 
   const exportCsv = () => {
     const csv = toCSV(
-      ['name', 'type', 'summary', 'hours_worked', 'logo_url'],
-      rows.map((p) => [p.name, p.type, p.summary, p.hours_worked, p.logo_url ?? '']),
+      ['name', 'type', 'state', 'summary', 'hours_worked', 'logo_url'],
+      rows.map((p) => [p.name, p.type, p.state, p.summary, p.hours_worked, p.logo_url ?? '']),
     )
     downloadText('projects.csv', csv, 'text/csv')
   }
@@ -121,6 +122,7 @@ export function Overview() {
       const recName = (rec.name ?? '').trim()
       if (!recName) continue
       const recType = (rec.type ?? '').trim() as ProjectType
+      const recState = (rec.state ?? '').trim() as ProjectState
       const patch: Partial<Project> = {}
       if (rec.summary !== undefined) patch.summary = rec.summary
       if (rec.hours_worked !== undefined && rec.hours_worked !== '') {
@@ -128,6 +130,7 @@ export function Overview() {
       }
       if (rec.logo_url !== undefined) patch.logo_url = rec.logo_url || null
       if (recType) patch.type = recType
+      if (recState && PROJECT_STATES.includes(recState)) patch.state = recState
 
       const existing = projects.find((p) => p.name.toLowerCase() === recName.toLowerCase())
       if (existing) {
@@ -199,7 +202,7 @@ export function Overview() {
             <List className="size-3.5" />
           </IconButton>
           <IconButton
-            title="By type"
+            title="Grouped"
             onClick={() => setView('byType')}
             className={view === 'byType' ? 'bg-muted text-foreground' : ''}
           >
@@ -317,7 +320,8 @@ export function Overview() {
               className="flex flex-col items-center gap-1.5 rounded-md p-2 text-center hover:bg-muted/60"
             >
               <ProjectLogo project={p} size="lg" />
-              <span className="w-full truncate text-xs font-medium">{p.name}</span>
+              <span className="w-full break-words text-xs font-medium">{p.name}</span>
+              <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{p.state}</Chip>
             </button>
           ))}
           {rows.length === 0 && (
@@ -342,16 +346,28 @@ function ProjectTable({
   onOpen: (id: string) => void
   compact?: boolean
 }) {
+  // A shared <colgroup> (identical whether or not the header row renders)
+  // is what keeps columns lined up across the separate <table> elements in
+  // Grouped view — without it, each group auto-sizes its own columns from
+  // its own content and they stagger against each other.
   return (
     <div className="overflow-hidden rounded-md border border-border">
-      <table className="w-full text-sm">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>
+          <col />
+          {!compact && <col className="w-24" />}
+          <col className="w-28" />
+          <col className="w-16" />
+          <col className="w-24" />
+        </colgroup>
         {!compact && (
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
               <th className="px-2.5 py-1 font-medium">Name</th>
               <th className="px-2.5 py-1 font-medium">Type</th>
-              <th className="w-20 px-2.5 py-1 text-right font-medium">Hours</th>
-              <th className="w-28 px-2.5 py-1 text-right font-medium">Updated</th>
+              <th className="px-2.5 py-1 font-medium">State</th>
+              <th className="px-2.5 py-1 text-right font-medium">Hours</th>
+              <th className="px-2.5 py-1 text-right font-medium">Updated</th>
             </tr>
           </thead>
         )}
@@ -364,13 +380,15 @@ function ProjectTable({
               onKeyDown={(e) => e.key === 'Enter' && onOpen(p.id)}
               className="group cursor-pointer border-b border-border last:border-0 hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
             >
-              <td className="px-2.5 py-1">
-                <span className="flex items-center gap-1.5 font-medium group-hover:underline">
+              <td className="truncate px-2.5 py-1">
+                <span className="flex items-center gap-1.5 truncate font-medium group-hover:underline">
                   <ProjectLogo project={p} size="xs" />
-                  {p.name}
+                  <span className="truncate">{p.name}</span>
                 </span>
                 {p.summary && (
-                  <span className="ml-[22px] text-xs text-muted-foreground">{p.summary}</span>
+                  <span className="ml-[22px] block truncate text-xs text-muted-foreground">
+                    {p.summary}
+                  </span>
                 )}
               </td>
               {!compact && (
@@ -378,6 +396,9 @@ function ProjectTable({
                   <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
                 </td>
               )}
+              <td className="px-2.5 py-1">
+                <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{p.state}</Chip>
+              </td>
               <td className="px-2.5 py-1 text-right tabular-nums text-muted-foreground">
                 {p.hours_worked || 0}
               </td>
@@ -388,7 +409,7 @@ function ProjectTable({
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-3 py-6 text-center text-xs text-muted-foreground">
+              <td colSpan={5} className="px-3 py-6 text-center text-xs text-muted-foreground">
                 {loaded ? 'No projects yet.' : 'Loading…'}
               </td>
             </tr>

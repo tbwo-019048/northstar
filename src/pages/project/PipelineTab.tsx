@@ -16,10 +16,13 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { CheckCircle2, Download, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { useProjectData, asPipelines, asPipelineItems } from '@/store/useProjectData'
-import { EditableText, IconButton, Select } from '@/components/ui-lite'
-import type { PipelineItem } from '@/lib/types'
+import { useProjects } from '@/store/useProjects'
+import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
+import type { PipelineItem, Project } from '@/lib/types'
 
-export function PipelineTab({ projectId }: { projectId: string }) {
+export function PipelineTab({ project }: { project: Project }) {
+  const projectId = project.id
+  const { update: updateProject } = useProjects()
   const pipeRows = useProjectData((s) => s.rows.pipelines)
   const itemRows = useProjectData((s) => s.rows.pipeline_items)
   const { add, patch, del, reorder } = useProjectData()
@@ -106,7 +109,13 @@ export function PipelineTab({ projectId }: { projectId: string }) {
 
   const completePipeline = async () => {
     if (!current) return
-    if (!confirm(`Complete "${current.name}"? Its ${currentItems.length} points move to Features.`))
+    const estimate = current.estimate_hours || 0
+    const hoursNote = estimate > 0 ? ` and ${estimate}h added to the project total` : ''
+    if (
+      !confirm(
+        `Complete "${current.name}"? Its ${currentItems.length} points move to Features${hoursNote}.`,
+      )
+    )
       return
     for (const it of currentItems) {
       if (!it.body.trim()) continue
@@ -121,6 +130,9 @@ export function PipelineTab({ projectId }: { projectId: string }) {
       status: 'completed',
       completed_at: new Date().toISOString(),
     })
+    if (estimate > 0) {
+      await updateProject(projectId, { hours_worked: (project.hours_worked || 0) + estimate })
+    }
   }
 
   return (
@@ -178,6 +190,21 @@ export function PipelineTab({ projectId }: { projectId: string }) {
               </span>
             )}
             <div className="flex-1" />
+            <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              Estimate
+              <Input
+                type="number"
+                step="0.5"
+                min="0"
+                disabled={current.status !== 'active'}
+                value={current.estimate_hours || 0}
+                onChange={(e) =>
+                  patch('pipelines', current.id, { estimate_hours: Number(e.target.value) || 0 })
+                }
+                className="h-6 w-16"
+              />
+              h
+            </label>
             <button
               type="button"
               onClick={exportTxt}

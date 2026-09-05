@@ -1,22 +1,45 @@
 export type ProjectType = 'website' | 'app' | 'physical' | 'written' | 'other'
+export type ProjectState =
+  | 'concept'
+  | 'commenced'
+  | 'development'
+  | 'mvp'
+  | 'revised'
+  | 'final'
+  | 'support'
 export type TodoStatus = 'todo' | 'completed'
 export type Priority = 'urgent' | 'high' | 'medium' | 'low'
 export type PipelineStatus = 'active' | 'completed' | 'archived'
 
 export const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low']
 export const PROJECT_TYPES: ProjectType[] = ['website', 'app', 'physical', 'written', 'other']
+export const PROJECT_STATES: ProjectState[] = [
+  'concept',
+  'commenced',
+  'development',
+  'mvp',
+  'revised',
+  'final',
+  'support',
+]
 export const TODO_TYPES = ['feature', 'bug', 'chore', 'idea', 'research', 'other']
+
+/** Projects with a real hosted URL — Details' Credentials section and
+ * Summary's Live/Test Site + screenshots only make sense for these. */
+export const SITE_TYPES: ProjectType[] = ['website', 'app']
 
 export interface Project {
   id: string
   name: string
   type: ProjectType
+  state: ProjectState
   summary: string
   hours_worked: number
   position: number
   logo_url: string | null
   website_url: string | null
   test_site_url: string | null
+  default_screenshot: string | null
   github_repo: string | null
   verification_token: string | null
   platform_project_id: string | null
@@ -139,9 +162,33 @@ export interface Pipeline {
   project_id: string
   name: string
   status: PipelineStatus
+  estimate_hours: number
   sort: number
   created_at: string
   completed_at: string | null
+}
+
+export interface ProjectScreenshot {
+  id: string
+  project_id: string
+  url: string
+  label: string
+  sort: number
+  created_at: string
+}
+
+export type AssetKind = 'link' | 'file'
+
+export interface ProjectAsset {
+  id: string
+  project_id: string
+  kind: AssetKind
+  label: string
+  url: string
+  file_name: string | null
+  file_size: number | null
+  sort: number
+  created_at: string
 }
 
 export interface PipelineItem {

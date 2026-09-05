@@ -153,3 +153,28 @@ Each project's **Settings** tab has an Import/Export section:
   SheetJS's own CDN build fixes. It's also only ever dynamically `import()`-ed, so its ~500 kB
   doesn't load for anyone who never opens this tab.
 
+## Project state, Overview fixes, pipeline estimates, screenshots, assets
+
+- **State** — every project has one of `concept, commenced, development, mvp, revised, final,
+  support` (editable in Details, shown as a color-coded chip in Overview's table/grid/grouped
+  views). Summary shows it as a half-circle progress gauge: percentage = (position among the 6
+  non-`support` states) × (100 ÷ 6); `support` reads as 100% (a project in support is done, just
+  being maintained).
+- **Overview** — the grid view no longer truncates project names; "By type" is now labelled
+  "Grouped"; every table (plain, and each per-type group in Grouped view) now shares an identical
+  `<colgroup>` on a `table-fixed` layout, so columns line up across the separately-rendered group
+  tables instead of each one auto-sizing its own widths from its own content.
+- **Live/Test Site + screenshots** only show for Website/App projects (`SITE_TYPES` in
+  `src/lib/types.ts`) — Physical and Written projects don't have a hosted URL to preview.
+- **Pipelines** — each has an `estimate_hours` field; completing a pipeline adds that estimate onto
+  the project's `hours_worked`, on top of moving its points into Features.
+- **Screenshots** (Summary tab) — an automatic preview of Live/Test Site via WordPress's free
+  `mshots` service (no key, just an image URL — the first render can return a placeholder that
+  resolves after a few seconds), plus manually uploaded screenshots (`project-screenshots` bucket).
+  Thumbnail strip to switch between them, a star to set the project's default, upload for more.
+- **Assets** — a new per-project tab: links to external sites, or files uploaded to the
+  `project-assets` bucket. Neither is included in the Excel export (Settings tab).
+- **Manual Save** (header, next to the theme toggle) — everything already autosaves; this button
+  force-resyncs whatever's open (the active project, or the projects list) from Supabase and
+  confirms when done, rather than being a no-op reassurance button.
+

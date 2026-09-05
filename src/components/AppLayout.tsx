@@ -1,9 +1,46 @@
+import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, Settings as SettingsIcon } from 'lucide-react'
+import { Check, LogOut, Save, Settings as SettingsIcon } from 'lucide-react'
 import { useAuth } from '@/store/useAuth'
+import { useProjects } from '@/store/useProjects'
+import { useProjectData } from '@/store/useProjectData'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
 import { Footer } from '@/components/Footer'
+
+/** Everything here already autosaves — every field write goes straight to
+ * Supabase. This button gives an explicit, reassuring action anyway: it
+ * force-resyncs whatever's currently open (the active project if you're in
+ * one, otherwise the projects list) from the server and confirms when done,
+ * rather than being a no-op. */
+function SaveButton() {
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  const onClick = async () => {
+    setState('saving')
+    const projectId = useProjectData.getState().projectId
+    if (projectId) await useProjectData.getState().load(projectId)
+    else await useProjects.getState().load()
+    setState('saved')
+    setTimeout(() => setState('idle'), 1200)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={state === 'saving'}
+      title="Save"
+      className="grid size-7 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+    >
+      {state === 'saved' ? (
+        <Check className="size-4 text-primary" />
+      ) : (
+        <Save className={'size-4' + (state === 'saving' ? ' animate-pulse' : '')} />
+      )}
+    </button>
+  )
+}
 
 export function AppLayout() {
   const nav = useNavigate()
@@ -37,6 +74,7 @@ export function AppLayout() {
           {initials || 'U'}
         </div>
         <ThemeToggle />
+        <SaveButton />
         <Link
           to="/app/settings"
           title="Settings"

@@ -9,6 +9,8 @@ import type {
   PersonComment,
   Pipeline,
   PipelineItem,
+  ProjectAsset,
+  ProjectScreenshot,
   RequestItem,
   Todo,
   TodoComment,
@@ -28,6 +30,8 @@ export type TableName =
   | 'requests'
   | 'pipelines'
   | 'pipeline_items'
+  | 'project_screenshots'
+  | 'project_assets'
 
 const PROJECT_TABLES: TableName[] = [
   'project_people',
@@ -38,6 +42,8 @@ const PROJECT_TABLES: TableName[] = [
   'details',
   'requests',
   'pipelines',
+  'project_screenshots',
+  'project_assets',
 ]
 
 interface ProjectDataState {
@@ -69,6 +75,8 @@ const empty = (): Record<TableName, Row[]> => ({
   requests: [],
   pipelines: [],
   pipeline_items: [],
+  project_screenshots: [],
+  project_assets: [],
 })
 
 export const useProjectData = create<ProjectDataState>((set, get) => ({
@@ -185,6 +193,8 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       'requests',
       'pipelines',
       'pipeline_items',
+      'project_screenshots',
+      'project_assets',
     ]
     ALL.forEach((table) =>
       ch.on('postgres_changes', { event: '*', schema: 'public', table }, bump),
@@ -209,3 +219,5 @@ export const asDetails = (r: Row[]) => r as unknown as Detail[]
 export const asRequests = (r: Row[]) => r as unknown as RequestItem[]
 export const asPipelines = (r: Row[]) => r as unknown as Pipeline[]
 export const asPipelineItems = (r: Row[]) => r as unknown as PipelineItem[]
+export const asScreenshots = (r: Row[]) => r as unknown as ProjectScreenshot[]
+export const asAssets = (r: Row[]) => r as unknown as ProjectAsset[]
