@@ -19,6 +19,7 @@
   },
   "registries": {
     "@velobits": "https://ui.velobits.dev/r/{name}.json",
-    "@heroicons-animated": "https://www.heroicons-animated.com/r/{name}.json"
+    "@heroicons-animated": "https://www.heroicons-animated.com/r/{name}.json",
+    "@eldoraui": "https://eldoraui.site/r/{name}.json"
   }
 }

@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { mshotUrl } from '@/lib/screenshot'
 import { IconButton } from '@/components/ui-lite'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
+import { Safari } from '@/components/ui/safari-browser'
 import type { Project } from '@/lib/types'
 
 interface Entry {
@@ -41,7 +42,7 @@ function PreviewSkeleton() {
   }, [])
 
   return (
-    <div className="flex h-72 w-full items-center justify-center gap-3 bg-muted/30">
+    <div className="flex h-full min-h-72 w-full items-center justify-center gap-3 bg-muted/30">
       <motion.div
         animate={{ rotate: angle }}
         transition={{ duration: 1.1, ease: 'linear' }}
@@ -130,6 +131,12 @@ export function ScreenshotGallery({ project }: { project: Project }) {
 
   const showSkeleton = !!active && (isLiveShot ? !settled : !loaded)
   const previewSrc = active ? (isLiveShot ? `${active.url}&_r=${retryNonce}` : active.url) : ''
+  const browserLabel =
+    active?.key === 'live'
+      ? project.website_url?.replace(/^https?:\/\//, '')
+      : active?.key === 'test'
+        ? project.test_site_url?.replace(/^https?:\/\//, '')
+        : `NorthStar / ${project.name}`
 
   const upload = async (file: File) => {
     setBusy(true)
@@ -199,14 +206,28 @@ export function ScreenshotGallery({ project }: { project: Project }) {
   return (
     <div className="space-y-1.5">
       {active && (
-        <div className="relative overflow-hidden rounded-md">
-          {showSkeleton && <PreviewSkeleton />}
+        <div className="relative overflow-hidden rounded-md bg-muted/20">
+          {showSkeleton && (
+            <div className="absolute inset-0 z-10">
+              <PreviewSkeleton />
+            </div>
+          )}
           <img
             src={previewSrc}
-            alt={active.label}
+            alt=""
+            aria-hidden="true"
             onLoad={() => setLoaded(true)}
             onError={() => setLoaded(true)}
-            className={'h-72 w-full object-cover ' + (showSkeleton ? 'hidden' : '')}
+            className="pointer-events-none absolute size-px opacity-0"
+          />
+          <Safari
+            src={previewSrc}
+            url={browserLabel}
+            role="img"
+            aria-label={active.label}
+            className={
+              'h-auto w-full transition-opacity ' + (showSkeleton ? 'opacity-0' : 'opacity-100')
+            }
           />
           <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
             <IconButton

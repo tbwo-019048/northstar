@@ -6,6 +6,7 @@ import { useAuth } from '@/store/useAuth'
 import { APP_ACCESS_TOKEN } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
+import ClerkOTP from '@/components/ui/clerk-otp'
 import versionData from '@/version.json'
 
 export function Login() {
@@ -46,7 +47,7 @@ export function Login() {
       <div className="fixed bottom-3 right-4 text-[11px] tabular-nums text-muted-foreground/70">
         v{versionData.version}
       </div>
-      <div className="w-full max-w-xs">
+      <div className="w-full max-w-sm">
         <div className="mb-6">
           <div className="flex items-center gap-2 font-semibold">
             <NorthStarIcon className="size-4 text-primary" />
@@ -56,23 +57,31 @@ export function Login() {
         </div>
 
         {needGate ? (
-          <form onSubmit={onGate} className="space-y-2.5">
-            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <KeyIcon size={14} /> Access token
-            </label>
-            <input
-              autoFocus
-              type="password"
-              className={field}
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Environment access token"
+          <div className="space-y-4">
+            <ClerkOTP
+              cardTitle="Verification token"
+              cardDescription="Enter the verification token you were given to continue to the secure workspace."
+              className="max-w-none"
             />
-            {err && <p className="text-xs text-destructive">{err}</p>}
-            <button className="h-8 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90">
-              Continue
-            </button>
-          </form>
+            <form onSubmit={onGate} className="space-y-2.5">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <KeyIcon size={14} /> Verification token
+              </label>
+              <input
+                autoFocus
+                type="password"
+                autoComplete="one-time-code"
+                className={field}
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Enter verification token"
+              />
+              {err && <p className="text-xs text-destructive">{err}</p>}
+              <button className="h-8 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                Verify and continue
+              </button>
+            </form>
+          </div>
         ) : (
           <form onSubmit={onLogin} className="space-y-2.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">

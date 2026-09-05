@@ -11,6 +11,19 @@
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
+@keyframes gold-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility animate-gold-spin {
+  animation: gold-spin 3s linear infinite;
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);

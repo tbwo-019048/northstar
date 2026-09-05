@@ -32,6 +32,7 @@ export function Overview() {
   const { projects, loaded, load, create, update, subscribe, error, clearError } = useProjects()
   const nav = useNavigate()
   const [q, setQ] = useState('')
+  const [showDescriptions, setShowDescriptions] = useState(false)
   const [filter, setFilter] = useState<ProjectType | 'all'>('all')
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -182,6 +183,15 @@ export function Overview() {
             className="h-7 w-40 pl-7"
           />
         </div>
+        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={showDescriptions}
+            onChange={(event) => setShowDescriptions(event.target.checked)}
+            className="size-3.5 accent-primary"
+          />
+          Descriptions
+        </label>
         <Select value={filter} onChange={(e) => setFilter(e.target.value as ProjectType | 'all')}>
           <option value="all">All types</option>
           {allTypes.map((t) => (
@@ -288,7 +298,14 @@ export function Overview() {
         </form>
       )}
 
-      {view === 'table' && <ProjectTable rows={rows} loaded={loaded} onOpen={openProject} />}
+      {view === 'table' && (
+        <ProjectTable
+          rows={rows}
+          loaded={loaded}
+          onOpen={openProject}
+          showDescriptions={showDescriptions}
+        />
+      )}
 
       {view === 'byType' && (
         <div className="space-y-4">
@@ -297,7 +314,13 @@ export function Overview() {
               <h2 className="text-xs font-semibold capitalize text-muted-foreground">
                 {t} · {list.length}
               </h2>
-              <ProjectTable rows={list} loaded={loaded} onOpen={openProject} compact />
+              <ProjectTable
+                rows={list}
+                loaded={loaded}
+                onOpen={openProject}
+                compact
+                showDescriptions={showDescriptions}
+              />
             </div>
           ))}
           {byType.length === 0 && (
@@ -345,11 +368,13 @@ function ProjectTable({
   loaded,
   onOpen,
   compact,
+  showDescriptions,
 }: {
   rows: Project[]
   loaded: boolean
   onOpen: (id: string) => void
   compact?: boolean
+  showDescriptions: boolean
 }) {
   // A shared <colgroup> (identical whether or not the header row renders)
   // is what keeps columns lined up across the separate <table> elements in
@@ -390,7 +415,7 @@ function ProjectTable({
                   <ProjectLogo project={p} size="xs" />
                   <span className="truncate">{p.name}</span>
                 </span>
-                {p.summary && (
+                {showDescriptions && p.summary && (
                   <span className="ml-[22px] block truncate text-xs text-muted-foreground">
                     {p.summary}
                   </span>
