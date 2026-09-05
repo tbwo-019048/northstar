@@ -16,7 +16,7 @@ import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type Pr
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
 import { parseCSV, toCSV, downloadText } from '@/lib/csv'
-import { STATE_CHIP_CLASS } from '@/lib/projectState'
+import { STATE_CHIP_CLASS, formatState } from '@/lib/projectState'
 
 const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   website: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
@@ -320,8 +320,13 @@ export function Overview() {
               className="flex flex-col items-center gap-1.5 rounded-md p-2 text-center hover:bg-muted/60"
             >
               <ProjectLogo project={p} size="lg" />
-              <span className="w-full break-words text-xs font-medium">{p.name}</span>
-              <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{p.state}</Chip>
+              {/* Fixed height (not min-height) — reserves the same room in
+                  every tile regardless of how many lines the name wraps to,
+                  so the state chip below lines up across the whole grid. */}
+              <span className="flex h-8 w-full items-start justify-center break-words text-xs font-medium leading-4">
+                {p.name}
+              </span>
+              <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
             </button>
           ))}
           {rows.length === 0 && (
@@ -397,7 +402,7 @@ function ProjectTable({
                 </td>
               )}
               <td className="px-2.5 py-1">
-                <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{p.state}</Chip>
+                <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
               </td>
               <td className="px-2.5 py-1 text-right tabular-nums text-muted-foreground">
                 {p.hours_worked || 0}

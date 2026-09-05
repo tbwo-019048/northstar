@@ -18,6 +18,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@velobits": "https://ui.velobits.dev/r/{name}.json"
+    "@velobits": "https://ui.velobits.dev/r/{name}.json",
+    "@heroicons-animated": "https://www.heroicons-animated.com/r/{name}.json"
   }
 }

@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/velobits/dialog'
 import { PROJECT_STATES, type Project, type ProjectState } from '@/lib/types'
+import { formatState } from '@/lib/projectState'
 
 export function DetailsTab({ project }: { project: Project }) {
   const projectId = project.id
@@ -53,7 +54,7 @@ export function DetailsTab({ project }: { project: Project }) {
           {[...PROJECT_STATES, ...(PROJECT_STATES.includes(project.state) ? [] : [project.state])].map(
             (s) => (
               <option key={s} value={s}>
-                {s}
+                {formatState(s)}
               </option>
             ),
           )}

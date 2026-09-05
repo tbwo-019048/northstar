@@ -200,6 +200,44 @@ export interface PipelineItem {
   created_at: string
 }
 
+export interface Client {
+  id: string
+  name: string
+  company: string
+  email: string
+  phone: string
+  notes: string
+  sort: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ProjectClient {
+  project_id: string
+  client_id: string
+  created_at: string
+}
+
+export interface EmailGroup {
+  id: string
+  name: string
+  sort: number
+  created_at: string
+}
+
+export interface EmailAccount {
+  id: string
+  group_id: string
+  name: string
+  email: string
+  domain: string
+  password: string
+  notes: string
+  sort: number
+  created_at: string
+  updated_at: string
+}
+
 export const DEFAULT_GROUPS = ['User', 'Admin', 'Advanced'] as const
 
 export interface MemberGroup {

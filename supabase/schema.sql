@@ -453,3 +453,73 @@ create policy "project assets auth write" on storage.objects
   for all to authenticated
   using (bucket_id = 'project-assets')
   with check (bucket_id = 'project-assets');
+
+-- ---------------------------------------------------------------------------
+-- Clients — a global directory (not scoped to one project), linkable to any
+-- number of projects via project_clients.
+-- ---------------------------------------------------------------------------
+create table if not exists clients (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null default '',
+  company     text not null default '',
+  email       text not null default '',
+  phone       text not null default '',
+  notes       text not null default '',
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_clients_updated on clients;
+create trigger trg_clients_updated before update on clients
+  for each row execute function set_updated_at();
+
+create table if not exists project_clients (
+  project_id  uuid not null references projects(id) on delete cascade,
+  client_id   uuid not null references clients(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (project_id, client_id)
+);
+
+-- ---------------------------------------------------------------------------
+-- Emails — accounts grouped into tabs (email_groups), each entry masked the
+-- same way as a person's password.
+-- ---------------------------------------------------------------------------
+create table if not exists email_groups (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null default 'Group',
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists email_accounts (
+  id          uuid primary key default gen_random_uuid(),
+  group_id    uuid not null references email_groups(id) on delete cascade,
+  name        text not null default '',
+  email       text not null default '',
+  domain      text not null default '',
+  password    text not null default '',
+  notes       text not null default '',
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_email_accounts_updated on email_accounts;
+create trigger trg_email_accounts_updated before update on email_accounts
+  for each row execute function set_updated_at();
+
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'clients','project_clients','email_groups','email_accounts'
+  ] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists "auth full access" on %I', t);
+    execute format(
+      'create policy "auth full access" on %I for all to authenticated using (true) with check (true)', t);
+    begin
+      execute format('alter publication supabase_realtime add table %I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;

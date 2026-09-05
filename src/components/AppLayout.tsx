@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { Check, LogOut, Save, Settings as SettingsIcon } from 'lucide-react'
+import { Check, LogOut, Save } from 'lucide-react'
 import { useAuth } from '@/store/useAuth'
 import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
+import { Dock } from '@/components/Dock'
 import { Footer } from '@/components/Footer'
 
 /** Everything here already autosaves — every field write goes straight to
@@ -75,13 +76,6 @@ export function AppLayout() {
         </div>
         <ThemeToggle />
         <SaveButton />
-        <Link
-          to="/app/settings"
-          title="Settings"
-          className="grid size-7 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <SettingsIcon className="size-4" />
-        </Link>
         <button
           type="button"
           onClick={onLogout}
@@ -91,10 +85,11 @@ export function AppLayout() {
           <LogOut className="size-4" />
         </button>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-20">
         <Outlet />
       </main>
       <Footer />
+      <Dock />
     </div>
   )
 }

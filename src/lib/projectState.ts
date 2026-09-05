@@ -1,5 +1,13 @@
 import type { ProjectState } from '@/lib/types'
 
+/** Display label per state — everywhere a state is shown as text should go
+ * through this rather than relying on CSS `capitalize` (which would render
+ * "mvp" as "Mvp" instead of "MVP"). */
+export function formatState(state: ProjectState): string {
+  if (state === 'mvp') return 'MVP'
+  return state.charAt(0).toUpperCase() + state.slice(1)
+}
+
 /** Text-only color per state — used for the half-circle progress gauge
  * (via `currentColor`) and as the base for the chip background below. */
 export const STATE_TEXT_CLASS: Partial<Record<ProjectState, string>> = {

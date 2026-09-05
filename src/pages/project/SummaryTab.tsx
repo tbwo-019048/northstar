@@ -1,14 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, ExternalLink, ImageDown, Link2, Pencil } from 'lucide-react'
+import { AlertTriangle, ArrowRight, ExternalLink, ImageDown, Link2, Pencil, Plus, X } from 'lucide-react'
 import { useProjectData, asTodos, asFeatures, asRequests, asPeople, asPipelines } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
+import { useClients } from '@/store/useClients'
 import { Chip, Input } from '@/components/ui-lite'
 import { resolveFaviconUrl } from '@/lib/favicon'
 import { ScreenshotGallery } from '@/components/ScreenshotGallery'
 import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
-import { STATE_TEXT_CLASS } from '@/lib/projectState'
+import { STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
 import { SITE_TYPES, type Project } from '@/lib/types'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/velobits/dialog'
 
 type SiteField = 'website_url' | 'test_site_url'
 
@@ -46,14 +53,34 @@ export function SummaryTab({ project }: { project: Project }) {
   return (
     <div className="space-y-4">
       {hasSites && (
-        <>
-          <div className="space-y-2">
-            <SiteLinkRow project={project} field="website_url" label="Live Site" />
-            <SiteLinkRow project={project} field="test_site_url" label="Test Site" />
-          </div>
-          <ScreenshotGallery project={project} />
-        </>
+        <div className="space-y-2">
+          <SiteLinkRow project={project} field="website_url" label="Live Site" />
+          <SiteLinkRow project={project} field="test_site_url" label="Test Site" />
+        </div>
       )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        {hasSites && (
+          <div className="min-w-0 flex-[7] basis-[70%]">
+            <ScreenshotGallery project={project} />
+          </div>
+        )}
+        <div
+          className={
+            'flex flex-1 items-center justify-center ' +
+            (hasSites ? 'flex-[3] basis-[30%]' : '') +
+            ' ' +
+            (STATE_TEXT_CLASS[project.state] ?? '')
+          }
+        >
+          <HalfCircleProgress
+            value={statePercent(project.state)}
+            label={formatState(project.state)}
+            color="currentColor"
+            size="lg"
+          />
+        </div>
+      </div>
 
       {project.summary && (
         <p className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
@@ -61,9 +88,7 @@ export function SummaryTab({ project }: { project: Project }) {
         </p>
       )}
 
-      <div className={'flex justify-center rounded-md border border-border py-2 ' + (STATE_TEXT_CLASS[project.state] ?? '')}>
-        <HalfCircleProgress value={statePercent(project.state)} label={project.state} color="currentColor" />
-      </div>
+      <ClientsSection projectId={project.id} />
 
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-5">
         {tiles.map(([label, value, tab]) => (
@@ -229,6 +254,86 @@ function SiteLinkRow({
           <AlertTriangle className="size-3 shrink-0" /> {error}
         </p>
       )}
+    </div>
+  )
+}
+
+/** Clients linked to this project — chips + a picker dialog, same pattern
+ * as Details' Tech Stack. Clients themselves are managed on the global
+ * Clients page (reachable from the dock); this just links/unlinks. */
+function ClientsSection({ projectId }: { projectId: string }) {
+  const { clients, loaded, load, subscribe, links, linkToProject, unlinkFromProject, clientsForProject } =
+    useClients()
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  useEffect(() => {
+    if (!loaded) load()
+    return subscribe()
+  }, [loaded, load, subscribe])
+
+  const linked = clientsForProject(projectId)
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Clients</h2>
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
+        >
+          <Plus className="size-3" /> Add
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {linked.map((c) => (
+          <span key={c.id} className="group/chip inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs">
+            {c.name}
+            <button
+              type="button"
+              onClick={() => unlinkFromProject(projectId, c.id)}
+              className="opacity-0 hover:text-destructive group-hover/chip:opacity-100"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ))}
+        {linked.length === 0 && <p className="text-xs text-muted-foreground">No clients linked yet.</p>}
+      </div>
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        {pickerOpen && (
+          <DialogContent aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle>Link a client</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-80 space-y-0.5 overflow-y-auto">
+              {clients.map((c) => {
+                const active = links.some((l) => l.project_id === projectId && l.client_id === c.id)
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => (active ? unlinkFromProject(projectId, c.id) : linkToProject(projectId, c.id))}
+                    className={
+                      'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ' +
+                      (active ? 'bg-primary/10 text-foreground' : 'hover:bg-muted')
+                    }
+                  >
+                    {c.name}
+                    {active && <span className="text-xs text-primary">Linked</span>}
+                  </button>
+                )
+              })}
+              {clients.length === 0 && (
+                <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                  No clients yet — create one on the Clients page.
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   )
 }

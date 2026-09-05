@@ -113,7 +113,7 @@ export function ScreenshotGallery({ project }: { project: Project }) {
   return (
     <div className="space-y-1.5">
       {active && (
-        <div className="relative overflow-hidden rounded-md border border-border bg-muted/20">
+        <div className="relative overflow-hidden rounded-md">
           <img src={active.url} alt={active.label} className="max-h-72 w-full object-contain" />
           <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
             <IconButton

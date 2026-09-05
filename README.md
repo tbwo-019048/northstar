@@ -178,3 +178,32 @@ Each project's **Settings** tab has an Import/Export section:
   force-resyncs whatever's open (the active project, or the projects list) from Supabase and
   confirms when done, rather than being a no-op reassurance button.
 
+## Dock, Clients, Emails, MVP casing, Summary layout
+
+- **Dock** — a compact pill fixed to the centre-bottom of every `/app/*` screen
+  (`src/components/Dock.tsx`), replacing the header's Settings link. Five stops: Home, Projects
+  (both point at `/app` — there's no separate projects route, so only "Projects" gets the
+  active-route highlight to avoid both lighting up at once), Emails, Clients, Settings. Icons are
+  hover-animated components from [heroicons-animated](https://www.heroicons-animated.com/)
+  (`src/components/ui/{home,folder,envelope,users,cog-6-tooth}.tsx`, installed the same way as
+  VeloBits — via `npx shadcn@latest add @heroicons-animated/<name>`, registry entry in
+  `components.json`); they animate on hover automatically via the `motion` package, no wiring
+  needed. The rest of the app still uses `lucide-react` — a full app-wide icon swap is a separate,
+  much larger follow-up if wanted.
+- **Clients** (`/app/clients`) — a global page, independent of any one project: create clients
+  (name, company, email, phone, notes) and link them to any number of projects. Each project's
+  Summary tab has its own "Clients" section (chips + a link/unlink picker) backed by the same
+  `project_clients` join table, so linking works from either side.
+- **Emails** (`/app/emails`) — a global page for storing email accounts (name, email, domain,
+  password, notes) organised into tabbed groups (e.g. Personal, Business, Clients). Passwords use
+  the same masked `SecretField` as every other secret in the app.
+- **MVP casing** — project state now renders through a `formatState()` helper (`src/lib/projectState.ts`)
+  so `mvp` displays as "MVP" everywhere (Overview, Details, Summary gauge) instead of relying on
+  CSS `capitalize`, which would've rendered "Mvp".
+- **Overview grid alignment** — the project name in each grid tile now reserves a fixed height
+  (rather than growing with the number of lines it wraps to), so the state chip beneath it lines up
+  across every tile regardless of name length.
+- **Summary layout** — the site preview and the state progress gauge now sit side-by-side (70/30
+  split) with no surrounding box on either, and the gauge renders larger (`size="lg"` on
+  `HalfCircleProgress`).
+

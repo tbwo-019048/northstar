@@ -16,6 +16,7 @@ const SIZES = {
   xs: { w: 96, h: 56, stroke: 8, font: 'text-sm' },
   sm: { w: 128, h: 72, stroke: 10, font: 'text-base' },
   md: { w: 160, h: 90, stroke: 12, font: 'text-lg' },
+  lg: { w: 220, h: 122, stroke: 14, font: 'text-2xl' },
 } as const
 
 export function HalfCircleProgress({
