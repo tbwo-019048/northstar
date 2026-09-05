@@ -7,8 +7,13 @@ export interface TechEntry {
 
 const devicon = (path: string) => `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${path}`
 
+/** Simple Icons for brands Devicon doesn't carry — forced to a neutral grey
+ * (`71717a`) so the monochrome glyph stays visible in both light and dark. */
+const simpleicon = (slug: string) => `https://cdn.simpleicons.org/${slug}/71717a`
+
 /** A curated catalog for the Details "Tech Stack" grid — logos via Devicon
- * (jsdelivr CDN). Not exhaustive; add more entries here as needed. */
+ * (jsdelivr CDN) or Simple Icons. Not exhaustive; add more entries here as
+ * needed. */
 export const TECH_CATALOG: TechEntry[] = [
   // Frontend frameworks
   { id: 'react', name: 'React', category: 'Frontend', iconUrl: devicon('react/react-original.svg') },
@@ -27,9 +32,25 @@ export const TECH_CATALOG: TechEntry[] = [
   { id: 'electron', name: 'Electron', category: 'Frontend', iconUrl: devicon('electron/electron-original.svg') },
   { id: 'tauri', name: 'Tauri', category: 'Frontend', iconUrl: devicon('tauri/tauri-original.svg') },
   { id: 'flutter', name: 'Flutter', category: 'Frontend', iconUrl: devicon('flutter/flutter-original.svg') },
+  { id: 'leaflet', name: 'Leaflet', category: 'Frontend', iconUrl: simpleicon('leaflet') },
+  { id: 'reacthookform', name: 'React Hook Form', category: 'Frontend', iconUrl: simpleicon('reacthookform') },
+  { id: 'reactquery', name: 'TanStack Query', category: 'Frontend', iconUrl: simpleicon('reactquery') },
+  {
+    id: 'recharts',
+    name: 'Recharts',
+    category: 'Frontend',
+    // No Devicon or Simple Icons entry — inline neutral bar-chart glyph.
+    iconUrl:
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2371717a'%3E%3Crect x='3' y='12' width='4' height='9' rx='1'/%3E%3Crect x='10' y='7' width='4' height='14' rx='1'/%3E%3Crect x='17' y='3' width='4' height='18' rx='1'/%3E%3C/svg%3E",
+  },
 
   // Styling / UI
   { id: 'tailwind', name: 'Tailwind CSS', category: 'Styling', iconUrl: devicon('tailwindcss/tailwindcss-original.svg') },
+  { id: 'shadcn', name: 'shadcn/ui', category: 'Styling', iconUrl: simpleicon('shadcnui') },
+  { id: 'radix', name: 'Radix UI', category: 'Styling', iconUrl: simpleicon('radixui') },
+  { id: 'heroui', name: 'HeroUI', category: 'Styling', iconUrl: simpleicon('heroui') },
+  { id: 'blueprint', name: 'BlueprintJS', category: 'Styling', iconUrl: simpleicon('blueprint') },
+  { id: 'daisyui', name: 'DaisyUI', category: 'Styling', iconUrl: simpleicon('daisyui') },
   { id: 'bootstrap', name: 'Bootstrap', category: 'Styling', iconUrl: devicon('bootstrap/bootstrap-original.svg') },
   { id: 'sass', name: 'Sass', category: 'Styling', iconUrl: devicon('sass/sass-original.svg') },
   { id: 'html5', name: 'HTML5', category: 'Styling', iconUrl: devicon('html5/html5-original.svg') },
@@ -57,6 +78,8 @@ export const TECH_CATALOG: TechEntry[] = [
   { id: 'django', name: 'Django', category: 'Backend', iconUrl: devicon('django/django-plain.svg') },
   { id: 'laravel', name: 'Laravel', category: 'Backend', iconUrl: devicon('laravel/laravel-original.svg') },
   { id: 'graphql', name: 'GraphQL', category: 'Backend', iconUrl: devicon('graphql/graphql-plain.svg') },
+  { id: 'zod', name: 'Zod', category: 'Backend', iconUrl: simpleicon('zod') },
+  { id: 'resend', name: 'Resend', category: 'Backend', iconUrl: simpleicon('resend') },
 
   // Data
   { id: 'supabase', name: 'Supabase', category: 'Data', iconUrl: devicon('supabase/supabase-original.svg') },
@@ -72,6 +95,16 @@ export const TECH_CATALOG: TechEntry[] = [
   { id: 'npm', name: 'npm', category: 'Tooling', iconUrl: devicon('npm/npm-original-wordmark.svg') },
   { id: 'yarn', name: 'Yarn', category: 'Tooling', iconUrl: devicon('yarn/yarn-original.svg') },
   { id: 'jest', name: 'Jest', category: 'Tooling', iconUrl: devicon('jest/jest-plain.svg') },
+  { id: 'vitest', name: 'Vitest', category: 'Tooling', iconUrl: devicon('vitest/vitest-original.svg') },
+  { id: 'playwright', name: 'Playwright', category: 'Tooling', iconUrl: devicon('playwright/playwright-original.svg') },
+  {
+    id: 'exceljs',
+    name: 'ExcelJS / SheetJS',
+    category: 'Tooling',
+    // No brand icon available — inline neutral spreadsheet-grid glyph.
+    iconUrl:
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M3 9h18M3 15h18M9 3v18M15 3v18'/%3E%3C/svg%3E",
+  },
   { id: 'git', name: 'Git', category: 'Tooling', iconUrl: devicon('git/git-original.svg') },
   { id: 'github', name: 'GitHub', category: 'Tooling', iconUrl: devicon('github/github-original.svg') },
   { id: 'githubactions', name: 'GitHub Actions', category: 'Tooling', iconUrl: devicon('githubactions/githubactions-original.svg') },
