@@ -123,3 +123,33 @@ Supabase Auth:
   `member_groups`, `members`, or the GitHub token in `app_settings`. Everyone signed in can read
   all three.
 
+## Details: environment variables & tech stack
+
+- **Environment Variables** — upload a `.env` file and it's parsed into a table (`env_vars`),
+  values masked the same way as passwords (click the eye to reveal). Uploading again replaces the
+  current set after a confirmation; "Download" reconstructs a `.env` file from what's stored.
+- **Tech Stack** — pick frameworks, languages, styling and hosting tools from a searchable catalog
+  (`src/lib/techStack.ts`, ~50 entries) and they show as a logo grid. Logos are Devicon SVGs served
+  from jsdelivr's CDN — referenced as plain `<img>` URLs, nothing is downloaded or re-hosted.
+  Selection is stored as `projects.tech_stack` (an array of catalog ids).
+
+## Project Settings: Excel / CSV import & export
+
+Each project's **Settings** tab has an Import/Export section:
+
+- **Download Excel** builds an `.xlsx` workbook (one sheet per Project/Users/To-Do/Features/
+  Requests/Details) via SheetJS. **Passwords, API tokens and environment variables are
+  deliberately excluded** — a bulk-download file is a bigger leak surface than the masked fields
+  already are, so those stay managed only through their own reveal-to-view controls. Pipelines
+  aren't included either (their pipeline → points shape doesn't fit a flat sheet; they already have
+  their own `.txt` export).
+- **Upload** accepts that same `.xlsx` back, or a plain `.csv` (treated as a Users list — name,
+  username, position, notes — matched by name, since a CSV can't hold multiple sheets). Rows whose
+  `id` matches something already loaded are updated in place; rows with no `id` (or an unrecognized
+  one) are created. **Nothing is ever deleted** by an import — a partial re-upload can't wipe data
+  it simply didn't mention.
+- `xlsx` (SheetJS) is installed from `cdn.sheetjs.com` rather than the plain npm registry — the
+  npm-published build has known unpatched vulnerabilities (prototype pollution, ReDoS) that
+  SheetJS's own CDN build fixes. It's also only ever dynamically `import()`-ed, so its ~500 kB
+  doesn't load for anyone who never opens this tab.
+

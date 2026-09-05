@@ -70,6 +70,7 @@ create table if not exists projects (
   private_token         text,
   position_colors jsonb not null default '{}'::jsonb,  -- { [position label]: hex } for Users cards
   priority_colors jsonb not null default '{}'::jsonb,  -- { [priority]: hex } for Requests/To-Do chips
+  tech_stack  jsonb not null default '[]'::jsonb,       -- [techStack catalog id, ...] shown in Details
   created_by  uuid references auth.users(id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
@@ -84,6 +85,7 @@ alter table projects add column if not exists public_token text;
 alter table projects add column if not exists private_token text;
 alter table projects add column if not exists position_colors jsonb not null default '{}'::jsonb;
 alter table projects add column if not exists priority_colors jsonb not null default '{}'::jsonb;
+alter table projects add column if not exists tech_stack jsonb not null default '[]'::jsonb;
 drop trigger if exists trg_projects_updated on projects;
 create trigger trg_projects_updated before update on projects
   for each row execute function set_updated_at();
@@ -125,6 +127,18 @@ create table if not exists person_columns (
   id          uuid primary key default gen_random_uuid(),
   project_id  uuid not null references projects(id) on delete cascade,
   label       text not null default 'Column',
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- Environment variables (uploaded from a .env file, shown masked in Details)
+-- ---------------------------------------------------------------------------
+create table if not exists env_vars (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  key         text not null default '',
+  value       text not null default '',
   sort        integer not null default 0,
   created_at  timestamptz not null default now()
 );
@@ -303,7 +317,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'projects','project_people','person_comments','person_columns','todos','todo_comments',
+    'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items'
   ] loop
     execute format('alter table %I enable row level security', t);
@@ -338,7 +352,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'projects','project_people','person_comments','person_columns','todos','todo_comments',
+    'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items'
   ] loop
     begin

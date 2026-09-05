@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type {
   Detail,
+  EnvVar,
   Feature,
   Person,
   PersonColumn,
@@ -19,6 +20,7 @@ export type TableName =
   | 'project_people'
   | 'person_comments'
   | 'person_columns'
+  | 'env_vars'
   | 'todos'
   | 'todo_comments'
   | 'features'
@@ -30,6 +32,7 @@ export type TableName =
 const PROJECT_TABLES: TableName[] = [
   'project_people',
   'person_columns',
+  'env_vars',
   'todos',
   'features',
   'details',
@@ -58,6 +61,7 @@ const empty = (): Record<TableName, Row[]> => ({
   project_people: [],
   person_comments: [],
   person_columns: [],
+  env_vars: [],
   todos: [],
   todo_comments: [],
   features: [],
@@ -173,6 +177,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       'project_people',
       'person_comments',
       'person_columns',
+      'env_vars',
       'todos',
       'todo_comments',
       'features',
@@ -196,6 +201,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
 export const asPeople = (r: Row[]) => r as unknown as Person[]
 export const asPersonComments = (r: Row[]) => r as unknown as PersonComment[]
 export const asPersonColumns = (r: Row[]) => r as unknown as PersonColumn[]
+export const asEnvVars = (r: Row[]) => r as unknown as EnvVar[]
 export const asTodos = (r: Row[]) => r as unknown as Todo[]
 export const asTodoComments = (r: Row[]) => r as unknown as TodoComment[]
 export const asFeatures = (r: Row[]) => r as unknown as Feature[]

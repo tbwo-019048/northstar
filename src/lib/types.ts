@@ -24,6 +24,7 @@ export interface Project {
   private_token: string | null
   position_colors: Record<string, string>
   priority_colors: Partial<Record<Priority, string>>
+  tech_stack: string[]
   created_by: string | null
   created_at: string
   updated_at: string
@@ -49,6 +50,16 @@ export interface PersonColumn {
   id: string
   project_id: string
   label: string
+  sort: number
+  created_at: string
+}
+
+/** One row parsed from an uploaded .env file. */
+export interface EnvVar {
+  id: string
+  project_id: string
+  key: string
+  value: string
   sort: number
   created_at: string
 }
