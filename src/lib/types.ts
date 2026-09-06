@@ -205,6 +205,9 @@ export interface Client {
   id: string
   name: string
   company: string
+  photo_url: string | null
+  company_logo_url: string | null
+  email_domain: string
   email: string
   phone: string
   notes: string

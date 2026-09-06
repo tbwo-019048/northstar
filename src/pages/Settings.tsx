@@ -40,18 +40,27 @@ export function Settings() {
   }
 
   return (
-    <div className="max-w-lg space-y-4">
-      <div className="flex items-center gap-2">
+    <div className="w-full space-y-5">
+      <div className="flex items-start gap-3 border-b border-border pb-4">
         <Link
           to="/app"
-          className="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="mt-0.5 grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label="Back to projects"
         >
           <ChevronLeftIcon size={16} />
         </Link>
-        <h1 className="text-sm font-semibold">Settings</h1>
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Manage workspace access, permissions, and connected services.
+          </p>
+        </div>
       </div>
 
-      <section className="space-y-2 rounded-md border border-border p-3">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+        <MembersSettings />
+
+      <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm lg:sticky lg:top-15">
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <GitBranch className="size-3.5" /> GitHub
         </h2>
@@ -72,26 +81,27 @@ export function Settings() {
 
         {isMaster ? (
           <>
-            <form onSubmit={onSave} className="flex items-center gap-2">
+            <form onSubmit={onSave} className="space-y-2">
               <Input
                 type="password"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder={githubTokenSet ? 'Token saved — enter a new one to replace it' : 'ghp_… or github_pat_…'}
-                className="max-w-sm"
               />
-              <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-                Save
-              </button>
-              {githubTokenSet && (
-                <button
-                  type="button"
-                  onClick={onClear}
-                  className="h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  Remove
+              <div className="flex items-center gap-2">
+                <button className="h-7 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+                  Save token
                 </button>
-              )}
+                {githubTokenSet && (
+                  <button
+                    type="button"
+                    onClick={onClear}
+                    className="h-7 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </form>
             {githubTokenSet && !status && (
               <p className="text-xs text-muted-foreground">A token is currently configured.</p>
@@ -106,8 +116,7 @@ export function Settings() {
           </p>
         )}
       </section>
-
-      <MembersSettings />
+      </div>
     </div>
   )
 }

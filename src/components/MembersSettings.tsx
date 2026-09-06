@@ -47,7 +47,7 @@ export function MembersSettings() {
   }
 
   return (
-    <section className="space-y-3 rounded-md border border-border p-3">
+    <section className="min-w-0 space-y-4 rounded-xl border border-border bg-panel p-4 shadow-sm">
       <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         <Crown className="size-3.5" /> Members &amp; groups
       </h2>
@@ -59,7 +59,7 @@ export function MembersSettings() {
       </p>
       {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-[11px] uppercase text-muted-foreground">
@@ -122,19 +122,20 @@ export function MembersSettings() {
       </div>
 
       {isMaster && (
-        <form onSubmit={onAddMember} className="flex flex-wrap items-center gap-1.5">
+        <form
+          onSubmit={onAddMember}
+          className="grid items-center gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(7rem,0.65fr)_auto]"
+        >
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="email@example.com"
             type="email"
-            className="max-w-[14rem]"
           />
           <Input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Display name (optional)"
-            className="max-w-[10rem]"
           />
           <Select value={group} onChange={(e) => setGroup(e.target.value)}>
             {groups.map((g) => (
@@ -143,7 +144,7 @@ export function MembersSettings() {
               </option>
             ))}
           </Select>
-          <button className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+          <button className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
             <PlusIcon size={12} /> Add member
           </button>
         </form>
@@ -158,7 +159,7 @@ export function MembersSettings() {
           actions actually restricted to the Master today; the rest of the app doesn't check them
           per-feature yet.
         </p>
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {groups.map((g) => (
             <div key={g.name} className="rounded-md border border-border p-2">
               <div className="mb-1 text-xs font-medium">{g.name}</div>
@@ -182,12 +183,12 @@ export function MembersSettings() {
           ))}
         </div>
         {isMaster && (
-          <form onSubmit={onAddGroup} className="flex items-center gap-1.5">
+          <form onSubmit={onAddGroup} className="flex max-w-sm items-center gap-1.5">
             <Input
               value={newGroup}
               onChange={(e) => setNewGroup(e.target.value)}
               placeholder="New group name"
-              className="max-w-[10rem]"
+              className="min-w-0 flex-1"
             />
             <button className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted">
               <PlusIcon size={12} /> Add group

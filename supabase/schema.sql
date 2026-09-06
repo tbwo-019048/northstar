@@ -410,7 +410,10 @@ end $$;
 -- Storage — public buckets for project logos and person avatars
 -- ---------------------------------------------------------------------------
 insert into storage.buckets (id, name, public)
-values ('project-logos', 'project-logos', true), ('avatars', 'avatars', true)
+values
+  ('project-logos', 'project-logos', true),
+  ('avatars', 'avatars', true),
+  ('client-media', 'client-media', true)
 on conflict (id) do nothing;
 
 drop policy if exists "project logos public read" on storage.objects;
@@ -432,6 +435,16 @@ create policy "avatars auth write" on storage.objects
   for all to authenticated
   using (bucket_id = 'avatars')
   with check (bucket_id = 'avatars');
+
+drop policy if exists "client media public read" on storage.objects;
+create policy "client media public read" on storage.objects
+  for select using (bucket_id = 'client-media');
+
+drop policy if exists "client media auth write" on storage.objects;
+create policy "client media auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'client-media')
+  with check (bucket_id = 'client-media');
 
 insert into storage.buckets (id, name, public)
 values ('project-screenshots', 'project-screenshots', true), ('project-assets', 'project-assets', true)
@@ -465,6 +478,9 @@ create table if not exists clients (
   id          uuid primary key default gen_random_uuid(),
   name        text not null default '',
   company     text not null default '',
+  photo_url   text,
+  company_logo_url text,
+  email_domain text not null default '',
   email       text not null default '',
   phone       text not null default '',
   notes       text not null default '',
@@ -473,6 +489,9 @@ create table if not exists clients (
   updated_at  timestamptz not null default now()
 );
 alter table clients add column if not exists countries jsonb not null default '[]'::jsonb;
+alter table clients add column if not exists photo_url text;
+alter table clients add column if not exists company_logo_url text;
+alter table clients add column if not exists email_domain text not null default '';
 drop trigger if exists trg_clients_updated on clients;
 create trigger trg_clients_updated before update on clients
   for each row execute function set_updated_at();

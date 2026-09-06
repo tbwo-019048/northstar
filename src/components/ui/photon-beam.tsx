@@ -446,6 +446,6 @@ export default function PhotonBeam({
   ])
 
   return (
-    <div ref={containerRef} className="h-full min-h-[200px] w-full bg-black" />
+    <div ref={containerRef} className="h-full min-h-[200px] w-full" style={{ backgroundColor: colorBg }} />
   )
 }

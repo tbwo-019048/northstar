@@ -37,3 +37,10 @@ This folder records completed implementation tasks and durable project context. 
 - 2026-09-06 — Corrected Safari live-site preview framing:
   - Added a 12px content inset beneath the Safari toolbar and top-aligned `slice` cropping, preventing the source page header from being cropped off the preview.
   - Verification: production build and `git diff --check` passed; lint produced only pre-existing warnings.
+- 2026-09-06 — Expanded workspace views, client identity, settings, and the themed Home globe:
+  - Reworked Settings into a full-width responsive layout with members and permission groups in the primary column and a compact sticky GitHub connection card alongside it.
+  - Added client photos, company logos, and email domains, including a dedicated public `client-media` storage bucket, authenticated write policies, canonical schema changes, and an idempotent Supabase migration.
+  - Added persisted table, grouped, and grid views plus search to both Clients and Emails, matching the Projects view controls.
+  - Moved the rotating globe to the centre of the full-width Photon background, preserved its natural aspect ratio, capped it at one-third of the viewport, and changed country activity spikes from curves to straight lines.
+  - Connected the Home scene to the global theme controller: the page background, Photon canvas, beam colours, title treatment, globe ocean, land, and glow now all switch between light and dark palettes.
+  - Verification: production build and `git diff --check` passed; lint produced only the repository's existing warnings; browser QA confirmed the circular centred globe, dark and light Home scenes, and aligned Client/Email view controls. Temporary QA access was removed afterward.

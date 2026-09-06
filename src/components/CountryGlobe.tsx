@@ -13,6 +13,7 @@ export interface CountryGlobeEntry {
 
 interface CountryGlobeProps {
   entries: CountryGlobeEntry[]
+  theme: 'light' | 'dark'
 }
 
 const WIDTH = 420
@@ -30,7 +31,7 @@ const collection = feature(
   atlas.objects.countries as unknown as Parameters<typeof feature>[1],
 ) as unknown as FeatureCollection<Geometry, { name?: string }>
 
-export function CountryGlobe({ entries }: CountryGlobeProps) {
+export function CountryGlobe({ entries, theme }: CountryGlobeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -81,12 +82,12 @@ export function CountryGlobe({ entries }: CountryGlobeProps) {
         CENTER_Y,
         RADIUS,
       )
-      ocean.addColorStop(0, '#12366b')
-      ocean.addColorStop(0.58, '#071a38')
-      ocean.addColorStop(1, '#020817')
+      ocean.addColorStop(0, theme === 'dark' ? '#12366b' : '#dbeafe')
+      ocean.addColorStop(0.58, theme === 'dark' ? '#071a38' : '#bfdbfe')
+      ocean.addColorStop(1, theme === 'dark' ? '#020817' : '#93c5fd')
 
       context.save()
-      context.shadowColor = 'rgba(14, 165, 233, 0.35)'
+      context.shadowColor = theme === 'dark' ? 'rgba(14, 165, 233, 0.35)' : 'rgba(37, 99, 235, 0.2)'
       context.shadowBlur = 16
       context.beginPath()
       context.arc(CENTER_X, CENTER_Y, RADIUS, 0, Math.PI * 2)
@@ -102,10 +103,14 @@ export function CountryGlobe({ entries }: CountryGlobeProps) {
         const active = selectedCountries.has(name)
         context.beginPath()
         path(country)
-        context.fillStyle = active ? (countryColor.get(name) ?? '#38bdf8') : '#10294d'
+        context.fillStyle = active
+          ? (countryColor.get(name) ?? '#38bdf8')
+          : theme === 'dark'
+            ? '#10294d'
+            : '#eff6ff'
         context.globalAlpha = active ? 0.9 : 0.66
         context.fill()
-        context.strokeStyle = active ? '#dbeafe' : '#3b82f6'
+        context.strokeStyle = active ? (theme === 'dark' ? '#dbeafe' : '#1e3a8a') : '#3b82f6'
         context.globalAlpha = active ? 0.74 : 0.2
         context.lineWidth = active ? 0.8 : 0.45
         context.stroke()
@@ -128,8 +133,6 @@ export function CountryGlobe({ entries }: CountryGlobeProps) {
         const endRadius = RADIUS + 34 + occurrences * 7
         const endX = CENTER_X + Math.cos(angle) * endRadius
         const endY = CENTER_Y + Math.sin(angle) * endRadius
-        const controlX = point[0] + (endX - point[0]) * 0.45 - Math.sin(angle) * 18
-        const controlY = point[1] + (endY - point[1]) * 0.45 + Math.cos(angle) * 18
         const color = entry.kind === 'client' ? '#7dd3fc' : '#2563eb'
 
         context.save()
@@ -137,7 +140,7 @@ export function CountryGlobe({ entries }: CountryGlobeProps) {
         context.shadowBlur = 7
         context.beginPath()
         context.moveTo(point[0], point[1])
-        context.quadraticCurveTo(controlX, controlY, endX, endY)
+        context.lineTo(endX, endY)
         context.setLineDash([3, 4])
         context.strokeStyle = color
         context.globalAlpha = 0.82
@@ -159,11 +162,18 @@ export function CountryGlobe({ entries }: CountryGlobeProps) {
 
     animationFrame = window.requestAnimationFrame(draw)
     return () => window.cancelAnimationFrame(animationFrame)
-  }, [entries])
+  }, [entries, theme])
 
   return (
     <div className="relative h-full w-full overflow-hidden" aria-label="Global client and project activity">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(7,26,56,0.32),transparent_66%)]" />
+      <div
+        className={
+          'pointer-events-none absolute inset-0 ' +
+          (theme === 'dark'
+            ? 'bg-[radial-gradient(circle_at_center,rgba(7,26,56,0.32),transparent_66%)]'
+            : 'bg-[radial-gradient(circle_at_center,rgba(147,197,253,0.22),transparent_66%)]')
+        }
+      />
       <canvas
         ref={canvasRef}
         className="absolute inset-0 size-full"
