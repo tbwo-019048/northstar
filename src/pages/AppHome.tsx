@@ -50,27 +50,28 @@ export function AppHome() {
     <div
       className={
         'relative h-[calc(100svh-2.75rem)] w-full overflow-hidden ' +
-        (theme === 'dark' ? 'bg-[#050708]' : 'bg-[#edf6ff]')
+        (theme === 'dark' ? 'bg-[#050708]' : 'bg-[#e5f1ff]')
       }
     >
       <Suspense
         fallback={
-          <div className={theme === 'dark' ? 'absolute inset-0 bg-[#050708]' : 'absolute inset-0 bg-[#edf6ff]'} />
+          <div className={theme === 'dark' ? 'absolute inset-0 bg-[#050708]' : 'absolute inset-0 bg-[#e5f1ff]'} />
         }
       >
         <div className="absolute inset-0">
           <PhotonBeam
-            colorBg={theme === 'dark' ? '#050708' : '#edf6ff'}
-            colorLine={theme === 'dark' ? '#12366b' : '#93c5fd'}
-            colorSignal={theme === 'dark' ? '#7dd3fc' : '#2563eb'}
-            colorSignal2={theme === 'dark' ? '#1d4ed8' : '#0ea5e9'}
+            colorBg={theme === 'dark' ? '#050708' : '#e5f1ff'}
+            colorLine={theme === 'dark' ? '#12366b' : '#2563eb'}
+            colorSignal={theme === 'dark' ? '#7dd3fc' : '#0756b8'}
+            colorSignal2={theme === 'dark' ? '#1d4ed8' : '#0284c7'}
             useColor2
             lineCount={80}
             spreadHeight={48}
+            lineOpacity={theme === 'dark' ? 0.557 : 0.72}
             signalCount={94}
             speedGlobal={0.345}
             trailLength={3}
-            bloomStrength={2.4}
+            bloomStrength={theme === 'dark' ? 2.4 : 0}
             bloomRadius={0.5}
           />
         </div>

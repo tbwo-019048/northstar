@@ -44,3 +44,7 @@ This folder records completed implementation tasks and durable project context. 
   - Moved the rotating globe to the centre of the full-width Photon background, preserved its natural aspect ratio, capped it at one-third of the viewport, and changed country activity spikes from curves to straight lines.
   - Connected the Home scene to the global theme controller: the page background, Photon canvas, beam colours, title treatment, globe ocean, land, and glow now all switch between light and dark palettes.
   - Verification: production build and `git diff --check` passed; lint produced only the repository's existing warnings; browser QA confirmed the circular centred globe, dark and light Home scenes, and aligned Client/Email view controls. Temporary QA access was removed afterward.
+- 2026-09-06 — Restored Photon visibility in the light Home theme:
+  - Replaced the low-contrast light palette with stronger blue beam and signal colours, increased line opacity, and disabled the full-scene bloom in light mode so the pale background no longer washes out the geometry.
+  - Preserved the existing dark-mode glow and palette.
+  - Verification: production build and `git diff --check` passed; browser QA confirmed a clearly visible Photon beam in both light and dark modes. Temporary QA access was removed afterward.
