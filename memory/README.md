@@ -34,3 +34,6 @@ This folder records completed implementation tasks and durable project context. 
   - Replaced the laggy 50ms React/SVG reconciliation loop with a single throttled canvas renderer. The globe rotates continuously again without updating hundreds of React nodes per frame, and respects reduced-motion preferences.
   - Verification: production build and `git diff --check` passed; lint produced only pre-existing warnings.
   - Moved the global top-right notification stack down below the app header for clearer spacing.
+- 2026-09-06 — Corrected Safari live-site preview framing:
+  - Added a 12px content inset beneath the Safari toolbar and top-aligned `slice` cropping, preventing the source page header from being cropped off the preview.
+  - Verification: production build and `git diff --check` passed; lint produced only pre-existing warnings.
