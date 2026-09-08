@@ -18,9 +18,21 @@ import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asPlanItems, asPlanComments } from '@/store/useProjectData'
+import { useProjects } from '@/store/useProjects'
 import { useAuth } from '@/store/useAuth'
 import { supabase } from '@/lib/supabase'
-import { PLAN_STATUSES, PLAN_STATUS_LABEL, type PlanItem, type PlanStatus } from '@/lib/types'
+import {
+  PLAN_BANDS,
+  PLAN_BAND_LABEL,
+  PLAN_BAND_PRIORITY,
+  PLAN_STATUSES,
+  PLAN_STATUS_LABEL,
+  planBand,
+  type PlanBand,
+  type PlanItem,
+  type PlanningPrefs,
+  type PlanStatus,
+} from '@/lib/types'
 import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import {
@@ -78,6 +90,11 @@ export function PlanningTab({ projectId }: { projectId: string }) {
   const rows = useProjectData((s) => s.rows.plan_items)
   const { add, patch, del, reorder } = useProjectData()
   const items = asPlanItems(rows)
+  const project = useProjects((s) => s.projects.find((p) => p.id === projectId))
+  const updateProject = useProjects((s) => s.update)
+  const prefs: PlanningPrefs = project?.planning_prefs ?? {}
+  const savePrefs = (next: PlanningPrefs) =>
+    void updateProject(projectId, { planning_prefs: { ...prefs, ...next } })
   const [view, setView] = useState<PlanView>(() => {
     try {
       return (localStorage.getItem(VIEW_KEY) as PlanView) || 'timeline'
@@ -119,7 +136,25 @@ export function PlanningTab({ projectId }: { projectId: string }) {
         >
           <PlusIcon size={12} /> Add
         </button>
-        <div className="ml-auto flex items-center gap-0.5 rounded-md border border-border p-0.5">
+        {view === 'board' && (
+          <label className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground">
+            Swimlanes
+            <Select
+              value={prefs.swimlane ?? 'none'}
+              onChange={(e) => savePrefs({ swimlane: e.target.value as 'none' | 'priority' })}
+              className="h-6"
+            >
+              <option value="none">None</option>
+              <option value="priority">Priority</option>
+            </Select>
+          </label>
+        )}
+        <div
+          className={
+            (view === 'board' ? '' : 'ml-auto ') +
+            'flex items-center gap-0.5 rounded-md border border-border p-0.5'
+          }
+        >
           <button
             type="button"
             onClick={() => setViewPersist('timeline')}
@@ -146,7 +181,14 @@ export function PlanningTab({ projectId }: { projectId: string }) {
       {view === 'timeline' ? (
         <TimelineView items={items} onOpen={setOpenId} />
       ) : (
-        <BoardView items={items} patch={patch} reorder={reorder} onOpen={setOpenId} />
+        <BoardView
+          items={items}
+          patch={patch}
+          reorder={reorder}
+          onOpen={setOpenId}
+          prefs={prefs}
+          savePrefs={savePrefs}
+        />
       )}
 
       <Dialog open={!!openItem} onOpenChange={(v) => !v && setOpenId(null)}>
@@ -209,22 +251,37 @@ function TimelineView({ items, onOpen }: { items: PlanItem[]; onOpen: (id: strin
   )
 }
 
-/** Kanban board — one column per status, drag cards between them. */
+const colId = (status: PlanStatus, band?: PlanBand) => (band ? `${status}__${band}` : status)
+const parseColId = (id: string): { status: PlanStatus; band?: PlanBand } | null => {
+  const [s, b] = id.split('__')
+  if (!(PLAN_STATUSES as string[]).includes(s)) return null
+  return { status: s as PlanStatus, band: (b as PlanBand) || undefined }
+}
+const GRID = 'grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5'
+
+/** Kanban board — one column per status, drag cards between them. Optional
+ * per-column WIP limits and priority swimlanes (dragging into another lane
+ * snaps the card's priority to that band). */
 function BoardView({
   items,
   patch,
   reorder,
   onOpen,
+  prefs,
+  savePrefs,
 }: {
   items: PlanItem[]
   patch: PatchFn
   reorder: ReturnType<typeof useProjectData.getState>['reorder']
   onOpen: (id: string) => void
+  prefs: PlanningPrefs
+  savePrefs: (next: PlanningPrefs) => void
 }) {
+  const swim = prefs.swimlane === 'priority'
   const [activeId, setActiveId] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
-  const cols = useMemo(() => {
+  const byStatus = useMemo(() => {
     const map: Record<PlanStatus, PlanItem[]> = {
       requested: [],
       in_progress: [],
@@ -236,9 +293,11 @@ function BoardView({
     return map
   }, [items])
 
-  const findCol = (id: string): PlanStatus | null => {
-    if ((PLAN_STATUSES as string[]).includes(id)) return id as PlanStatus
-    return items.find((i) => i.id === id)?.status ?? null
+  const locate = (id: string): { status: PlanStatus; band?: PlanBand } | null => {
+    const parsed = parseColId(id)
+    if (parsed) return parsed
+    const it = items.find((i) => i.id === id)
+    return it ? { status: it.status, band: planBand(it.priority) } : null
   }
 
   const onDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id))
@@ -248,23 +307,45 @@ function BoardView({
     const { active, over } = e
     if (!over) return
     const activeIdStr = String(active.id)
-    const from = findCol(activeIdStr)
-    const to = findCol(String(over.id))
-    if (!from || !to) return
     const moved = items.find((i) => i.id === activeIdStr)
-    if (!moved) return
+    const dest = locate(String(over.id))
+    if (!moved || !dest) return
+    const fromStatus = moved.status
 
-    const target = cols[to].filter((i) => i.id !== activeIdStr)
-    const overIdx =
-      over.id === to ? target.length : target.findIndex((i) => i.id === String(over.id))
-    target.splice(overIdx < 0 ? target.length : overIdx, 0, moved)
-
-    if (from !== to) {
-      patch('plan_items', activeIdStr, { status: to })
-      reorder('plan_items', cols[from].filter((i) => i.id !== activeIdStr))
+    const patchValues: Record<string, unknown> = {}
+    if (dest.status !== fromStatus) patchValues.status = dest.status
+    if (swim && dest.band && dest.band !== planBand(moved.priority)) {
+      patchValues.priority = PLAN_BAND_PRIORITY[dest.band]
     }
-    reorder('plan_items', target)
+    if (Object.keys(patchValues).length) patch('plan_items', activeIdStr, patchValues)
+
+    const destList = byStatus[dest.status].filter((i) => i.id !== activeIdStr)
+    const overItem = items.find((i) => i.id === String(over.id))
+    const idx = overItem ? destList.findIndex((i) => i.id === overItem.id) : -1
+    destList.splice(idx < 0 ? destList.length : idx, 0, moved)
+    if (fromStatus !== dest.status) {
+      reorder('plan_items', byStatus[fromStatus].filter((i) => i.id !== activeIdStr))
+    }
+    reorder('plan_items', destList)
   }
+
+  const columns = (band?: PlanBand) =>
+    PLAN_STATUSES.map((status) => (
+      <BoardColumn
+        key={colId(status, band)}
+        droppableId={colId(status, band)}
+        status={status}
+        items={band ? byStatus[status].filter((i) => planBand(i.priority) === band) : byStatus[status]}
+        total={byStatus[status].length}
+        limit={prefs.wip?.[status]}
+        onLimitChange={
+          !band || band === PLAN_BANDS[0]
+            ? (n) => savePrefs({ wip: { ...prefs.wip, [status]: n || undefined } })
+            : undefined
+        }
+        onOpen={onOpen}
+      />
+    ))
 
   return (
     <DndContext
@@ -273,11 +354,23 @@ function BoardView({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-        {PLAN_STATUSES.map((status) => (
-          <BoardColumn key={status} status={status} items={cols[status]} onOpen={onOpen} />
-        ))}
-      </div>
+      {swim ? (
+        <div className="space-y-3">
+          {PLAN_BANDS.map((band) => (
+            <div key={band} className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {PLAN_BAND_LABEL[band]}
+                <span className="font-normal">
+                  {items.filter((i) => planBand(i.priority) === band).length}
+                </span>
+              </div>
+              <div className={GRID}>{columns(band)}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={GRID}>{columns()}</div>
+      )}
       <DragOverlay>
         {activeId ? (
           <div className="rounded-md border border-border bg-background px-2 py-1 text-xs shadow-lg">
@@ -291,25 +384,57 @@ function BoardView({
 
 function BoardColumn({
   status,
+  droppableId,
   items,
+  total,
+  limit,
+  onLimitChange,
   onOpen,
 }: {
   status: PlanStatus
+  droppableId: string
   items: PlanItem[]
+  total: number
+  limit?: number
+  onLimitChange?: (n: number) => void
   onOpen: (id: string) => void
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status })
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId })
+  const overLimit = !!limit && limit > 0 && total > limit
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
         <StatusChip status={status} />
-        <span className="text-[11px] text-muted-foreground">{items.length}</span>
+        <span
+          className={
+            'text-[11px] tabular-nums ' +
+            (overLimit ? 'font-semibold text-red-600 dark:text-red-400' : 'text-muted-foreground')
+          }
+        >
+          {total}
+          {limit ? ` / ${limit}` : ''}
+        </span>
+        {onLimitChange && (
+          <input
+            type="number"
+            min={0}
+            value={limit ?? ''}
+            onChange={(e) => onLimitChange(Number(e.target.value))}
+            placeholder="WIP"
+            title="Work-in-progress limit (0 = none)"
+            className="ml-auto h-5 w-11 rounded border border-border bg-background px-1 text-[10px] tabular-nums outline-none focus:border-ring"
+          />
+        )}
       </div>
       <div
         ref={setNodeRef}
         className={
           'min-h-16 space-y-1.5 rounded-md border p-1.5 transition-colors ' +
-          (isOver ? 'border-primary bg-primary/5' : 'border-border')
+          (isOver
+            ? 'border-primary bg-primary/5'
+            : overLimit
+              ? 'border-red-500/60 bg-red-500/5'
+              : 'border-border')
         }
       >
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>

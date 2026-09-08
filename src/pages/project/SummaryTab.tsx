@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
+import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
 import { ArrowRightIcon } from '@/components/ui/arrow-right'
 import { ArrowTopRightOnSquareIcon } from '@/components/ui/arrow-top-right-on-square'
 import { PhotoIcon } from '@/components/ui/photo'
@@ -59,6 +60,18 @@ export function SummaryTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() =>
+            window.open(`/app/project/${project.id}/print`, '_blank', 'noopener')
+          }
+          className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted"
+        >
+          <ArrowDownTrayIcon size={12} /> Export PDF
+        </button>
+      </div>
+
       {hasSites && (
         <div className="space-y-2">
           <SiteLinkRow project={project} field="website_url" label="Live Site" />

@@ -43,3 +43,13 @@
     border-radius: 999px;
   }
 }
+
+/* Print — used by the project PDF report route (src/pages/ProjectPrint.tsx). */
+@media print {
+  .screen-only {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

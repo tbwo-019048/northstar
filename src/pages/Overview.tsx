@@ -10,6 +10,7 @@ import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
 import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjects } from '@/store/useProjects'
+import { useTemplates, seedProjectFromTemplate } from '@/store/useTemplates'
 import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
@@ -31,6 +32,12 @@ const VIEW_KEY = 'northstar.overview.view'
 
 export function Overview() {
   const { projects, loaded, load, create, update, subscribe, error, clearError } = useProjects()
+  const {
+    templates,
+    loaded: templatesLoaded,
+    load: loadTemplates,
+    subscribe: subscribeTemplates,
+  } = useTemplates()
   const nav = useNavigate()
   const [q, setQ] = useState('')
   const [showDescriptions, setShowDescriptions] = useState(false)
@@ -38,6 +45,8 @@ export function Overview() {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<ProjectType>('website')
+  const [templateId, setTemplateId] = useState('')
+  const [creating, setCreating] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>(() => {
     try {
@@ -53,6 +62,11 @@ export function Overview() {
     if (!loaded) load()
     return subscribe()
   }, [loaded, load, subscribe])
+
+  useEffect(() => {
+    if (!templatesLoaded) loadTemplates()
+    return subscribeTemplates()
+  }, [templatesLoaded, loadTemplates, subscribeTemplates])
 
   useEffect(() => {
     try {
@@ -90,16 +104,26 @@ export function Overview() {
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
-    const { error: err } = await create(name.trim(), type)
-    if (err) {
+    if (!name.trim() || creating) return
+    setCreating(true)
+    const { project, error: err } = await create(name.trim(), type)
+    if (err || !project) {
       setFormError(err)
+      setCreating(false)
       return
+    }
+    const tpl = templateId ? templates.find((t) => t.id === templateId) : null
+    if (tpl) {
+      if (tpl.payload.summary) await update(project.id, { summary: tpl.payload.summary })
+      await seedProjectFromTemplate(project.id, tpl.payload)
     }
     setFormError(null)
     setName('')
     setType('website')
+    setTemplateId('')
     setAdding(false)
+    setCreating(false)
+    if (tpl) nav(`/app/project/${project.id}`)
   }
 
   const openProject = (id: string) => nav(`/app/project/${id}`)
@@ -276,14 +300,32 @@ export function Overview() {
               </option>
             ))}
           </Select>
-          <button className="h-7 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
-            Create
+          {templates.length > 0 && (
+            <Select
+              value={templateId}
+              onChange={(e) => setTemplateId(e.target.value)}
+              title="Seed the new project from a template"
+            >
+              <option value="">No template</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name || 'Untitled template'}
+                </option>
+              ))}
+            </Select>
+          )}
+          <button
+            disabled={creating}
+            className="h-7 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {creating ? 'Creating…' : 'Create'}
           </button>
           <button
             type="button"
             onClick={() => {
               setAdding(false)
               setFormError(null)
+              setTemplateId('')
             }}
             className="h-7 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
           >

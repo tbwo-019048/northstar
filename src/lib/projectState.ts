@@ -5,6 +5,7 @@ import type { ProjectState } from '@/lib/types'
  * "mvp" as "Mvp" instead of "MVP"). */
 export function formatState(state: ProjectState): string {
   if (state === 'mvp') return 'MVP'
+  if (state === 'retired') return 'Retired'
   return state.charAt(0).toUpperCase() + state.slice(1)
 }
 
@@ -18,6 +19,7 @@ export const STATE_TEXT_CLASS: Partial<Record<ProjectState, string>> = {
   revised: 'text-orange-600 dark:text-orange-400',
   final: 'text-emerald-600 dark:text-emerald-400',
   support: 'text-teal-600 dark:text-teal-400',
+  retired: 'text-zinc-500 dark:text-zinc-500',
 }
 
 /** Chip-style background + text per state (Overview table/grid). */
@@ -29,4 +31,5 @@ export const STATE_CHIP_CLASS: Partial<Record<ProjectState, string>> = {
   revised: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
   final: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   support: 'bg-teal-500/15 text-teal-600 dark:text-teal-400',
+  retired: 'bg-zinc-500/15 text-zinc-500 dark:text-zinc-400',
 }

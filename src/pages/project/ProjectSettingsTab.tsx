@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
 import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
 import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
 import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
 import { useProjects } from '@/store/useProjects'
+import { useTemplates } from '@/store/useTemplates'
 import {
   useProjectData,
   asPeople,
@@ -12,9 +13,25 @@ import {
   asFeatures,
   asRequests,
   asDetails,
+  asPlanItems,
+  asPipelines,
+  asPipelineItems,
 } from '@/store/useProjectData'
-import { PRIORITIES, PROJECT_TYPES, type Priority, type Project } from '@/lib/types'
-import { ColorDot, Input } from '@/components/ui-lite'
+import {
+  PRIORITIES,
+  PROJECT_TYPES,
+  type Priority,
+  type Project,
+  type ProjectTemplate,
+  type TemplatePayload,
+} from '@/lib/types'
+import { ColorDot, EditableText, Input } from '@/components/ui-lite'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/velobits/dialog'
 import { parseCSV, downloadText } from '@/lib/csv'
 import { resolveTechIds } from '@/lib/techStack'
 import {
@@ -151,7 +168,222 @@ export function ProjectSettingsTab({ project }: { project: Project }) {
       </section>
 
       <ImportExportSection project={project} />
+
+      <TemplatesSection project={project} />
     </div>
+  )
+}
+
+const TEMPLATE_PARTS = [
+  ['details', 'Details'],
+  ['features', 'Features'],
+  ['todos', 'Open to-dos'],
+  ['plan_items', 'Plan items'],
+  ['pipelines', 'Pipelines'],
+] as const
+type TemplatePart = (typeof TEMPLATE_PARTS)[number][0]
+
+function templateCounts(t: ProjectTemplate): string {
+  const p = t.payload
+  const bits = [
+    p.details?.length && `${p.details.length} details`,
+    p.features?.length && `${p.features.length} features`,
+    p.todos?.length && `${p.todos.length} to-dos`,
+    p.plan_items?.length && `${p.plan_items.length} plan items`,
+    p.pipelines?.length && `${p.pipelines.length} pipelines`,
+  ].filter(Boolean)
+  return bits.length ? bits.join(' · ') : 'empty'
+}
+
+function TemplatesSection({ project }: { project: Project }) {
+  const { templates, loaded, load, subscribe, create, update, remove } = useTemplates()
+  const detailRows = useProjectData((s) => s.rows.details)
+  const featureRows = useProjectData((s) => s.rows.features)
+  const todoRows = useProjectData((s) => s.rows.todos)
+  const planRows = useProjectData((s) => s.rows.plan_items)
+  const pipeRows = useProjectData((s) => s.rows.pipelines)
+  const pipeItemRows = useProjectData((s) => s.rows.pipeline_items)
+
+  useEffect(() => {
+    if (!loaded) load()
+    return subscribe()
+  }, [loaded, load, subscribe])
+
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [parts, setParts] = useState<Record<TemplatePart, boolean>>({
+    details: true,
+    features: true,
+    todos: true,
+    plan_items: true,
+    pipelines: true,
+  })
+  const [busy, setBusy] = useState(false)
+
+  const buildPayload = (): TemplatePayload => {
+    const p: TemplatePayload = {}
+    if (project.summary) p.summary = project.summary
+    if (parts.details) {
+      p.details = asDetails(detailRows).map((d) => ({
+        section: d.section,
+        label: d.label,
+        value: d.value,
+      }))
+    }
+    if (parts.features) {
+      p.features = asFeatures(featureRows).map((f) => ({ title: f.title, description: f.description }))
+    }
+    if (parts.todos) {
+      p.todos = asTodos(todoRows)
+        .filter((t) => t.status === 'todo')
+        .map((t) => ({
+          title: t.title,
+          subtitle: t.subtitle,
+          type: t.type,
+          priority: t.priority,
+          description: t.description,
+        }))
+    }
+    if (parts.plan_items) {
+      p.plan_items = asPlanItems(planRows).map((i) => ({
+        title: i.title,
+        description: i.description,
+        status: i.status,
+        priority: i.priority,
+      }))
+    }
+    if (parts.pipelines) {
+      const items = asPipelineItems(pipeItemRows)
+      p.pipelines = asPipelines(pipeRows).map((pl) => ({
+        name: pl.name,
+        estimate_hours: pl.estimate_hours,
+        items: items
+          .filter((it) => it.pipeline_id === pl.id)
+          .sort((a, b) => a.sort - b.sort)
+          .map((it) => it.body)
+          .filter(Boolean),
+      }))
+    }
+    return p
+  }
+
+  const save = async () => {
+    if (!name.trim() || busy) return
+    setBusy(true)
+    const { error } = await create(name.trim(), description.trim(), project.type, buildPayload())
+    setBusy(false)
+    if (!error) {
+      setOpen(false)
+      setName('')
+      setDescription('')
+    }
+  }
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Templates
+      </h2>
+      <p className="text-xs text-muted-foreground">
+        Save this project's structure as a reusable template, or manage existing ones. New
+        projects can be seeded from a template in the <strong>New</strong> form on the Projects
+        page. Passwords, tokens and environment variables are never captured.
+      </p>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted"
+      >
+        <PlusIcon size={12} /> Save as template
+      </button>
+
+      <div className="divide-y divide-border rounded-md border border-border">
+        {templates.map((t) => (
+          <div key={t.id} className="flex items-center gap-2 px-2 py-1.5">
+            <div className="min-w-0 flex-1">
+              <EditableText
+                value={t.name}
+                placeholder="Untitled template"
+                onSave={(v) => update(t.id, { name: v })}
+                className="text-sm font-medium"
+              />
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {templateCounts(t)}
+                {t.description ? ` — ${t.description}` : ''}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Delete template "${t.name || 'Untitled'}"?`)) remove(t.id)
+              }}
+              className="grid size-6 place-items-center rounded text-muted-foreground hover:text-destructive"
+            >
+              <TrashIcon size={14} />
+            </button>
+          </div>
+        ))}
+        {templates.length === 0 && (
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground">No templates yet.</p>
+        )}
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        {open && (
+          <DialogContent aria-describedby={undefined} focusFirstField>
+            <DialogHeader>
+              <DialogTitle>Save as template</DialogTitle>
+            </DialogHeader>
+            <label className="block space-y-1">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Name</span>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Standard website" />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">
+                Description
+              </span>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional"
+              />
+            </label>
+            <div className="space-y-1">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Include</span>
+              {TEMPLATE_PARTS.map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={parts[key]}
+                    onChange={(e) => setParts((prev) => ({ ...prev, [key]: e.target.checked }))}
+                    className="size-3.5 accent-primary"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-border pt-3">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="h-7 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={busy || !name.trim()}
+                className="h-7 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {busy ? 'Saving…' : 'Save template'}
+              </button>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
+    </section>
   )
 }
 

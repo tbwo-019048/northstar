@@ -9,6 +9,7 @@ import { Settings } from '@/pages/Settings'
 import { Clients } from '@/pages/Clients'
 import { Emails } from '@/pages/Emails'
 import { AppHome } from '@/pages/AppHome'
+import { ProjectPrint } from '@/pages/ProjectPrint'
 import { AppLayout } from '@/components/AppLayout'
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,16 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      {/* Bare print view — inside the auth gate, but no app chrome so it renders
+          clean to PDF. */}
+      <Route
+        path="/app/project/:id/print"
+        element={
+          <Protected>
+            <ProjectPrint />
+          </Protected>
+        }
+      />
       <Route
         element={
           <Protected>

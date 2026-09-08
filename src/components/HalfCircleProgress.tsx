@@ -1,12 +1,13 @@
 import { PROJECT_STATES, type ProjectState } from '@/lib/types'
 
-/** States that count toward the progress percentage — `support` is excluded
- * from the divisor (a project in support is already "done", same as final). */
-const PROGRESS_STATES = PROJECT_STATES.filter((s) => s !== 'support')
+/** States that count toward the progress percentage — `support` and `retired`
+ * are excluded from the divisor (a project in support is already "done", same
+ * as final; a retired project is closed out). */
+const PROGRESS_STATES = PROJECT_STATES.filter((s) => s !== 'support' && s !== 'retired')
 const INCREMENT = 100 / PROGRESS_STATES.length
 
 export function statePercent(state: ProjectState): number {
-  if (state === 'support') return 100
+  if (state === 'support' || state === 'retired') return 100
   const idx = PROGRESS_STATES.indexOf(state)
   if (idx === -1) return 0
   return Math.round((idx + 1) * INCREMENT)

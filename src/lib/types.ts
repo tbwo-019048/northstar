@@ -7,6 +7,7 @@ export type ProjectState =
   | 'revised'
   | 'final'
   | 'support'
+  | 'retired'
 export type TodoStatus = 'todo' | 'completed'
 export type Priority = 'urgent' | 'high' | 'medium' | 'low'
 export type PipelineStatus = 'active' | 'completed' | 'archived'
@@ -43,7 +44,23 @@ export const PROJECT_STATES: ProjectState[] = [
   'revised',
   'final',
   'support',
+  'retired',
 ]
+
+/** Planning kanban priority bands — a 0..10 plan-item priority folded into
+ * three swimlanes. `PLAN_BAND_PRIORITY` is the value a card's priority snaps
+ * to when it's dragged into a different band's lane. */
+export type PlanBand = 'high' | 'medium' | 'low'
+export const PLAN_BANDS: PlanBand[] = ['high', 'medium', 'low']
+export const PLAN_BAND_LABEL: Record<PlanBand, string> = {
+  high: 'High priority',
+  medium: 'Medium priority',
+  low: 'Low priority',
+}
+export const PLAN_BAND_PRIORITY: Record<PlanBand, number> = { high: 9, medium: 5, low: 2 }
+export function planBand(n: number): PlanBand {
+  return n >= 8 ? 'high' : n >= 4 ? 'medium' : 'low'
+}
 export const TODO_TYPES = ['feature', 'bug', 'chore', 'idea', 'research', 'other']
 
 /** Projects with a real hosted URL — Details' Credentials section and
@@ -69,11 +86,19 @@ export interface Project {
   private_token: string | null
   position_colors: Record<string, string>
   priority_colors: Partial<Record<Priority, string>>
+  planning_prefs: PlanningPrefs
   tech_stack: string[]
   countries: string[]
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+/** Per-project Planning-board flow controls, stored in `projects.planning_prefs`. */
+export interface PlanningPrefs {
+  /** Per-column work-in-progress limit; missing or 0 means no limit. */
+  wip?: Partial<Record<PlanStatus, number>>
+  swimlane?: 'none' | 'priority'
 }
 
 export interface Person {
@@ -310,6 +335,34 @@ export interface Member {
   display_name: string
   group_name: string
   is_master: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** A reusable starting point for a new project — seeds rows on creation, or is
+ * captured from an existing project on the Settings tab. */
+export interface TemplatePayload {
+  summary?: string
+  details?: { section: string; label: string; value: string }[]
+  features?: { title: string; description: string }[]
+  todos?: {
+    title: string
+    subtitle?: string
+    type?: string
+    priority?: Priority
+    description?: string
+  }[]
+  plan_items?: { title: string; description?: string; status?: PlanStatus; priority?: number }[]
+  pipelines?: { name: string; estimate_hours?: number; items: string[] }[]
+}
+
+export interface ProjectTemplate {
+  id: string
+  name: string
+  description: string
+  type: ProjectType | null
+  payload: TemplatePayload
+  created_by: string | null
   created_at: string
   updated_at: string
 }

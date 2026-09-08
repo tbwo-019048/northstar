@@ -83,6 +83,7 @@ create table if not exists projects (
   private_token         text,
   position_colors jsonb not null default '{}'::jsonb,  -- { [position label]: hex } for Users cards
   priority_colors jsonb not null default '{}'::jsonb,  -- { [priority]: hex } for Requests/To-Do chips
+  planning_prefs jsonb not null default '{}'::jsonb,   -- { wip: { [plan_status]: n }, swimlane } for the Planning board
   tech_stack  jsonb not null default '[]'::jsonb,       -- [techStack catalog id, ...] shown in Details
   countries   jsonb not null default '[]'::jsonb,       -- country names represented by this project
   created_by  uuid references auth.users(id) on delete set null,
@@ -101,6 +102,7 @@ alter table projects add column if not exists public_token text;
 alter table projects add column if not exists private_token text;
 alter table projects add column if not exists position_colors jsonb not null default '{}'::jsonb;
 alter table projects add column if not exists priority_colors jsonb not null default '{}'::jsonb;
+alter table projects add column if not exists planning_prefs jsonb not null default '{}'::jsonb;
 alter table projects add column if not exists tech_stack jsonb not null default '[]'::jsonb;
 alter table projects add column if not exists countries jsonb not null default '[]'::jsonb;
 drop trigger if exists trg_projects_updated on projects;
@@ -354,6 +356,25 @@ create table if not exists app_settings (
 );
 
 -- ---------------------------------------------------------------------------
+-- Project templates — reusable starting points. Picking one in the New-project
+-- form seeds details / features / to-dos / plan items / pipelines; a project
+-- can also be captured as a template from its Settings tab.
+-- ---------------------------------------------------------------------------
+create table if not exists project_templates (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null default '',
+  description text not null default '',
+  type        project_type,                          -- optional default project type
+  payload     jsonb not null default '{}'::jsonb,     -- TemplatePayload (see src/lib/types.ts)
+  created_by  uuid references auth.users(id) on delete set null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_project_templates_updated on project_templates;
+create trigger trg_project_templates_updated before update on project_templates
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------------
 -- Groups & members — app-level roles, separate from Supabase Auth accounts.
 -- A member row maps a login (by email) to a group. The earliest-created
 -- auth user is flagged is_master and is the only one who can edit member_groups,
@@ -420,7 +441,8 @@ declare t text;
 begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
-    'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets'
+    'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets',
+    'project_templates'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
@@ -455,7 +477,8 @@ declare t text;
 begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
-    'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets'
+    'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets',
+    'project_templates'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table %I', t);
