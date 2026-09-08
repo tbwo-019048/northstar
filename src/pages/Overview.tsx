@@ -22,21 +22,22 @@ import { parseCSV, toCSV, downloadText } from '@/lib/csv'
 import { STATE_CHIP_CLASS, STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
 
 const TYPE_TONE: Partial<Record<ProjectType, string>> = {
-  website: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
-  app: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
-  production: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-  physical: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  mechanical: 'bg-slate-500/15 text-slate-600 dark:text-slate-400',
-  location: 'bg-teal-500/15 text-teal-600 dark:text-teal-400',
-  written: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-  writing: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
-  other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
+  website: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  app: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300',
+  production: 'bg-rose-500/15 text-rose-700 dark:text-rose-300',
+  physical: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
+  mechanical: 'bg-stone-500/20 text-stone-700 dark:text-stone-300',
+  location: 'bg-lime-500/20 text-lime-700 dark:text-lime-300',
+  written: 'bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300',
+  writing: 'bg-pink-500/15 text-pink-700 dark:text-pink-300',
+  other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
 }
 const FALLBACK_TONE = 'bg-muted text-muted-foreground'
 
 type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'progress'
 const VIEW_KEY = 'northstar.overview.view'
 const CODENAME_KEY = 'northstar.overview.codenames'
+const TABLE_PAGE_SIZE = 15
 
 export function Overview() {
   const { projects, loaded, load, create, update, subscribe, error, clearError } = useProjects()
@@ -78,6 +79,7 @@ export function Overview() {
     }
   })
   const [importMsg, setImportMsg] = useState<string | null>(null)
+  const [tablePage, setTablePage] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -261,7 +263,10 @@ export function Overview() {
           <MagnifyingGlassIcon size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value)
+              setTablePage(0)
+            }}
             placeholder="Search"
             className="h-7 w-40 pl-7"
           />
@@ -284,7 +289,13 @@ export function Overview() {
           />
           Codenames
         </label>
-        <Select value={filter} onChange={(e) => setFilter(e.target.value as ProjectType | 'all')}>
+        <Select
+          value={filter}
+          onChange={(e) => {
+            setFilter(e.target.value as ProjectType | 'all')
+            setTablePage(0)
+          }}
+        >
           <option value="all">All types</option>
           {allTypes.map((t) => (
             <option key={t} value={t}>
@@ -423,12 +434,14 @@ export function Overview() {
       )}
 
       {view === 'table' && (
-        <ProjectTable
+        <TablePage
           rows={rows}
           loaded={loaded}
           onOpen={openProject}
           nameFor={projectLabel}
           showDescriptions={showDescriptions}
+          page={tablePage}
+          setPage={setTablePage}
         />
       )}
 
@@ -500,7 +513,10 @@ export function Overview() {
               <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
                 {projectLabel(p)}
               </span>
-              <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+              <div className="flex flex-wrap items-center justify-center gap-1">
+                <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+                <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
+              </div>
             </button>
           ))}
           {rows.length === 0 && (
@@ -512,13 +528,13 @@ export function Overview() {
       )}
 
       {view === 'progress' && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {rows.map((p) => (
             <button
               key={p.id}
               type="button"
               onClick={() => openProject(p.id)}
-              className="flex flex-col items-center gap-1.5 rounded-md border border-border p-3 text-center hover:bg-muted/50"
+              className="flex flex-col items-center gap-1.5 rounded-md border border-border p-2 text-center hover:bg-muted/50"
             >
               <span className="line-clamp-2 h-8 w-full break-words text-xs font-medium leading-4">
                 {projectLabel(p)}
@@ -528,12 +544,10 @@ export function Overview() {
                   value={statePercent(p.state)}
                   label={formatState(p.state)}
                   color="currentColor"
-                  size="sm"
+                  size="xs"
                 />
               </div>
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {p.type}
-              </span>
+              <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
             </button>
           ))}
           {rows.length === 0 && (
@@ -541,6 +555,69 @@ export function Overview() {
               {loaded ? 'No projects yet.' : 'Loading…'}
             </p>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TablePage({
+  rows,
+  loaded,
+  onOpen,
+  nameFor,
+  showDescriptions,
+  page,
+  setPage,
+}: {
+  rows: Project[]
+  loaded: boolean
+  onOpen: (id: string) => void
+  nameFor: (p: Project) => string
+  showDescriptions: boolean
+  page: number
+  setPage: (n: number) => void
+}) {
+  const pageCount = Math.max(1, Math.ceil(rows.length / TABLE_PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const start = safePage * TABLE_PAGE_SIZE
+  const pageRows = rows.slice(start, start + TABLE_PAGE_SIZE)
+
+  return (
+    <div className="space-y-2">
+      <ProjectTable
+        rows={pageRows}
+        loaded={loaded}
+        onOpen={onOpen}
+        nameFor={nameFor}
+        showDescriptions={showDescriptions}
+      />
+      {rows.length > TABLE_PAGE_SIZE && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="tabular-nums">
+            {start + 1}–{Math.min(start + TABLE_PAGE_SIZE, rows.length)} of {rows.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={safePage === 0}
+              onClick={() => setPage(safePage - 1)}
+              className="h-6 rounded-md border border-border px-2 hover:bg-muted disabled:opacity-40"
+            >
+              Prev
+            </button>
+            <span className="tabular-nums">
+              {safePage + 1} / {pageCount}
+            </span>
+            <button
+              type="button"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPage(safePage + 1)}
+              className="h-6 rounded-md border border-border px-2 hover:bg-muted disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
