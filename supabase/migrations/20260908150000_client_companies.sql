@@ -3,6 +3,35 @@
 -- existing rows. The legacy columns are left in place (unused by the app).
 -- Idempotent; safe to re-run.
 
+-- updated_at helper (no-op if it already exists).
+create or replace function set_updated_at() returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$ language plpgsql;
+
+-- Ensure the legacy source columns + media bucket exist (some databases never
+-- ran the 20260906120000 client-identity migration) so the backfill below is
+-- safe and company/photo logo uploads work.
+alter table clients add column if not exists company text not null default '';
+alter table clients add column if not exists photo_url text;
+alter table clients add column if not exists company_logo_url text;
+alter table clients add column if not exists email_domain text not null default '';
+
+insert into storage.buckets (id, name, public)
+values ('client-media', 'client-media', true)
+on conflict (id) do nothing;
+
+drop policy if exists "client media public read" on storage.objects;
+create policy "client media public read" on storage.objects
+  for select using (bucket_id = 'client-media');
+
+drop policy if exists "client media auth write" on storage.objects;
+create policy "client media auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'client-media')
+  with check (bucket_id = 'client-media');
+
 create table if not exists client_companies (
   id           uuid primary key default gen_random_uuid(),
   client_id    uuid not null references clients(id) on delete cascade,
