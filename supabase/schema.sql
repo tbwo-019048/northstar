@@ -7,7 +7,8 @@
 -- Enums
 -- ---------------------------------------------------------------------------
 do $$ begin
-  create type project_type as enum ('website', 'app', 'production', 'physical', 'written', 'other');
+  create type project_type as enum
+    ('website', 'app', 'production', 'physical', 'mechanical', 'location', 'written', 'other');
 exception when duplicate_object then null; end $$;
 
 -- Migration for a database created before 'website'/'app'/'production' existed:
@@ -33,6 +34,20 @@ begin
     where t.typname = 'project_type' and e.enumlabel = 'production'
   ) then
     alter type project_type add value 'production';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'mechanical'
+  ) then
+    alter type project_type add value 'mechanical';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'location'
+  ) then
+    alter type project_type add value 'location';
   end if;
 end $$;
 
@@ -67,6 +82,7 @@ end $$ language plpgsql;
 create table if not exists projects (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
+  codename    text not null default '',
   type        project_type not null default 'website',
   state       text not null default 'concept',  -- concept|commenced|development|mvp|revised|final|support
   summary     text default '',
@@ -91,6 +107,7 @@ create table if not exists projects (
   updated_at  timestamptz not null default now()
 );
 alter table projects add column if not exists logo_url text;
+alter table projects add column if not exists codename text not null default '';
 alter table projects add column if not exists state text not null default 'concept';
 alter table projects add column if not exists website_url text;
 alter table projects add column if not exists test_site_url text;
@@ -605,6 +622,28 @@ create table if not exists project_clients (
   primary key (project_id, client_id)
 );
 
+-- A client can operate across several companies/brands, each with its own name,
+-- logo and email domain. The legacy clients.company / company_logo_url /
+-- email_domain columns are kept but no longer used by the app.
+create table if not exists client_companies (
+  id           uuid primary key default gen_random_uuid(),
+  client_id    uuid not null references clients(id) on delete cascade,
+  name         text not null default '',
+  logo_url     text,
+  email_domain text not null default '',
+  sort         integer not null default 0,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+drop trigger if exists trg_client_companies_updated on client_companies;
+create trigger trg_client_companies_updated before update on client_companies
+  for each row execute function set_updated_at();
+insert into client_companies (client_id, name, logo_url, email_domain, sort)
+select c.id, c.company, c.company_logo_url, c.email_domain, 0
+from clients c
+where coalesce(c.company, '') <> ''
+  and not exists (select 1 from client_companies cc where cc.client_id = c.id);
+
 -- ---------------------------------------------------------------------------
 -- Emails — accounts grouped into tabs (email_groups), each entry masked the
 -- same way as a person's password.
@@ -636,7 +675,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'clients','project_clients','email_groups','email_accounts'
+    'clients','client_companies','project_clients','email_groups','email_accounts'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);

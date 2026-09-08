@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { Client, ProjectClient } from '@/lib/types'
+import type { Client, ClientCompany, ProjectClient } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 
 interface ClientsState {
   clients: Client[]
+  companies: ClientCompany[]
   links: ProjectClient[]
   loading: boolean
   loaded: boolean
@@ -13,6 +14,10 @@ interface ClientsState {
   create: (fields: Partial<Client>) => Promise<Client | null>
   update: (id: string, patch: Partial<Client>) => Promise<{ error: string | null }>
   remove: (id: string) => Promise<void>
+  addCompany: (clientId: string, fields?: Partial<ClientCompany>) => Promise<ClientCompany | null>
+  updateCompany: (id: string, patch: Partial<ClientCompany>) => Promise<void>
+  removeCompany: (id: string) => Promise<void>
+  companiesForClient: (clientId: string) => ClientCompany[]
   linkToProject: (projectId: string, clientId: string) => Promise<void>
   unlinkFromProject: (projectId: string, clientId: string) => Promise<void>
   clientsForProject: (projectId: string) => Client[]
@@ -22,6 +27,7 @@ interface ClientsState {
 
 export const useClients = create<ClientsState>((set, get) => ({
   clients: [],
+  companies: [],
   links: [],
   loading: false,
   loaded: false,
@@ -29,16 +35,19 @@ export const useClients = create<ClientsState>((set, get) => ({
 
   load: async () => {
     set({ loading: true })
-    const [clientsRes, linksRes] = await Promise.all([
+    const [clientsRes, companiesRes, linksRes] = await Promise.all([
       supabase.from('clients').select('*').order('sort', { ascending: true }),
+      supabase.from('client_companies').select('*').order('sort', { ascending: true }),
       supabase.from('project_clients').select('*'),
     ])
     set({
       clients: (clientsRes.data as Client[]) ?? [],
+      companies: (companiesRes.data as ClientCompany[]) ?? [],
       links: (linksRes.data as ProjectClient[]) ?? [],
       loading: false,
       loaded: true,
-      error: clientsRes.error?.message ?? linksRes.error?.message ?? null,
+      error:
+        clientsRes.error?.message ?? companiesRes.error?.message ?? linksRes.error?.message ?? null,
     })
   },
 
@@ -84,6 +93,52 @@ export const useClients = create<ClientsState>((set, get) => ({
     notifySaved('Client removed.')
   },
 
+  addCompany: async (clientId, fields) => {
+    const sort = get().companies.filter((c) => c.client_id === clientId).length
+    const { data, error } = await supabase
+      .from('client_companies')
+      .insert({ client_id: clientId, name: '', email_domain: '', sort, ...fields })
+      .select('*')
+      .single()
+    if (error || !data) {
+      console.error('[NorthStar] add company failed', error)
+      notifySaveError(error?.message)
+      return null
+    }
+    set({ companies: [...get().companies, data as ClientCompany] })
+    notifySaved('Company added.')
+    return data as ClientCompany
+  },
+
+  updateCompany: async (id, patch) => {
+    const previous = get().companies
+    set({ companies: previous.map((c) => (c.id === id ? { ...c, ...patch } : c)) })
+    const { error } = await supabase.from('client_companies').update(patch).eq('id', id)
+    if (error) {
+      set({ companies: previous })
+      notifySaveError(error.message)
+      return
+    }
+    notifySaved()
+  },
+
+  removeCompany: async (id) => {
+    const previous = get().companies
+    set({ companies: previous.filter((c) => c.id !== id) })
+    const { error } = await supabase.from('client_companies').delete().eq('id', id)
+    if (error) {
+      set({ companies: previous })
+      notifySaveError(error.message)
+      return
+    }
+    notifySaved('Company removed.')
+  },
+
+  companiesForClient: (clientId) =>
+    get()
+      .companies.filter((c) => c.client_id === clientId)
+      .sort((a, b) => a.sort - b.sort),
+
   linkToProject: async (projectId, clientId) => {
     if (get().links.some((l) => l.project_id === projectId && l.client_id === clientId)) return
     set({
@@ -124,6 +179,9 @@ export const useClients = create<ClientsState>((set, get) => ({
     const ch = supabase
       .channel('clients-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => get().load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_companies' }, () =>
+        get().load(),
+      )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_clients' }, () =>
         get().load(),
       )

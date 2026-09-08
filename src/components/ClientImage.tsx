@@ -9,6 +9,7 @@ export function ClientImage({
   name,
   url,
   kind,
+  slot,
   size = 'md',
   editable = false,
   onChange,
@@ -18,6 +19,9 @@ export function ClientImage({
   name: string
   url: string | null
   kind: 'photo' | 'company-logo'
+  /** Disambiguates the storage path when a client has several of one `kind`
+   * (e.g. one logo per company) — pass the company id. */
+  slot?: string
   size?: 'sm' | 'md' | 'lg'
   editable?: boolean
   onChange?: (url: string) => void
@@ -33,7 +37,7 @@ export function ClientImage({
     setBusy(true)
     setError(null)
     const ext = file.name.split('.').pop() || 'png'
-    const path = `${clientId}/${kind}-${Date.now()}.${ext}`
+    const path = `${clientId}/${kind}-${slot ? slot + '-' : ''}${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage
       .from('client-media')
       .upload(path, file, { upsert: true, cacheControl: '3600' })

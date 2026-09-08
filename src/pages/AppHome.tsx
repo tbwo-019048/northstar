@@ -10,6 +10,7 @@ const PhotonBeam = lazy(() => import('@/components/ui/photon-beam'))
 export function AppHome() {
   const theme = useTheme((state) => state.theme)
   const { clients, loaded: clientsLoaded, load: loadClients, subscribe: subscribeClients } = useClients()
+  const clientCompanies = useClients((state) => state.companies)
   const { projects, loaded: projectsLoaded, load: loadProjects, subscribe: subscribeProjects } = useProjects()
 
   useEffect(() => {
@@ -31,7 +32,10 @@ export function AppHome() {
           id: client.id,
           country,
           kind: 'client' as const,
-          label: client.name || client.company || 'Client',
+          label:
+            client.name ||
+            clientCompanies.find((co) => co.client_id === client.id)?.name ||
+            'Client',
         })),
       ),
       ...projects.flatMap((project) =>
@@ -43,7 +47,7 @@ export function AppHome() {
         })),
       ),
     ],
-    [clients, projects],
+    [clients, clientCompanies, projects],
   )
 
   return (

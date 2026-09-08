@@ -51,6 +51,16 @@ export function DetailsTab({ project }: { project: Project }) {
   return (
     <div className="space-y-3">
       <label className="block">
+        <span className="text-[11px] font-medium uppercase text-muted-foreground">Codename</span>
+        <Input
+          value={project.codename ?? ''}
+          onChange={(e) => update(projectId, { codename: e.target.value })}
+          placeholder="Optional — shown instead of the name when Codenames is on"
+          className="mt-1 w-full sm:w-56"
+        />
+      </label>
+
+      <label className="block">
         <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
         <Select
           value={project.state}

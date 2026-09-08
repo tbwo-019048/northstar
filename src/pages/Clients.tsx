@@ -22,7 +22,18 @@ export function Clients() {
   const {
     clients, loaded, load, subscribe, create, update, remove, links,
     linkToProject, unlinkFromProject, projectIdsForClient,
+    addCompany, updateCompany, removeCompany,
   } = useClients()
+  const companies = useClients((s) => s.companies)
+  const companiesByClient = useMemo(() => {
+    const map = new Map<string, typeof companies>()
+    for (const co of [...companies].sort((a, b) => a.sort - b.sort)) {
+      if (!map.has(co.client_id)) map.set(co.client_id, [])
+      map.get(co.client_id)!.push(co)
+    }
+    return map
+  }, [companies])
+  const companiesOf = (clientId: string) => companiesByClient.get(clientId) ?? []
   const { projects, loaded: projectsLoaded, load: loadProjects } = useProjects()
   const nav = useNavigate()
   const [open, setOpen] = useState<string | null>(null)
@@ -59,26 +70,47 @@ export function Clients() {
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase()
     if (!query) return clients
-    return clients.filter((client) =>
-      [client.name, client.company, client.email, client.email_domain, client.phone]
-        .some((value) => (value ?? '').toLowerCase().includes(query)),
-    )
-  }, [clients, q])
+    return clients.filter((client) => {
+      const cos = companiesByClient.get(client.id) ?? []
+      return [
+        client.name,
+        client.email,
+        client.phone,
+        ...cos.map((co) => co.name),
+        ...cos.map((co) => co.email_domain),
+      ].some((value) => (value ?? '').toLowerCase().includes(query))
+    })
+  }, [clients, q, companiesByClient])
 
+  const companySummary = (clientId: string) => {
+    const cos = companiesOf(clientId)
+    if (cos.length === 0) return '—'
+    return cos[0].name + (cos.length > 1 ? ` +${cos.length - 1}` : '')
+  }
+
+  // Each company row becomes a directory entry; a client with two companies
+  // appears under both group headings.
   const byCompany = useMemo(() => {
-    const groups = new Map<string, typeof clients>()
+    const groups = new Map<string, { client: (typeof clients)[number]; company: (typeof companies)[number] | null }[]>()
     for (const client of rows) {
-      const group = client.company.trim() || 'Independent'
-      if (!groups.has(group)) groups.set(group, [])
-      groups.get(group)!.push(client)
+      const cos = companiesByClient.get(client.id) ?? []
+      const entries = cos.length
+        ? cos.map((company) => ({ client, company }))
+        : [{ client, company: null }]
+      for (const entry of entries) {
+        const group = entry.company?.name.trim() || 'Independent'
+        if (!groups.has(group)) groups.set(group, [])
+        groups.get(group)!.push(entry)
+      }
     }
-    return [...groups.entries()]
-  }, [rows])
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [rows, companiesByClient])
 
   const onCreate = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!name.trim()) return
-    const created = await create({ name: name.trim(), company: company.trim() })
+    const created = await create({ name: name.trim() })
+    if (created && company.trim()) await addCompany(created.id, { name: company.trim() })
     setName('')
     setCompany('')
     setAdding(false)
@@ -148,7 +180,7 @@ export function Clients() {
                   <div className="min-w-0 flex-1">
                     <EditableText value={client.name} placeholder="Name" onSave={(value) => update(client.id, { name: value })} className="font-medium" />
                   </div>
-                  <span className="hidden w-36 shrink-0 truncate text-xs text-muted-foreground sm:block">{client.company}</span>
+                  <span className="hidden w-36 shrink-0 truncate text-xs text-muted-foreground sm:block">{companySummary(client.id)}</span>
                   <span className="hidden w-44 shrink-0 truncate text-xs text-muted-foreground md:block">{client.email}</span>
                   <span className="hidden w-28 shrink-0 truncate text-xs text-muted-foreground lg:block">{client.phone}</span>
                   <IconButton
@@ -170,31 +202,63 @@ export function Clients() {
                         />
                         <p className="text-[10px] uppercase text-muted-foreground">Client photo</p>
                       </div>
-                      <div className="space-y-1.5 text-center">
-                        <ClientImage
-                          clientId={client.id} name={client.company} url={client.company_logo_url ?? null}
-                          kind="company-logo" size="lg" editable onChange={(url) => update(client.id, { company_logo_url: url })}
-                        />
-                        <p className="text-[10px] uppercase text-muted-foreground">Company logo</p>
-                      </div>
                       <div className="min-w-52 flex-1 pt-1">
                         <p className="font-medium">{client.name || 'Unnamed client'}</p>
-                        <p className="text-xs text-muted-foreground">Click either image to upload or replace it.</p>
+                        <p className="text-xs text-muted-foreground">Click the photo to upload or replace it. Manage brands under Companies below.</p>
                       </div>
                     </div>
 
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                      <label className="block">
-                        <span className="text-[11px] font-medium uppercase text-muted-foreground">Company</span>
-                        <Input value={client.company} onChange={(event) => update(client.id, { company: event.target.value })} className="mt-1" />
-                      </label>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-medium uppercase text-muted-foreground">Companies</span>
+                        <button
+                          type="button"
+                          onClick={() => addCompany(client.id)}
+                          className="inline-flex h-5 items-center gap-1 rounded px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                        >
+                          <PlusIcon size={12} /> Add company
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {companiesOf(client.id).map((co) => (
+                          <div key={co.id} className="flex items-center gap-2 rounded-md border border-border bg-background/60 p-2">
+                            <ClientImage
+                              clientId={client.id} name={co.name} url={co.logo_url ?? null}
+                              kind="company-logo" slot={co.id} size="sm" editable
+                              onChange={(url) => updateCompany(co.id, { logo_url: url })}
+                            />
+                            <Input
+                              value={co.name}
+                              onChange={(event) => updateCompany(co.id, { name: event.target.value })}
+                              placeholder="Company name"
+                              className="max-w-[220px]"
+                            />
+                            <Input
+                              value={co.email_domain}
+                              onChange={(event) => updateCompany(co.id, { email_domain: event.target.value })}
+                              placeholder="company.com"
+                              className="max-w-[180px]"
+                            />
+                            <IconButton
+                              onClick={() => {
+                                if (confirm(`Remove ${co.name || 'this company'}?`)) removeCompany(co.id)
+                              }}
+                              className="ml-auto hover:text-destructive"
+                            >
+                              <TrashIcon size={14} />
+                            </IconButton>
+                          </div>
+                        ))}
+                        {companiesOf(client.id).length === 0 && (
+                          <p className="text-xs text-muted-foreground">No companies yet.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <label className="block">
                         <span className="text-[11px] font-medium uppercase text-muted-foreground">Email</span>
                         <Input value={client.email} onChange={(event) => update(client.id, { email: event.target.value })} className="mt-1" />
-                      </label>
-                      <label className="block">
-                        <span className="text-[11px] font-medium uppercase text-muted-foreground">Email domain</span>
-                        <Input value={client.email_domain ?? ''} onChange={(event) => update(client.id, { email_domain: event.target.value })} placeholder="company.com" className="mt-1" />
                       </label>
                       <label className="block">
                         <span className="text-[11px] font-medium uppercase text-muted-foreground">Phone</span>
@@ -238,22 +302,22 @@ export function Clients() {
 
       {view === 'byCompany' && (
         <div className="space-y-4">
-          {byCompany.map(([group, groupClients]) => (
+          {byCompany.map(([group, entries]) => (
             <section key={group} className="space-y-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group}</h2>
-                <span className="text-[11px] text-muted-foreground">{groupClients.length}</span>
+                <span className="text-[11px] text-muted-foreground">{entries.length}</span>
                 <div className="h-px flex-1 bg-border" />
               </div>
               <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
-                {groupClients.map((client) => (
-                  <button key={client.id} type="button" onClick={() => editClient(client.id)} className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted/40">
+                {entries.map(({ client, company }) => (
+                  <button key={client.id + (company?.id ?? '')} type="button" onClick={() => editClient(client.id)} className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted/40">
                     <ClientImage clientId={client.id} name={client.name} url={client.photo_url ?? null} kind="photo" size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{client.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">{client.email || client.email_domain || 'No email details'}</p>
+                      <p className="truncate text-xs text-muted-foreground">{client.email || company?.email_domain || 'No email details'}</p>
                     </div>
-                    {client.company_logo_url && <ClientImage clientId={client.id} name={client.company} url={client.company_logo_url} kind="company-logo" size="sm" />}
+                    {company?.logo_url && <ClientImage clientId={client.id} name={company.name} url={company.logo_url} kind="company-logo" slot={company.id} size="sm" />}
                     <ChevronRightIcon size={14} className="text-muted-foreground" />
                   </button>
                 ))}
@@ -272,13 +336,26 @@ export function Clients() {
                 <ClientImage clientId={client.id} name={client.name} url={client.photo_url ?? null} kind="photo" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{client.name || 'Unnamed client'}</p>
-                  <p className="truncate text-xs text-muted-foreground">{client.company || 'Independent'}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {companiesOf(client.id).map((co) => co.name).join(', ') || 'Independent'}
+                  </p>
                 </div>
-                <ClientImage clientId={client.id} name={client.company} url={client.company_logo_url ?? null} kind="company-logo" size="sm" />
+                {companiesOf(client.id)[0] && (
+                  <ClientImage
+                    clientId={client.id}
+                    name={companiesOf(client.id)[0].name}
+                    url={companiesOf(client.id)[0].logo_url ?? null}
+                    kind="company-logo"
+                    slot={companiesOf(client.id)[0].id}
+                    size="sm"
+                  />
+                )}
               </div>
               <div className="mt-4 space-y-1 text-xs text-muted-foreground">
                 <p className="truncate">{client.email || 'No email address'}</p>
-                <p className="truncate">{client.email_domain || 'No email domain'}</p>
+                <p className="truncate">
+                  {companiesOf(client.id).map((co) => co.email_domain).filter(Boolean).join(', ') || 'No email domain'}
+                </p>
               </div>
               {client.countries?.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1">

@@ -1,4 +1,12 @@
-export type ProjectType = 'website' | 'app' | 'production' | 'physical' | 'written' | 'other'
+export type ProjectType =
+  | 'website'
+  | 'app'
+  | 'production'
+  | 'physical'
+  | 'mechanical'
+  | 'location'
+  | 'written'
+  | 'other'
 export type ProjectState =
   | 'concept'
   | 'commenced'
@@ -33,6 +41,8 @@ export const PROJECT_TYPES: ProjectType[] = [
   'app',
   'production',
   'physical',
+  'mechanical',
+  'location',
   'written',
   'other',
 ]
@@ -70,6 +80,7 @@ export const SITE_TYPES: ProjectType[] = ['website', 'app']
 export interface Project {
   id: string
   name: string
+  codename: string
   type: ProjectType
   state: ProjectState
   summary: string
@@ -299,6 +310,19 @@ export interface ProjectClient {
   project_id: string
   client_id: string
   created_at: string
+}
+
+/** One company/brand a client operates under. A client can have several; the
+ * legacy scalar `Client.company` fields are frozen in favour of these. */
+export interface ClientCompany {
+  id: string
+  client_id: string
+  name: string
+  logo_url: string | null
+  email_domain: string
+  sort: number
+  created_at: string
+  updated_at: string
 }
 
 export interface EmailGroup {

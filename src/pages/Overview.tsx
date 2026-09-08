@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Gauge } from 'lucide-react'
+import { UsersIcon } from '@/components/ui/users'
 import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
 import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
 import { Squares2X2Icon } from '@/components/ui/squares-2x2'
@@ -11,6 +12,7 @@ import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
 import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjects } from '@/store/useProjects'
+import { useClients } from '@/store/useClients'
 import { useTemplates, seedProjectFromTemplate } from '@/store/useTemplates'
 import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
@@ -24,13 +26,16 @@ const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   app: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
   production: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
   physical: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  mechanical: 'bg-slate-500/15 text-slate-600 dark:text-slate-400',
+  location: 'bg-teal-500/15 text-teal-600 dark:text-teal-400',
   written: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
   other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
 }
 const FALLBACK_TONE = 'bg-muted text-muted-foreground'
 
-type ViewMode = 'table' | 'byType' | 'grid' | 'progress'
+type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'progress'
 const VIEW_KEY = 'northstar.overview.view'
+const CODENAME_KEY = 'northstar.overview.codenames'
 
 export function Overview() {
   const { projects, loaded, load, create, update, subscribe, error, clearError } = useProjects()
@@ -40,9 +45,23 @@ export function Overview() {
     load: loadTemplates,
     subscribe: subscribeTemplates,
   } = useTemplates()
+  const {
+    clients,
+    loaded: clientsLoaded,
+    load: loadClients,
+    subscribe: subscribeClients,
+    projectIdsForClient,
+  } = useClients()
   const nav = useNavigate()
   const [q, setQ] = useState('')
   const [showDescriptions, setShowDescriptions] = useState(false)
+  const [codenames, setCodenames] = useState(() => {
+    try {
+      return localStorage.getItem(CODENAME_KEY) !== '0'
+    } catch {
+      return true
+    }
+  })
   const [filter, setFilter] = useState<ProjectType | 'all'>('all')
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -71,6 +90,11 @@ export function Overview() {
   }, [templatesLoaded, loadTemplates, subscribeTemplates])
 
   useEffect(() => {
+    if (!clientsLoaded) loadClients()
+    return subscribeClients()
+  }, [clientsLoaded, loadClients, subscribeClients])
+
+  useEffect(() => {
     try {
       localStorage.setItem(VIEW_KEY, view)
     } catch {
@@ -78,11 +102,22 @@ export function Overview() {
     }
   }, [view])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(CODENAME_KEY, codenames ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [codenames])
+
+  const projectLabel = (p: Project) => (codenames && p.codename?.trim() ? p.codename : p.name)
+
   const rows = useMemo(() => {
     return projects.filter(
       (p) =>
         (filter === 'all' || p.type === filter) &&
-        p.name.toLowerCase().includes(q.toLowerCase()),
+        (p.name.toLowerCase().includes(q.toLowerCase()) ||
+          (p.codename ?? '').toLowerCase().includes(q.toLowerCase())),
     )
   }, [projects, q, filter])
 
@@ -103,6 +138,26 @@ export function Overview() {
     }
     return [...groups.entries()]
   }, [rows])
+
+  // Group projects by linked client. A project with several clients appears
+  // under each; projects with none go under "Unassigned".
+  const byClient = useMemo(() => {
+    const groups = new Map<string, Project[]>()
+    for (const p of rows) {
+      const names = clients
+        .filter((c) => projectIdsForClient(c.id).includes(p.id))
+        .map((c) => c.name || 'Unnamed client')
+      for (const key of names.length ? names : ['Unassigned']) {
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(p)
+      }
+    }
+    return [...groups.entries()].sort((a, b) => {
+      if (a[0] === 'Unassigned') return 1
+      if (b[0] === 'Unassigned') return -1
+      return a[0].localeCompare(b[0])
+    })
+  }, [rows, clients, projectIdsForClient])
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -219,6 +274,15 @@ export function Overview() {
           />
           Descriptions
         </label>
+        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={codenames}
+            onChange={(event) => setCodenames(event.target.checked)}
+            className="size-3.5 accent-primary"
+          />
+          Codenames
+        </label>
         <Select value={filter} onChange={(e) => setFilter(e.target.value as ProjectType | 'all')}>
           <option value="all">All types</option>
           {allTypes.map((t) => (
@@ -237,11 +301,18 @@ export function Overview() {
             <ListBulletIcon size={14} />
           </IconButton>
           <IconButton
-            title="Grouped"
+            title="Grouped by type"
             onClick={() => setView('byType')}
             className={view === 'byType' ? 'bg-muted text-foreground' : ''}
           >
             <Bars3Icon size={14} />
+          </IconButton>
+          <IconButton
+            title="Grouped by client"
+            onClick={() => setView('byClient')}
+            className={view === 'byClient' ? 'bg-muted text-foreground' : ''}
+          >
+            <UsersIcon size={14} />
           </IconButton>
           <IconButton
             title="Grid"
@@ -355,6 +426,7 @@ export function Overview() {
           rows={rows}
           loaded={loaded}
           onOpen={openProject}
+          nameFor={projectLabel}
           showDescriptions={showDescriptions}
         />
       )}
@@ -371,11 +443,37 @@ export function Overview() {
                 loaded={loaded}
                 onOpen={openProject}
                 compact
+                nameFor={projectLabel}
                 showDescriptions={showDescriptions}
               />
             </div>
           ))}
           {byType.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
+              {loaded ? 'No projects yet.' : 'Loading…'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {view === 'byClient' && (
+        <div className="space-y-4">
+          {byClient.map(([client, list]) => (
+            <div key={client} className="space-y-1">
+              <h2 className="text-xs font-semibold text-muted-foreground">
+                {client} · {list.length}
+              </h2>
+              <ProjectTable
+                rows={list}
+                loaded={loaded}
+                onOpen={openProject}
+                compact
+                nameFor={projectLabel}
+                showDescriptions={showDescriptions}
+              />
+            </div>
+          ))}
+          {byClient.length === 0 && (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               {loaded ? 'No projects yet.' : 'Loading…'}
             </p>
@@ -399,7 +497,7 @@ export function Overview() {
                   clips a 3rd+ line with an ellipsis instead of letting it
                   spill down into the state chip below. */}
               <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
-                {p.name}
+                {projectLabel(p)}
               </span>
               <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
             </button>
@@ -422,7 +520,7 @@ export function Overview() {
               className="flex flex-col items-center gap-1.5 rounded-md border border-border p-3 text-center hover:bg-muted/50"
             >
               <span className="line-clamp-2 h-8 w-full break-words text-xs font-medium leading-4">
-                {p.name}
+                {projectLabel(p)}
               </span>
               <div className={STATE_TEXT_CLASS[p.state] ?? 'text-muted-foreground'}>
                 <HalfCircleProgress
@@ -453,12 +551,14 @@ function ProjectTable({
   loaded,
   onOpen,
   compact,
+  nameFor,
   showDescriptions,
 }: {
   rows: Project[]
   loaded: boolean
   onOpen: (id: string) => void
   compact?: boolean
+  nameFor: (p: Project) => string
   showDescriptions: boolean
 }) {
   // A shared <colgroup> (identical whether or not the header row renders)
@@ -498,7 +598,7 @@ function ProjectTable({
               <td className="truncate px-2.5 py-1">
                 <span className="flex items-center gap-1.5 truncate font-medium group-hover:underline">
                   <ProjectLogo project={p} size="xs" />
-                  <span className="truncate">{p.name}</span>
+                  <span className="truncate">{nameFor(p)}</span>
                 </span>
                 {showDescriptions && p.summary && (
                   <span className="ml-[22px] block truncate text-xs text-muted-foreground">

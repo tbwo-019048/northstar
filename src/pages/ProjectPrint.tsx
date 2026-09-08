@@ -35,7 +35,7 @@ export function ProjectPrint() {
   const loading = useProjectData((s) => s.loading)
   const dataProjectId = useProjectData((s) => s.projectId)
   const { load, reset } = useProjectData()
-  const { loaded: clientsLoaded, load: loadClients, clientsForProject } = useClients()
+  const { loaded: clientsLoaded, load: loadClients, clientsForProject, companiesForClient } = useClients()
 
   useEffect(() => {
     if (!projectsLoaded) loadProjects()
@@ -164,7 +164,14 @@ export function ProjectPrint() {
         {linkedClients.length > 0 && (
           <Section title="Clients">
             <p className="text-neutral-700">
-              {linkedClients.map((c) => c.name + (c.company ? ` (${c.company})` : '')).join(', ')}
+              {linkedClients
+                .map((c) => {
+                  const cos = companiesForClient(c.id)
+                    .map((x) => x.name)
+                    .filter(Boolean)
+                  return cos.length ? `${c.name} (${cos.join(', ')})` : c.name
+                })
+                .join(', ')}
             </p>
           </Section>
         )}
