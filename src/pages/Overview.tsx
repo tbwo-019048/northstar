@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Gauge } from 'lucide-react'
 import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
 import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
 import { Squares2X2Icon } from '@/components/ui/squares-2x2'
@@ -14,8 +15,9 @@ import { useTemplates, seedProjectFromTemplate } from '@/store/useTemplates'
 import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
+import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
 import { parseCSV, toCSV, downloadText } from '@/lib/csv'
-import { STATE_CHIP_CLASS, formatState } from '@/lib/projectState'
+import { STATE_CHIP_CLASS, STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
 
 const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   website: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
@@ -27,7 +29,7 @@ const TYPE_TONE: Partial<Record<ProjectType, string>> = {
 }
 const FALLBACK_TONE = 'bg-muted text-muted-foreground'
 
-type ViewMode = 'table' | 'byType' | 'grid'
+type ViewMode = 'table' | 'byType' | 'grid' | 'progress'
 const VIEW_KEY = 'northstar.overview.view'
 
 export function Overview() {
@@ -248,6 +250,13 @@ export function Overview() {
           >
             <Squares2X2Icon size={14} />
           </IconButton>
+          <IconButton
+            title="Progress"
+            onClick={() => setView('progress')}
+            className={view === 'progress' ? 'bg-muted text-foreground' : ''}
+          >
+            <Gauge className="size-3.5" />
+          </IconButton>
         </div>
 
         <IconButton title="Export CSV" onClick={exportCsv} className="border border-border">
@@ -393,6 +402,39 @@ export function Overview() {
                 {p.name}
               </span>
               <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+            </button>
+          ))}
+          {rows.length === 0 && (
+            <p className="col-span-full px-3 py-6 text-center text-xs text-muted-foreground">
+              {loaded ? 'No projects yet.' : 'Loading…'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {view === 'progress' && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {rows.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => openProject(p.id)}
+              className="flex flex-col items-center gap-1.5 rounded-md border border-border p-3 text-center hover:bg-muted/50"
+            >
+              <span className="line-clamp-2 h-8 w-full break-words text-xs font-medium leading-4">
+                {p.name}
+              </span>
+              <div className={STATE_TEXT_CLASS[p.state] ?? 'text-muted-foreground'}>
+                <HalfCircleProgress
+                  value={statePercent(p.state)}
+                  label={formatState(p.state)}
+                  color="currentColor"
+                  size="sm"
+                />
+              </div>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                {p.type}
+              </span>
             </button>
           ))}
           {rows.length === 0 && (
