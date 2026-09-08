@@ -29,6 +29,7 @@ const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   mechanical: 'bg-slate-500/15 text-slate-600 dark:text-slate-400',
   location: 'bg-teal-500/15 text-teal-600 dark:text-teal-400',
   written: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  writing: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
   other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
 }
 const FALLBACK_TONE = 'bg-muted text-muted-foreground'

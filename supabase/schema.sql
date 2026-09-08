@@ -8,7 +8,7 @@
 -- ---------------------------------------------------------------------------
 do $$ begin
   create type project_type as enum
-    ('website', 'app', 'production', 'physical', 'mechanical', 'location', 'written', 'other');
+    ('website', 'app', 'production', 'physical', 'mechanical', 'location', 'written', 'writing', 'other');
 exception when duplicate_object then null; end $$;
 
 -- Migration for a database created before 'website'/'app'/'production' existed:
@@ -48,6 +48,13 @@ begin
     where t.typname = 'project_type' and e.enumlabel = 'location'
   ) then
     alter type project_type add value 'location';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'writing'
+  ) then
+    alter type project_type add value 'writing';
   end if;
 end $$;
 

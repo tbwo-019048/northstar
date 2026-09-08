@@ -6,6 +6,7 @@ export type ProjectType =
   | 'mechanical'
   | 'location'
   | 'written'
+  | 'writing'
   | 'other'
 export type ProjectState =
   | 'concept'
@@ -44,6 +45,7 @@ export const PROJECT_TYPES: ProjectType[] = [
   'mechanical',
   'location',
   'written',
+  'writing',
   'other',
 ]
 export const PROJECT_STATES: ProjectState[] = [
