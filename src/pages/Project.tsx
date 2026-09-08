@@ -13,6 +13,7 @@ import { FeaturesTab } from '@/pages/project/FeaturesTab'
 import { DetailsTab } from '@/pages/project/DetailsTab'
 import { RequestsTab } from '@/pages/project/RequestsTab'
 import { PipelineTab } from '@/pages/project/PipelineTab'
+import { PlanningTab } from '@/pages/project/PlanningTab'
 import { AnalysisTab } from '@/pages/project/AnalysisTab'
 import { GitTab } from '@/pages/project/GitTab'
 import { ProjectSettingsTab } from '@/pages/project/ProjectSettingsTab'
@@ -26,6 +27,7 @@ const TABS = [
   { key: 'requests', label: 'Requests' },
   { key: 'todo', label: 'To-Do' },
   { key: 'pipeline', label: 'Pipeline' },
+  { key: 'planning', label: 'Planning' },
   { key: 'users', label: 'Users' },
   { key: 'git', label: 'Git' },
   { key: 'analysis', label: 'Analysis' },
@@ -144,6 +146,7 @@ export function Project() {
         {active === 'requests' && project && <RequestsTab project={project} />}
         {active === 'todo' && <TodoTab projectId={id} />}
         {active === 'pipeline' && project && <PipelineTab project={project} />}
+        {active === 'planning' && <PlanningTab projectId={id} />}
         {active === 'users' && project && <UsersTab project={project} />}
         {active === 'git' && <GitTab projectId={id} />}
         {active === 'analysis' && project && <AnalysisTab project={project} />}

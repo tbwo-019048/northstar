@@ -10,8 +10,23 @@ export type ProjectState =
 export type TodoStatus = 'todo' | 'completed'
 export type Priority = 'urgent' | 'high' | 'medium' | 'low'
 export type PipelineStatus = 'active' | 'completed' | 'archived'
+export type PlanStatus = 'requested' | 'in_progress' | 'delayed' | 'completed' | 'failed'
 
 export const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low']
+export const PLAN_STATUSES: PlanStatus[] = [
+  'requested',
+  'in_progress',
+  'delayed',
+  'completed',
+  'failed',
+]
+export const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
+  requested: 'Requested',
+  in_progress: 'In Progress',
+  delayed: 'Delayed',
+  completed: 'Completed',
+  failed: 'Failed',
+}
 export const PROJECT_TYPES: ProjectType[] = ['website', 'app', 'physical', 'written', 'other']
 export const PROJECT_STATES: ProjectState[] = [
   'concept',
@@ -167,6 +182,34 @@ export interface Pipeline {
   sort: number
   created_at: string
   completed_at: string | null
+}
+
+export interface PlanPhoto {
+  url: string
+  caption?: string
+}
+
+export interface PlanItem {
+  id: string
+  project_id: string
+  title: string
+  description: string
+  status: PlanStatus
+  priority: number // 0..10
+  start_date: string | null
+  due_date: string | null
+  photos: PlanPhoto[]
+  sort: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanComment {
+  id: string
+  plan_item_id: string
+  author: string
+  body: string
+  created_at: string
 }
 
 export interface ProjectScreenshot {

@@ -9,6 +9,8 @@ import type {
   PersonComment,
   Pipeline,
   PipelineItem,
+  PlanComment,
+  PlanItem,
   ProjectAsset,
   ProjectScreenshot,
   RequestItem,
@@ -31,6 +33,8 @@ export type TableName =
   | 'requests'
   | 'pipelines'
   | 'pipeline_items'
+  | 'plan_items'
+  | 'plan_comments'
   | 'project_screenshots'
   | 'project_assets'
 
@@ -43,6 +47,7 @@ const PROJECT_TABLES: TableName[] = [
   'details',
   'requests',
   'pipelines',
+  'plan_items',
   'project_screenshots',
   'project_assets',
 ]
@@ -76,6 +81,8 @@ const empty = (): Record<TableName, Row[]> => ({
   requests: [],
   pipelines: [],
   pipeline_items: [],
+  plan_items: [],
+  plan_comments: [],
   project_screenshots: [],
   project_assets: [],
 })
@@ -102,8 +109,9 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     const personIds = rows.project_people.map((r) => r.id)
     const todoIds = rows.todos.map((r) => r.id)
     const pipelineIds = rows.pipelines.map((r) => r.id)
+    const planIds = rows.plan_items.map((r) => r.id)
 
-    const [pc, tc, pi] = await Promise.all([
+    const [pc, tc, pi, plc] = await Promise.all([
       personIds.length
         ? supabase.from('person_comments').select('*').in('person_id', personIds)
         : Promise.resolve({ data: [] }),
@@ -117,10 +125,14 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
             .in('pipeline_id', pipelineIds)
             .order('sort', { ascending: true })
         : Promise.resolve({ data: [] }),
+      planIds.length
+        ? supabase.from('plan_comments').select('*').in('plan_item_id', planIds)
+        : Promise.resolve({ data: [] }),
     ])
     rows.person_comments = (pc.data as Row[]) ?? []
     rows.todo_comments = (tc.data as Row[]) ?? []
     rows.pipeline_items = (pi.data as Row[]) ?? []
+    rows.plan_comments = (plc.data as Row[]) ?? []
 
     set({ rows, loading: false })
   },
@@ -208,6 +220,8 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       'requests',
       'pipelines',
       'pipeline_items',
+      'plan_items',
+      'plan_comments',
       'project_screenshots',
       'project_assets',
     ]
@@ -234,5 +248,7 @@ export const asDetails = (r: Row[]) => r as unknown as Detail[]
 export const asRequests = (r: Row[]) => r as unknown as RequestItem[]
 export const asPipelines = (r: Row[]) => r as unknown as Pipeline[]
 export const asPipelineItems = (r: Row[]) => r as unknown as PipelineItem[]
+export const asPlanItems = (r: Row[]) => r as unknown as PlanItem[]
+export const asPlanComments = (r: Row[]) => r as unknown as PlanComment[]
 export const asScreenshots = (r: Row[]) => r as unknown as ProjectScreenshot[]
 export const asAssets = (r: Row[]) => r as unknown as ProjectAsset[]
