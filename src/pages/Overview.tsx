@@ -19,6 +19,7 @@ import { STATE_CHIP_CLASS, formatState } from '@/lib/projectState'
 const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   website: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
   app: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
+  production: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
   physical: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   written: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
   other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',

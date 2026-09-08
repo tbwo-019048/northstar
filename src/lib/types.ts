@@ -1,4 +1,4 @@
-export type ProjectType = 'website' | 'app' | 'physical' | 'written' | 'other'
+export type ProjectType = 'website' | 'app' | 'production' | 'physical' | 'written' | 'other'
 export type ProjectState =
   | 'concept'
   | 'commenced'
@@ -27,7 +27,14 @@ export const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
   completed: 'Completed',
   failed: 'Failed',
 }
-export const PROJECT_TYPES: ProjectType[] = ['website', 'app', 'physical', 'written', 'other']
+export const PROJECT_TYPES: ProjectType[] = [
+  'website',
+  'app',
+  'production',
+  'physical',
+  'written',
+  'other',
+]
 export const PROJECT_STATES: ProjectState[] = [
   'concept',
   'commenced',
@@ -126,6 +133,7 @@ export interface Todo {
   status: TodoStatus
   description: string
   attachments: Attachment[]
+  source_plan_item_id?: string | null
   sort: number
   created_at: string
   updated_at: string
@@ -144,7 +152,8 @@ export interface Feature {
   project_id: string
   title: string
   description: string
-  source: 'manual' | 'pipeline'
+  source: 'manual' | 'pipeline' | 'planning'
+  source_plan_item_id?: string | null
   sort: number
   created_at: string
 }
@@ -199,6 +208,7 @@ export interface PlanItem {
   start_date: string | null
   due_date: string | null
   photos: PlanPhoto[]
+  source_request_id?: string | null
   sort: number
   created_at: string
   updated_at: string

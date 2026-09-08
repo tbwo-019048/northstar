@@ -87,6 +87,86 @@ const empty = (): Record<TableName, Row[]> => ({
   project_assets: [],
 })
 
+// --- Request → Planning → To-Do → Features workflow ----------------------
+// A Request is mirrored into a plan item on creation. Moving that plan item
+// out of "Requested" to anything except "Failed" (rejected) spawns a To-Do;
+// moving it to "Completed" spawns a Feature and closes the To-Do.
+
+const PRIORITY_TO_NUM: Record<string, number> = { urgent: 9, high: 7, medium: 5, low: 2 }
+const numToPriority = (n: number): string =>
+  n >= 8 ? 'urgent' : n >= 6 ? 'high' : n >= 3 ? 'medium' : 'low'
+
+type Get = () => ProjectDataState
+
+async function mirrorRequestToPlan(get: Get, request: Row) {
+  const projectId = get().projectId
+  if (!projectId) return
+  if (get().rows.plan_items.some((p) => p.source_request_id === request.id)) return
+  await get().add('plan_items', {
+    project_id: projectId,
+    title: (request.title as string) || 'Request',
+    description: [request.subtitle, request.notes].filter(Boolean).join('\n\n'),
+    status: 'requested',
+    priority: PRIORITY_TO_NUM[(request.priority as string) ?? 'medium'] ?? 5,
+    source_request_id: request.id,
+    sort: get().rows.plan_items.length,
+  })
+}
+
+/** While a request's plan item is still "Requested" (not yet accepted), keep
+ * its title/description in step with edits to the request. */
+async function syncRequestEdits(get: Get, requestId: string, values: Record<string, unknown>) {
+  const plan = get().rows.plan_items.find((p) => p.source_request_id === requestId)
+  if (!plan || plan.status !== 'requested') return
+  const patch: Record<string, unknown> = {}
+  if (typeof values.title === 'string') patch.title = values.title
+  if (typeof values.subtitle === 'string' || typeof values.notes === 'string') {
+    const req = get().rows.requests.find((r) => r.id === requestId)
+    const subtitle = (values.subtitle ?? req?.subtitle ?? '') as string
+    const notes = (values.notes ?? req?.notes ?? '') as string
+    patch.description = [subtitle, notes].filter(Boolean).join('\n\n')
+  }
+  if (Object.keys(patch).length) await get().patch('plan_items', plan.id, patch)
+}
+
+async function advancePlanItem(get: Get, planItemId: string, status: string) {
+  const projectId = get().projectId
+  if (!projectId) return
+  const plan = get().rows.plan_items.find((p) => p.id === planItemId)
+  if (!plan) return
+  const accepted = status !== 'requested' && status !== 'failed'
+
+  if (accepted) {
+    const existingTodo = get().rows.todos.find((t) => t.source_plan_item_id === planItemId)
+    if (!existingTodo) {
+      await get().add('todos', {
+        project_id: projectId,
+        title: (plan.title as string) || 'Task',
+        subtitle: '',
+        description: (plan.description as string) ?? '',
+        type: 'feature',
+        priority: numToPriority((plan.priority as number) ?? 5),
+        status: status === 'completed' ? 'completed' : 'todo',
+        source_plan_item_id: planItemId,
+        sort: get().rows.todos.length,
+      })
+    } else if (status === 'completed' && existingTodo.status !== 'completed') {
+      await get().patch('todos', existingTodo.id, { status: 'completed' })
+    }
+  }
+
+  if (status === 'completed' && !get().rows.features.some((f) => f.source_plan_item_id === planItemId)) {
+    await get().add('features', {
+      project_id: projectId,
+      title: (plan.title as string) || 'Feature',
+      description: (plan.description as string) ?? '',
+      source: 'planning',
+      source_plan_item_id: planItemId,
+      sort: get().rows.features.length,
+    })
+  }
+}
+
 export const useProjectData = create<ProjectDataState>((set, get) => ({
   projectId: null,
   loading: false,
@@ -146,6 +226,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     }
     set((s) => ({ rows: { ...s.rows, [table]: [...s.rows[table], data as Row] } }))
     notifySaved('Item added.')
+    if (table === 'requests') void mirrorRequestToPlan(get, data as Row)
     return data as never
   },
 
@@ -165,6 +246,18 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       return { error: error.message }
     }
     notifySaved()
+    if (table === 'plan_items' && typeof values.status === 'string') {
+      void advancePlanItem(get, id, values.status)
+    }
+    if (table === 'requests' && values.status === 'completed') {
+      const plan = get().rows.plan_items.find((p) => p.source_request_id === id)
+      if (plan && plan.status !== 'completed') {
+        void get().patch('plan_items', plan.id, { status: 'completed' })
+      }
+    }
+    if (table === 'requests' && ('title' in values || 'subtitle' in values || 'notes' in values)) {
+      void syncRequestEdits(get, id, values)
+    }
     return { error: null }
   },
 

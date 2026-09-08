@@ -16,6 +16,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 import { CheckCircleIcon } from '@/components/ui/check-circle'
+import { CheckIcon } from '@/components/ui/check'
+import { DocumentIcon } from '@/components/ui/document'
 import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
 import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
@@ -96,19 +98,34 @@ export function PipelineTab({ project }: { project: Project }) {
     reorder('pipeline_items', arrayMove(currentItems, oldI, newI))
   }
 
+  const pipelineText = () =>
+    !current
+      ? ''
+      : `# ${current.name}\n\n` +
+        currentItems.map((i) => `- [${i.done ? 'x' : ' '}] ${i.body}`).join('\n') +
+        '\n'
+
   const exportTxt = () => {
     if (!current) return
-    const body =
-      `# ${current.name}\n\n` +
-      currentItems.map((i) => `- [${i.done ? 'x' : ' '}] ${i.body}`).join('\n') +
-      '\n'
-    const blob = new Blob([body], { type: 'text/plain' })
+    const blob = new Blob([pipelineText()], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `${current.name.replace(/\s+/g, '-').toLowerCase()}.txt`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const [copied, setCopied] = useState(false)
+  const copyToClipboard = async () => {
+    if (!current) return
+    try {
+      await navigator.clipboard.writeText(pipelineText())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* clipboard blocked — ignore */
+    }
   }
 
   const completePipeline = async () => {
@@ -209,6 +226,14 @@ export function PipelineTab({ project }: { project: Project }) {
               />
               h
             </label>
+            <button
+              type="button"
+              onClick={copyToClipboard}
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
+            >
+              {copied ? <CheckIcon size={12} className="text-primary" /> : <DocumentIcon size={12} />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
             <button
               type="button"
               onClick={exportTxt}

@@ -7,11 +7,11 @@
 -- Enums
 -- ---------------------------------------------------------------------------
 do $$ begin
-  create type project_type as enum ('website', 'app', 'physical', 'written', 'other');
+  create type project_type as enum ('website', 'app', 'production', 'physical', 'written', 'other');
 exception when duplicate_object then null; end $$;
 
--- Migration for a database created before 'website'/'app' existed: rename the
--- old 'software' label and add 'app'. Safe to re-run.
+-- Migration for a database created before 'website'/'app'/'production' existed:
+-- rename the old 'software' label and add the newer values. Safe to re-run.
 do $$
 begin
   if exists (
@@ -26,6 +26,13 @@ begin
     where t.typname = 'project_type' and e.enumlabel = 'app'
   ) then
     alter type project_type add value 'app';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'production'
+  ) then
+    alter type project_type add value 'production';
   end if;
 end $$;
 
@@ -191,10 +198,12 @@ create table if not exists features (
   project_id  uuid not null references projects(id) on delete cascade,
   title       text not null default '',
   description text not null default '',
-  source      text not null default 'manual',   -- manual | pipeline
+  source      text not null default 'manual',   -- manual | pipeline | planning
+  source_plan_item_id uuid,                      -- FK added after plan_items exists (below)
   sort        integer not null default 0,
   created_at  timestamptz not null default now()
 );
+alter table features add column if not exists source_plan_item_id uuid;
 
 -- ---------------------------------------------------------------------------
 -- Details (dynamic key/value grouped rows)
@@ -310,6 +319,28 @@ create table if not exists plan_comments (
   body          text not null default '',
   created_at    timestamptz not null default now()
 );
+
+-- Workflow links: a Request auto-creates a plan item; accepting it (any status
+-- but rejected/failed) auto-creates a To-Do; completing it auto-creates a
+-- Feature. The FKs are added here, after plan_items exists.
+alter table plan_items add column if not exists source_request_id uuid;
+alter table todos      add column if not exists source_plan_item_id uuid;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'plan_items_source_request_fk') then
+    alter table plan_items add constraint plan_items_source_request_fk
+      foreign key (source_request_id) references requests(id) on delete cascade;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'todos_source_plan_item_fk') then
+    alter table todos add constraint todos_source_plan_item_fk
+      foreign key (source_plan_item_id) references plan_items(id) on delete set null;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'features_source_plan_item_fk') then
+    alter table features add constraint features_source_plan_item_fk
+      foreign key (source_plan_item_id) references plan_items(id) on delete set null;
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- App settings — a single shared row (e.g. the GitHub token used to fetch
