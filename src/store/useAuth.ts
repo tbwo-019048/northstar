@@ -18,6 +18,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshMember: () => Promise<void>
+  setDisplayName: (name: string) => Promise<{ error: string | null }>
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -80,5 +81,12 @@ export const useAuth = create<AuthState>((set, get) => ({
   signOut: async () => {
     await supabase.auth.signOut()
     set({ session: null, user: null, member: null, isMaster: false })
+  },
+
+  setDisplayName: async (name) => {
+    const { error } = await supabase.rpc('set_my_display_name', { new_name: name })
+    if (error) return { error: error.message }
+    await get().refreshMember()
+    return { error: null }
   },
 }))

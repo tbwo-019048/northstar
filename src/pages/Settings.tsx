@@ -12,6 +12,8 @@ import { MembersSettings } from '@/components/MembersSettings'
 
 export function Settings() {
   const isMaster = useAuth((s) => s.isMaster)
+  const member = useAuth((s) => s.member)
+  const setDisplayName = useAuth((s) => s.setDisplayName)
   const diagnostic = useDiagnostic((s) => s.on)
   const setDiagnostic = useDiagnostic((s) => s.setOn)
   const gridCols = useGridCols((s) => s.cols)
@@ -20,6 +22,15 @@ export function Settings() {
   const [token, setToken] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const memberName = member?.display_name ?? ''
+  const [nameDraft, setNameDraft] = useState(memberName)
+  const [nameSeeded, setNameSeeded] = useState(memberName)
+  const [nameStatus, setNameStatus] = useState<string | null>(null)
+  if (memberName !== nameSeeded) {
+    // member row arrived / changed elsewhere — adopt it as the field's baseline
+    setNameSeeded(memberName)
+    setNameDraft(memberName)
+  }
 
   useEffect(() => {
     if (!loaded) load()
@@ -71,6 +82,27 @@ export function Settings() {
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <Wrench className="size-3.5" /> Display
         </h2>
+        <form
+          className="space-y-1"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            setNameStatus(null)
+            const { error: err } = await setDisplayName(nameDraft.trim())
+            setNameStatus(err ?? 'Saved.')
+          }}
+        >
+          <span className="text-sm">Display name</span>
+          <div className="flex items-center gap-1.5">
+            <Input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder="Your name" />
+            <button className="h-7 shrink-0 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+              Save
+            </button>
+          </div>
+          <span className="block text-xs text-muted-foreground">
+            Shown as your name across the workspace and on the home greeting.
+            {nameStatus && <em className="ml-1 not-italic text-primary">{nameStatus}</em>}
+          </span>
+        </form>
         <label className="flex cursor-pointer items-start gap-2 text-sm">
           <input
             type="checkbox"
