@@ -5,6 +5,9 @@ import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
 import { ArrowUturnLeftIcon } from '@/components/ui/arrow-uturn-left'
 import { useProjectData, asRequests } from '@/store/useProjectData'
+import { useDiagnostic } from '@/store/useDiagnostic'
+import { visibleRows } from '@/lib/hidden'
+import { HideToggle } from '@/components/HideToggle'
 import { PRIORITIES, type Priority, type Project } from '@/lib/types'
 import { EditableText, IconButton, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
@@ -20,7 +23,8 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
   const projectId = project.id
   const rows = useProjectData((s) => s.rows.requests)
   const { add, patch, del } = useProjectData()
-  const requests = asRequests(rows)
+  const diagnostic = useDiagnostic((s) => s.on)
+  const requests = visibleRows(asRequests(rows), diagnostic)
   const [open, setOpen] = useState<string | null>(null)
   const heading = label ?? 'Requests'
   const singular = (label ?? 'request').toLowerCase().replace(/s$/, '')
@@ -48,8 +52,15 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
     <Fragment>
       <tr
         style={{ boxShadow: `inset 3px 0 0 ${colorFor(r.priority)}` }}
-        className="border-b border-border last:border-0 hover:bg-muted/30"
+        className={
+          'border-b border-border last:border-0 hover:bg-muted/30' + (r.hidden ? ' opacity-50' : '')
+        }
       >
+        {diagnostic && (
+          <td className="w-6 px-1 text-center">
+            <HideToggle hidden={r.hidden} onToggle={(v) => patch('requests', r.id, { hidden: v })} />
+          </td>
+        )}
         <td className="w-6 px-1">
           <IconButton onClick={() => setOpen(open === r.id ? null : r.id)}>
             <ChevronRightIcon size={14} className={'transition-transform ' + (open === r.id ? 'rotate-90' : '')} />
@@ -107,6 +118,7 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
       </tr>
       {open === r.id && (
         <tr className="border-b border-border bg-muted/20">
+          {diagnostic && <td />}
           <td />
           <td colSpan={5} className="px-2 py-2">
             <ReqNotes id={r.id} initial={r.notes} onSave={(v) => patch('requests', r.id, { notes: v })} />

@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Wrench } from 'lucide-react'
 import { ChevronLeftIcon } from '@/components/ui/chevron-left'
 import { ShieldExclamationIcon } from '@/components/ui/shield-exclamation'
 import { useAuth } from '@/store/useAuth'
 import { useSettings } from '@/store/useSettings'
+import { useDiagnostic } from '@/store/useDiagnostic'
 import { Input } from '@/components/ui-lite'
 import { MembersSettings } from '@/components/MembersSettings'
 
 export function Settings() {
   const isMaster = useAuth((s) => s.isMaster)
+  const diagnostic = useDiagnostic((s) => s.on)
+  const setDiagnostic = useDiagnostic((s) => s.setOn)
   const { githubTokenSet, loaded, load, saveGithubToken, clearGithubToken } = useSettings()
   const [token, setToken] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -60,7 +63,29 @@ export function Settings() {
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
         <MembersSettings />
 
-      <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm lg:sticky lg:top-15">
+      <div className="space-y-4 lg:sticky lg:top-15">
+      <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm">
+        <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Wrench className="size-3.5" /> Display
+        </h2>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={diagnostic}
+            onChange={(e) => setDiagnostic(e.target.checked)}
+            className="mt-0.5 size-3.5 accent-primary"
+          />
+          <span>
+            Diagnostic mode
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Shows a hide checkbox on every list. Hidden items disappear when this is off. This
+              setting is per-browser; the hidden items themselves are shared with everyone.
+            </span>
+          </span>
+        </label>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm">
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <GitBranch className="size-3.5" /> GitHub
         </h2>
@@ -116,6 +141,7 @@ export function Settings() {
           </p>
         )}
       </section>
+      </div>
       </div>
     </div>
   )

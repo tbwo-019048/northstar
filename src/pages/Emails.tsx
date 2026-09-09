@@ -7,6 +7,9 @@ import { PlusIcon } from '@/components/ui/plus'
 import { Squares2X2Icon } from '@/components/ui/squares-2x2'
 import { TrashIcon } from '@/components/ui/trash'
 import { useEmails } from '@/store/useEmails'
+import { useDiagnostic } from '@/store/useDiagnostic'
+import { visibleRows } from '@/lib/hidden'
+import { HideToggle } from '@/components/HideToggle'
 import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
 import type { EmailAccount } from '@/lib/types'
 
@@ -18,6 +21,7 @@ export function Emails() {
     groups, accounts, loaded, load, subscribe, addGroup, removeGroup,
     addAccount, updateAccount, removeAccount,
   } = useEmails()
+  const diagnostic = useDiagnostic((s) => s.on)
   const [active, setActive] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [view, setView] = useState<EmailView>(() => {
@@ -47,12 +51,15 @@ export function Emails() {
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase()
-    if (!query) return accounts
-    return accounts.filter((account) =>
-      [account.name, account.email, account.domain, account.notes]
-        .some((value) => value.toLowerCase().includes(query)),
-    )
-  }, [accounts, q])
+    const matched = query
+      ? accounts.filter((account) =>
+          [account.name, account.email, account.domain, account.notes].some((value) =>
+            value.toLowerCase().includes(query),
+          ),
+        )
+      : accounts
+    return visibleRows(matched, diagnostic)
+  }, [accounts, q, diagnostic])
 
   const current = filtered
     .filter((account) => account.group_id === active)
@@ -136,7 +143,7 @@ export function Emails() {
           </div>
 
           {view === 'table' && (
-            <EmailTable accounts={current} updateAccount={updateAccount} removeAccount={removeAccount} emptyText={q ? 'No accounts match your search in this group.' : 'No accounts in this group yet.'} />
+            <EmailTable accounts={current} updateAccount={updateAccount} removeAccount={removeAccount} diagnostic={diagnostic} emptyText={q ? 'No accounts match your search in this group.' : 'No accounts in this group yet.'} />
           )}
 
           {view === 'byGroup' && (
@@ -150,7 +157,7 @@ export function Emails() {
                       <span className="text-[11px] text-muted-foreground">{groupAccounts.length}</span>
                       <div className="h-px flex-1 bg-border" />
                     </div>
-                    <EmailTable accounts={groupAccounts} updateAccount={updateAccount} removeAccount={removeAccount} emptyText={q ? 'No matching accounts.' : 'No accounts in this group yet.'} />
+                    <EmailTable accounts={groupAccounts} updateAccount={updateAccount} removeAccount={removeAccount} diagnostic={diagnostic} emptyText={q ? 'No matching accounts.' : 'No accounts in this group yet.'} />
                   </section>
                 )
               })}
@@ -198,22 +205,26 @@ function EmailTable({
   accounts,
   updateAccount,
   removeAccount,
+  diagnostic,
   emptyText,
 }: {
   accounts: EmailAccount[]
   updateAccount: (id: string, patch: Partial<EmailAccount>) => Promise<{ error: string | null }>
   removeAccount: (id: string) => Promise<void>
+  diagnostic: boolean
   emptyText: string
 }) {
   return (
     <div className="overflow-x-auto rounded-md border border-border">
       <table className="w-full min-w-[640px] table-fixed text-sm">
         <colgroup>
+          {diagnostic && <col className="w-8" />}
           <col className="w-40" /><col className="w-48" /><col className="w-32" />
           <col className="w-32" /><col /><col className="w-8" />
         </colgroup>
         <thead>
           <tr className="border-b border-border bg-muted/40 text-left text-[11px] uppercase text-muted-foreground">
+            {diagnostic && <th />}
             <th className="px-2 py-1 font-medium">Name</th><th className="px-2 py-1 font-medium">Email</th>
             <th className="px-2 py-1 font-medium">Domain</th><th className="px-2 py-1 font-medium">Password</th>
             <th className="px-2 py-1 font-medium">Notes</th><th />
@@ -221,7 +232,20 @@ function EmailTable({
         </thead>
         <tbody>
           {accounts.map((account) => (
-            <tr key={account.id} className="group border-b border-border last:border-0">
+            <tr
+              key={account.id}
+              className={
+                'group border-b border-border last:border-0' + (account.hidden ? ' opacity-50' : '')
+              }
+            >
+              {diagnostic && (
+                <td className="px-1.5 py-1 text-center align-top">
+                  <HideToggle
+                    hidden={account.hidden}
+                    onToggle={(v) => updateAccount(account.id, { hidden: v })}
+                  />
+                </td>
+              )}
               <td className="px-2 py-1 align-top"><EditableText value={account.name} onSave={(value) => updateAccount(account.id, { name: value })} /></td>
               <td className="px-2 py-1 align-top"><EditableText value={account.email} onSave={(value) => updateAccount(account.id, { email: value })} /></td>
               <td className="px-2 py-1 align-top"><EditableText value={account.domain} onSave={(value) => updateAccount(account.id, { domain: value })} /></td>
@@ -232,7 +256,7 @@ function EmailTable({
               </td>
             </tr>
           ))}
-          {accounts.length === 0 && <tr><td colSpan={6} className="px-2 py-6 text-center text-xs text-muted-foreground">{emptyText}</td></tr>}
+          {accounts.length === 0 && <tr><td colSpan={diagnostic ? 7 : 6} className="px-2 py-6 text-center text-xs text-muted-foreground">{emptyText}</td></tr>}
         </tbody>
       </table>
     </div>

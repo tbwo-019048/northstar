@@ -1,12 +1,19 @@
 import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asFeatures } from '@/store/useProjectData'
+import { useDiagnostic } from '@/store/useDiagnostic'
+import { visibleRows } from '@/lib/hidden'
+import { HideToggle } from '@/components/HideToggle'
 import { EditableText, IconButton, Chip } from '@/components/ui-lite'
 
 export function FeaturesTab({ projectId, label }: { projectId: string; label?: string }) {
   const rows = useProjectData((s) => s.rows.features)
   const { add, patch, del } = useProjectData()
-  const features = asFeatures(rows).slice().sort((a, b) => a.sort - b.sort)
+  const diagnostic = useDiagnostic((s) => s.on)
+  const features = visibleRows(
+    asFeatures(rows).slice().sort((a, b) => a.sort - b.sort),
+    diagnostic,
+  )
   const heading = label ?? 'Features'
   const newTitle = 'New ' + (label ? label.toLowerCase().replace(/s$/, '') : 'feature')
 
@@ -27,7 +34,17 @@ export function FeaturesTab({ projectId, label }: { projectId: string; label?: s
 
       <div className="divide-y divide-border rounded-md border border-border">
         {features.map((f) => (
-          <div key={f.id} className="group flex items-start gap-2 px-2 py-1">
+          <div
+            key={f.id}
+            className={'group flex items-start gap-2 px-2 py-1' + (f.hidden ? ' opacity-50' : '')}
+          >
+            {diagnostic && (
+              <HideToggle
+                hidden={f.hidden}
+                onToggle={(v) => patch('features', f.id, { hidden: v })}
+                className="mt-0.5"
+              />
+            )}
             <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
             <div className="min-w-0 flex-1">
               <EditableText

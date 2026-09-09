@@ -23,6 +23,9 @@ import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asTodos, asTodoComments } from '@/store/useProjectData'
+import { useDiagnostic } from '@/store/useDiagnostic'
+import { visibleRows } from '@/lib/hidden'
+import { HideToggle } from '@/components/HideToggle'
 import { useAuth } from '@/store/useAuth'
 import { PRIORITIES, TODO_TYPES, type Todo, type TodoStatus } from '@/lib/types'
 import { Chip, EditableText, IconButton, Input, Select } from '@/components/ui-lite'
@@ -31,7 +34,8 @@ import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 export function TodoTab({ projectId, label }: { projectId: string; label?: string }) {
   const rows = useProjectData((s) => s.rows.todos)
   const { add, patch, del, reorder } = useProjectData()
-  const todos = asTodos(rows)
+  const diagnostic = useDiagnostic((s) => s.on)
+  const todos = visibleRows(asTodos(rows), diagnostic)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -103,6 +107,7 @@ export function TodoTab({ projectId, label }: { projectId: string; label?: strin
           patch={patch}
           del={del}
           onAdd={addTodo}
+          diagnostic={diagnostic}
         />
         <TodoList
           id="completed"
@@ -112,6 +117,7 @@ export function TodoTab({ projectId, label }: { projectId: string; label?: strin
           setExpanded={setExpanded}
           patch={patch}
           del={del}
+          diagnostic={diagnostic}
           dim
         />
       </div>
@@ -138,6 +144,7 @@ function TodoList({
   patch,
   del,
   onAdd,
+  diagnostic,
   dim,
 }: {
   id: TodoStatus
@@ -148,6 +155,7 @@ function TodoList({
   patch: PatchFn
   del: DelFn
   onAdd?: () => void
+  diagnostic: boolean
   dim?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -186,6 +194,7 @@ function TodoList({
                   toggle={() => setExpanded(expanded === t.id ? null : t.id)}
                   patch={patch}
                   del={del}
+                  diagnostic={diagnostic}
                 />
               ))}
               {items.length === 0 && (
@@ -209,21 +218,32 @@ function TodoRow({
   toggle,
   patch,
   del,
+  diagnostic,
 }: {
   todo: Todo
   open: boolean
   toggle: () => void
   patch: PatchFn
   del: DelFn
+  diagnostic: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: todo.id,
   })
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : todo.hidden ? 0.5 : 1,
+  }
 
   return (
     <Fragment>
       <tr ref={setNodeRef} style={style} className="border-b border-border last:border-0 hover:bg-muted/30">
+        {diagnostic && (
+          <td className="w-6 px-1 text-center">
+            <HideToggle hidden={todo.hidden} onToggle={(v) => patch('todos', todo.id, { hidden: v })} />
+          </td>
+        )}
         <td className="w-6 px-1">
           <button
             type="button"
@@ -299,7 +319,7 @@ function TodoRow({
       </tr>
       {open && (
         <tr className="border-b border-border bg-muted/20">
-          <td colSpan={7} className="px-3 py-2">
+          <td colSpan={diagnostic ? 8 : 7} className="px-3 py-2">
             <TodoDetail todo={todo} patch={patch} />
           </td>
         </tr>

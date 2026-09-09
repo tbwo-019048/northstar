@@ -62,21 +62,23 @@ export function ProjectPrint() {
   }, [ready])
 
   const data = useMemo(() => {
-    const todos = asTodos(rows.todos)
-    const openTodos = todos.filter((t) => t.status === 'todo')
-    const requests = asRequests(rows.requests).filter((r) => r.status === 'todo')
-    const plans = asPlanItems(rows.plan_items).slice().sort((a, b) => {
-      const da = a.start_date ?? a.due_date ?? ''
-      const db = b.start_date ?? b.due_date ?? ''
-      if (da && db && da !== db) return da < db ? -1 : 1
-      if (da && !db) return -1
-      if (!da && db) return 1
-      return a.sort - b.sort
-    })
+    const live = <T extends { hidden?: boolean | null }>(r: T[]) => r.filter((x) => !x.hidden)
+    const openTodos = live(asTodos(rows.todos)).filter((t) => t.status === 'todo')
+    const requests = live(asRequests(rows.requests)).filter((r) => r.status === 'todo')
+    const plans = live(asPlanItems(rows.plan_items))
+      .slice()
+      .sort((a, b) => {
+        const da = a.start_date ?? a.due_date ?? ''
+        const db = b.start_date ?? b.due_date ?? ''
+        if (da && db && da !== db) return da < db ? -1 : 1
+        if (da && !db) return -1
+        if (!da && db) return 1
+        return a.sort - b.sort
+      })
     const details = asDetails(rows.details)
     const sections = [...new Set(details.map((d) => d.section || 'General'))]
     return {
-      features: asFeatures(rows.features),
+      features: live(asFeatures(rows.features)),
       openTodos,
       requests,
       people: asPeople(rows.project_people),

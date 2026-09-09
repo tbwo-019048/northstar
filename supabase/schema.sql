@@ -680,6 +680,20 @@ drop trigger if exists trg_email_accounts_updated on email_accounts;
 create trigger trg_email_accounts_updated before update on email_accounts
   for each row execute function set_updated_at();
 
+-- ---------------------------------------------------------------------------
+-- Diagnostic mode — a shared `hidden` flag; hidden rows drop out of every
+-- list unless the viewer has diagnostic mode on.
+-- ---------------------------------------------------------------------------
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'projects', 'clients', 'email_accounts', 'todos', 'features', 'requests', 'plan_items'
+  ] loop
+    execute format('alter table %I add column if not exists hidden boolean not null default false', t);
+  end loop;
+end $$;
+
 do $$
 declare t text;
 begin

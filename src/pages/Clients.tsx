@@ -12,6 +12,9 @@ import { ClientImage } from '@/components/ClientImage'
 import { CountryPicker } from '@/components/CountryPicker'
 import { useClients } from '@/store/useClients'
 import { useProjects } from '@/store/useProjects'
+import { useDiagnostic } from '@/store/useDiagnostic'
+import { visibleRows } from '@/lib/hidden'
+import { HideToggle } from '@/components/HideToggle'
 import { EditableText, IconButton, Input, Textarea } from '@/components/ui-lite'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/velobits/dialog'
 
@@ -35,6 +38,7 @@ export function Clients() {
   }, [companies])
   const companiesOf = (clientId: string) => companiesByClient.get(clientId) ?? []
   const { projects, loaded: projectsLoaded, load: loadProjects } = useProjects()
+  const diagnostic = useDiagnostic((s) => s.on)
   const nav = useNavigate()
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -69,18 +73,20 @@ export function Clients() {
 
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase()
-    if (!query) return clients
-    return clients.filter((client) => {
-      const cos = companiesByClient.get(client.id) ?? []
-      return [
-        client.name,
-        client.email,
-        client.phone,
-        ...cos.map((co) => co.name),
-        ...cos.map((co) => co.email_domain),
-      ].some((value) => (value ?? '').toLowerCase().includes(query))
-    })
-  }, [clients, q, companiesByClient])
+    const matched = !query
+      ? clients
+      : clients.filter((client) => {
+          const cos = companiesByClient.get(client.id) ?? []
+          return [
+            client.name,
+            client.email,
+            client.phone,
+            ...cos.map((co) => co.name),
+            ...cos.map((co) => co.email_domain),
+          ].some((value) => (value ?? '').toLowerCase().includes(query))
+        })
+    return visibleRows(matched, diagnostic)
+  }, [clients, q, companiesByClient, diagnostic])
 
   const companySummary = (clientId: string) => {
     const cos = companiesOf(clientId)
@@ -171,8 +177,11 @@ export function Clients() {
             const linkedProjectIds = projectIdsForClient(client.id)
             const linkedProjects = projects.filter((project) => linkedProjectIds.includes(project.id))
             return (
-              <div key={client.id}>
+              <div key={client.id} className={client.hidden ? 'opacity-50' : undefined}>
                 <div className="flex items-center gap-2 px-2 py-1.5">
+                  {diagnostic && (
+                    <HideToggle hidden={client.hidden} onToggle={(v) => update(client.id, { hidden: v })} />
+                  )}
                   <IconButton onClick={() => setOpen(isOpen ? null : client.id)}>
                     <ChevronRightIcon size={14} className={'transition-transform ' + (isOpen ? 'rotate-90' : '')} />
                   </IconButton>

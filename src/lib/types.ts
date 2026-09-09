@@ -106,6 +106,7 @@ export interface Project {
   platforms: string[]
   tech_stack: string[]
   countries: string[]
+  hidden?: boolean
   created_by: string | null
   created_at: string
   updated_at: string
@@ -176,6 +177,7 @@ export interface Todo {
   description: string
   attachments: Attachment[]
   source_plan_item_id?: string | null
+  hidden?: boolean
   sort: number
   created_at: string
   updated_at: string
@@ -196,6 +198,7 @@ export interface Feature {
   description: string
   source: 'manual' | 'pipeline' | 'planning'
   source_plan_item_id?: string | null
+  hidden?: boolean
   sort: number
   created_at: string
 }
@@ -219,6 +222,7 @@ export interface RequestItem {
   priority: Priority
   status: TodoStatus
   notes: string
+  hidden?: boolean
   sort: number
   created_at: string
   updated_at: string
@@ -251,6 +255,7 @@ export interface PlanItem {
   due_date: string | null
   photos: PlanPhoto[]
   source_request_id?: string | null
+  hidden?: boolean
   sort: number
   created_at: string
   updated_at: string
@@ -307,6 +312,7 @@ export interface Client {
   phone: string
   notes: string
   countries: string[]
+  hidden?: boolean
   sort: number
   created_at: string
   updated_at: string
@@ -346,6 +352,7 @@ export interface EmailAccount {
   domain: string
   password: string
   notes: string
+  hidden?: boolean
   sort: number
   created_at: string
   updated_at: string

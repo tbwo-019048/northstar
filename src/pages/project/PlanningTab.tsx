@@ -19,6 +19,9 @@ import { TrashIcon } from '@/components/ui/trash'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asPlanItems, asPlanComments } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
+import { useDiagnostic } from '@/store/useDiagnostic'
+import { visibleRows } from '@/lib/hidden'
+import { HideToggle } from '@/components/HideToggle'
 import { useAuth } from '@/store/useAuth'
 import { supabase } from '@/lib/supabase'
 import {
@@ -89,7 +92,8 @@ function fmtDate(d: string | null) {
 export function PlanningTab({ projectId }: { projectId: string }) {
   const rows = useProjectData((s) => s.rows.plan_items)
   const { add, patch, del, reorder } = useProjectData()
-  const items = asPlanItems(rows)
+  const diagnostic = useDiagnostic((s) => s.on)
+  const items = visibleRows(asPlanItems(rows), diagnostic)
   const project = useProjects((s) => s.projects.find((p) => p.id === projectId))
   const updateProject = useProjects((s) => s.update)
   const prefs: PlanningPrefs = project?.planning_prefs ?? {}
@@ -179,7 +183,7 @@ export function PlanningTab({ projectId }: { projectId: string }) {
       </div>
 
       {view === 'timeline' ? (
-        <TimelineView items={items} onOpen={setOpenId} />
+        <TimelineView items={items} onOpen={setOpenId} patch={patch} diagnostic={diagnostic} />
       ) : (
         <BoardView
           items={items}
@@ -188,6 +192,7 @@ export function PlanningTab({ projectId }: { projectId: string }) {
           onOpen={setOpenId}
           prefs={prefs}
           savePrefs={savePrefs}
+          diagnostic={diagnostic}
         />
       )}
 
@@ -201,7 +206,17 @@ export function PlanningTab({ projectId }: { projectId: string }) {
 }
 
 /** Ordered chronological list — the default view. */
-function TimelineView({ items, onOpen }: { items: PlanItem[]; onOpen: (id: string) => void }) {
+function TimelineView({
+  items,
+  onOpen,
+  patch,
+  diagnostic,
+}: {
+  items: PlanItem[]
+  onOpen: (id: string) => void
+  patch: PatchFn
+  diagnostic: boolean
+}) {
   const ordered = useMemo(
     () =>
       items.slice().sort((a, b) => {
@@ -226,12 +241,21 @@ function TimelineView({ items, onOpen }: { items: PlanItem[]; onOpen: (id: strin
   return (
     <ol className="relative space-y-0.5 border-l border-border pl-4">
       {ordered.map((item) => (
-        <li key={item.id} className="relative">
+        <li
+          key={item.id}
+          className={'relative flex items-center gap-1.5' + (item.hidden ? ' opacity-50' : '')}
+        >
           <span className="absolute -left-5 top-3 size-2 rounded-full border-2 border-background bg-primary" />
+          {diagnostic && (
+            <HideToggle
+              hidden={item.hidden}
+              onToggle={(v) => patch('plan_items', item.id, { hidden: v })}
+            />
+          )}
           <button
             type="button"
             onClick={() => onOpen(item.id)}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/50"
+            className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/50"
           >
             <span className="w-24 shrink-0 text-[11px] tabular-nums text-muted-foreground">
               {fmtDate(item.start_date) ?? fmtDate(item.due_date) ?? '—'}
@@ -269,6 +293,7 @@ function BoardView({
   onOpen,
   prefs,
   savePrefs,
+  diagnostic,
 }: {
   items: PlanItem[]
   patch: PatchFn
@@ -276,6 +301,7 @@ function BoardView({
   onOpen: (id: string) => void
   prefs: PlanningPrefs
   savePrefs: (next: PlanningPrefs) => void
+  diagnostic: boolean
 }) {
   const swim = prefs.swimlane === 'priority'
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -344,6 +370,8 @@ function BoardView({
             : undefined
         }
         onOpen={onOpen}
+        patch={patch}
+        diagnostic={diagnostic}
       />
     ))
 
@@ -390,6 +418,8 @@ function BoardColumn({
   limit,
   onLimitChange,
   onOpen,
+  patch,
+  diagnostic,
 }: {
   status: PlanStatus
   droppableId: string
@@ -398,6 +428,8 @@ function BoardColumn({
   limit?: number
   onLimitChange?: (n: number) => void
   onOpen: (id: string) => void
+  patch: PatchFn
+  diagnostic: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: droppableId })
   const overLimit = !!limit && limit > 0 && total > limit
@@ -439,7 +471,14 @@ function BoardColumn({
       >
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           {items.map((item) => (
-            <BoardCard key={item.id} item={item} onOpen={onOpen} />
+            <BoardCard
+              key={item.id}
+              item={item}
+              onOpen={onOpen}
+              onToggleHidden={
+                diagnostic ? (v) => patch('plan_items', item.id, { hidden: v }) : undefined
+              }
+            />
           ))}
         </SortableContext>
         {items.length === 0 && (
@@ -450,14 +489,22 @@ function BoardColumn({
   )
 }
 
-function BoardCard({ item, onOpen }: { item: PlanItem; onOpen: (id: string) => void }) {
+function BoardCard({
+  item,
+  onOpen,
+  onToggleHidden,
+}: {
+  item: PlanItem
+  onOpen: (id: string) => void
+  onToggleHidden?: (v: boolean) => void
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   })
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.4 : item.hidden ? 0.5 : 1,
   }
   return (
     <div
@@ -465,6 +512,9 @@ function BoardCard({ item, onOpen }: { item: PlanItem; onOpen: (id: string) => v
       style={style}
       className="flex items-start gap-1 rounded-md border border-border bg-background p-2 shadow-sm"
     >
+      {onToggleHidden && (
+        <HideToggle hidden={item.hidden} onToggle={onToggleHidden} className="mt-0.5" />
+      )}
       <button
         type="button"
         className="mt-0.5 cursor-grab text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"

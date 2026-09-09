@@ -13,7 +13,10 @@ import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjects } from '@/store/useProjects'
 import { useClients } from '@/store/useClients'
+import { useDiagnostic } from '@/store/useDiagnostic'
 import { useTemplates, seedProjectFromTemplate } from '@/store/useTemplates'
+import { visibleRows } from '@/lib/hidden'
+import { HideToggle } from '@/components/HideToggle'
 import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
@@ -56,6 +59,7 @@ export function Overview() {
     subscribe: subscribeClients,
     projectIdsForClient,
   } = useClients()
+  const diagnostic = useDiagnostic((s) => s.on)
   const nav = useNavigate()
   const [q, setQ] = useState('')
   const [showDescriptions, setShowDescriptions] = useState(false)
@@ -147,13 +151,14 @@ export function Overview() {
   const projectLabel = (p: Project) => (codenames && p.codename?.trim() ? p.codename : p.name)
 
   const rows = useMemo(() => {
-    return projects.filter(
+    const matched = projects.filter(
       (p) =>
         (filter === 'all' || p.type === filter) &&
         (p.name.toLowerCase().includes(q.toLowerCase()) ||
           (p.codename ?? '').toLowerCase().includes(q.toLowerCase())),
     )
-  }, [projects, q, filter])
+    return visibleRows(matched, diagnostic)
+  }, [projects, q, filter, diagnostic])
 
   // A project's `type` can hold a value the current build doesn't know about
   // (e.g. the database enum hasn't been migrated yet) — keep it selectable
@@ -483,6 +488,8 @@ export function Overview() {
           onOpen={openProject}
           nameFor={projectLabel}
           showDescriptions={showDescriptions}
+          diagnostic={diagnostic}
+          onToggleHidden={(pid, hidden) => update(pid, { hidden })}
           paginate={paginate}
           page={tablePage}
           setPage={setTablePage}
@@ -503,6 +510,8 @@ export function Overview() {
                 compact
                 nameFor={projectLabel}
                 showDescriptions={showDescriptions}
+                diagnostic={diagnostic}
+                onToggleHidden={(pid, hidden) => update(pid, { hidden })}
               />
             </div>
           ))}
@@ -528,6 +537,8 @@ export function Overview() {
                 compact
                 nameFor={projectLabel}
                 showDescriptions={showDescriptions}
+                diagnostic={diagnostic}
+                onToggleHidden={(pid, hidden) => update(pid, { hidden })}
               />
             </div>
           ))}
@@ -611,6 +622,8 @@ function TablePage({
   onOpen,
   nameFor,
   showDescriptions,
+  diagnostic,
+  onToggleHidden,
   paginate,
   page,
   setPage,
@@ -620,6 +633,8 @@ function TablePage({
   onOpen: (id: string) => void
   nameFor: (p: Project) => string
   showDescriptions: boolean
+  diagnostic: boolean
+  onToggleHidden: (id: string, hidden: boolean) => void
   paginate: boolean
   page: number
   setPage: (n: number) => void
@@ -632,6 +647,8 @@ function TablePage({
         onOpen={onOpen}
         nameFor={nameFor}
         showDescriptions={showDescriptions}
+        diagnostic={diagnostic}
+        onToggleHidden={onToggleHidden}
       />
     )
   }
@@ -649,6 +666,8 @@ function TablePage({
         onOpen={onOpen}
         nameFor={nameFor}
         showDescriptions={showDescriptions}
+        diagnostic={diagnostic}
+        onToggleHidden={onToggleHidden}
       />
       {rows.length > TABLE_PAGE_SIZE && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -689,6 +708,8 @@ function ProjectTable({
   compact,
   nameFor,
   showDescriptions,
+  diagnostic,
+  onToggleHidden,
 }: {
   rows: Project[]
   loaded: boolean
@@ -696,6 +717,8 @@ function ProjectTable({
   compact?: boolean
   nameFor: (p: Project) => string
   showDescriptions: boolean
+  diagnostic: boolean
+  onToggleHidden: (id: string, hidden: boolean) => void
 }) {
   // A shared <colgroup> (identical whether or not the header row renders)
   // is what keeps columns lined up across the separate <table> elements in
@@ -705,6 +728,7 @@ function ProjectTable({
     <div className="overflow-hidden rounded-md border border-border">
       <table className="w-full table-fixed text-sm">
         <colgroup>
+          {diagnostic && <col className="w-8" />}
           <col />
           {!compact && <col className="w-24" />}
           <col className="w-28" />
@@ -714,6 +738,7 @@ function ProjectTable({
         {!compact && (
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+              {diagnostic && <th />}
               <th className="px-2.5 py-1 font-medium">Name</th>
               <th className="px-2.5 py-1 font-medium">Type</th>
               <th className="px-2.5 py-1 font-medium">State</th>
@@ -729,8 +754,16 @@ function ProjectTable({
               tabIndex={0}
               onClick={() => onOpen(p.id)}
               onKeyDown={(e) => e.key === 'Enter' && onOpen(p.id)}
-              className="group cursor-pointer border-b border-border last:border-0 hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
+              className={
+                'group cursor-pointer border-b border-border last:border-0 hover:bg-muted/40 focus:bg-muted/40 focus:outline-none' +
+                (p.hidden ? ' opacity-50' : '')
+              }
             >
+              {diagnostic && (
+                <td className="px-1.5 py-1 text-center">
+                  <HideToggle hidden={p.hidden} onToggle={(v) => onToggleHidden(p.id, v)} />
+                </td>
+              )}
               <td className="truncate px-2.5 py-1">
                 <span className="flex items-center gap-1.5 truncate font-medium group-hover:underline">
                   <ProjectLogo project={p} size="xs" />
@@ -760,7 +793,7 @@ function ProjectTable({
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-3 py-6 text-center text-xs text-muted-foreground">
+              <td colSpan={6} className="px-3 py-6 text-center text-xs text-muted-foreground">
                 {loaded ? 'No projects yet.' : 'Loading…'}
               </td>
             </tr>
