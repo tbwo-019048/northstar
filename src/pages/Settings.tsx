@@ -6,6 +6,7 @@ import { ShieldExclamationIcon } from '@/components/ui/shield-exclamation'
 import { useAuth } from '@/store/useAuth'
 import { useSettings } from '@/store/useSettings'
 import { useDiagnostic } from '@/store/useDiagnostic'
+import { useGridCols } from '@/store/useGridCols'
 import { Input } from '@/components/ui-lite'
 import { MembersSettings } from '@/components/MembersSettings'
 
@@ -13,6 +14,8 @@ export function Settings() {
   const isMaster = useAuth((s) => s.isMaster)
   const diagnostic = useDiagnostic((s) => s.on)
   const setDiagnostic = useDiagnostic((s) => s.setOn)
+  const gridCols = useGridCols((s) => s.cols)
+  const setGridCols = useGridCols((s) => s.setCols)
   const { githubTokenSet, loaded, load, saveGithubToken, clearGithubToken } = useSettings()
   const [token, setToken] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -81,6 +84,23 @@ export function Settings() {
               Shows a hide checkbox on every list. Hidden items disappear when this is off. This
               setting is per-browser; the hidden items themselves are shared with everyone.
             </span>
+          </span>
+        </label>
+        <label className="block text-sm">
+          <span className="flex items-center justify-between">
+            Grid columns
+            <span className="tabular-nums text-muted-foreground">{gridCols}</span>
+          </span>
+          <input
+            type="range"
+            min={2}
+            max={12}
+            value={gridCols}
+            onChange={(e) => setGridCols(Number(e.target.value))}
+            className="mt-1 w-full accent-primary"
+          />
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            Columns in the grid views on Projects, Clients and Emails.
           </span>
         </label>
       </section>

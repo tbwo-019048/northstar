@@ -27,6 +27,7 @@ import { useDiagnostic } from '@/store/useDiagnostic'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
 import { useReorderLock } from '@/hooks/useReorderLock'
+import { useGridCols } from '@/store/useGridCols'
 import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
 import type { EmailAccount } from '@/lib/types'
 
@@ -40,6 +41,7 @@ export function Emails() {
   } = useEmails()
   const diagnostic = useDiagnostic((s) => s.on)
   const [unlocked, setUnlocked] = useReorderLock('emails')
+  const gridCols = useGridCols((s) => s.cols)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const [active, setActive] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -207,7 +209,10 @@ export function Emails() {
           )}
 
           {view === 'grid' && (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div
+              className="grid gap-3"
+              style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}
+            >
               {current.map((account) => (
                 <article key={account.id} className="group rounded-xl border border-border bg-panel p-4 shadow-sm">
                   <div className="flex items-start gap-3">

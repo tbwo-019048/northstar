@@ -30,6 +30,7 @@ import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjects } from '@/store/useProjects'
 import { useClients } from '@/store/useClients'
 import { useDiagnostic } from '@/store/useDiagnostic'
+import { useGridCols } from '@/store/useGridCols'
 import { useTemplates, seedProjectFromTemplate } from '@/store/useTemplates'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
@@ -79,6 +80,8 @@ export function Overview() {
     projectIdsForClient,
   } = useClients()
   const diagnostic = useDiagnostic((s) => s.on)
+  const gridCols = useGridCols((s) => s.cols)
+  const gridStyle = { gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }
   const nav = useNavigate()
   const [q, setQ] = useState('')
   const [showDescriptions, setShowDescriptions] = useState(false)
@@ -589,7 +592,7 @@ export function Overview() {
       )}
 
       {view === 'grid' && (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        <div className="grid gap-2" style={gridStyle}>
           {rows.map((p) => (
             <button
               key={p.id}
@@ -621,7 +624,7 @@ export function Overview() {
       )}
 
       {view === 'progress' && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+        <div className="grid gap-2" style={gridStyle}>
           {rows.map((p) => (
             <button
               key={p.id}

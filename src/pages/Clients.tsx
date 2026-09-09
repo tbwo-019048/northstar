@@ -34,6 +34,7 @@ import { useDiagnostic } from '@/store/useDiagnostic'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
 import { useReorderLock } from '@/hooks/useReorderLock'
+import { useGridCols } from '@/store/useGridCols'
 import type { Client } from '@/lib/types'
 import { EditableText, IconButton, Input, Textarea } from '@/components/ui-lite'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/velobits/dialog'
@@ -48,6 +49,7 @@ export function Clients() {
     addCompany, updateCompany, removeCompany,
   } = useClients()
   const [unlocked, setUnlocked] = useReorderLock('clients')
+  const gridCols = useGridCols((s) => s.cols)
   const [globePaused, setGlobePaused] = useState(() => {
     try {
       return localStorage.getItem('northstar.clients.globePaused') === '1'
@@ -433,7 +435,10 @@ export function Clients() {
       )}
 
       {view === 'grid' && (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}
+        >
           {rows.map((client) => (
             <button key={client.id} type="button" onClick={() => editClient(client.id)} className="rounded-xl border border-border bg-panel p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
               <div className="flex items-start gap-3">
