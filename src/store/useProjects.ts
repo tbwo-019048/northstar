@@ -12,6 +12,7 @@ interface ProjectsState {
   create: (name: string, type: ProjectType) => Promise<{ project: Project | null; error: string | null }>
   update: (id: string, patch: Partial<Project>) => Promise<{ error: string | null }>
   remove: (id: string) => Promise<void>
+  reorder: (orderedIds: string[]) => Promise<void>
   subscribe: () => () => void
   clearError: () => void
 }
@@ -79,6 +80,24 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       return
     }
     notifySaved('Project removed.')
+  },
+
+  reorder: async (orderedIds) => {
+    const previous = get().projects
+    const pos = new Map(orderedIds.map((id, i) => [id, i]))
+    set({
+      projects: previous
+        .map((p) => (pos.has(p.id) ? { ...p, position: pos.get(p.id)! } : p))
+        .sort((a, b) => a.position - b.position),
+    })
+    const results = await Promise.all(
+      orderedIds.map((id, i) => supabase.from('projects').update({ position: i }).eq('id', id)),
+    )
+    const error = results.find((r) => r.error)?.error
+    if (error) {
+      set({ projects: previous, error: error.message })
+      notifySaveError(error.message)
+    } else notifySaved('Order saved.')
   },
 
   clearError: () => set({ error: null }),

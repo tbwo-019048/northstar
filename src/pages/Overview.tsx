@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { GripVertical, Lock, LockOpen } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { ChartPieIcon } from '@/components/ui/chart-pie'
 import { UsersIcon } from '@/components/ui/users'
 import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
@@ -17,6 +33,7 @@ import { useDiagnostic } from '@/store/useDiagnostic'
 import { useTemplates, seedProjectFromTemplate } from '@/store/useTemplates'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
+import { useReorderLock } from '@/hooks/useReorderLock'
 import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
@@ -45,7 +62,9 @@ const TABLEPAGE_KEY = 'northstar.overview.tablepage'
 const TABLE_PAGE_SIZE = 15
 
 export function Overview() {
-  const { projects, loaded, load, create, update, subscribe, error, clearError } = useProjects()
+  const { projects, loaded, load, create, update, reorder, subscribe, error, clearError } =
+    useProjects()
+  const [unlocked, setUnlocked] = useReorderLock('projects')
   const {
     templates,
     loaded: templatesLoaded,
@@ -412,6 +431,17 @@ export function Overview() {
           }}
         />
 
+        <IconButton
+          title={unlocked ? 'Lock order' : 'Unlock to reorder (table view)'}
+          onClick={() => {
+            if (!unlocked) setView('table')
+            setUnlocked(!unlocked)
+          }}
+          className={'border border-border ' + (unlocked ? 'bg-primary/10 text-primary' : '')}
+        >
+          {unlocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
+        </IconButton>
+
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
@@ -481,20 +511,28 @@ export function Overview() {
         </form>
       )}
 
-      {view === 'table' && (
-        <TablePage
-          rows={rows}
-          loaded={loaded}
-          onOpen={openProject}
-          nameFor={projectLabel}
-          showDescriptions={showDescriptions}
-          diagnostic={diagnostic}
-          onToggleHidden={(pid, hidden) => update(pid, { hidden })}
-          paginate={paginate}
-          page={tablePage}
-          setPage={setTablePage}
-        />
-      )}
+      {view === 'table' &&
+        (unlocked ? (
+          <ReorderList
+            rows={projects}
+            nameFor={projectLabel}
+            onOpen={openProject}
+            onReorder={(ids) => reorder(ids)}
+          />
+        ) : (
+          <TablePage
+            rows={rows}
+            loaded={loaded}
+            onOpen={openProject}
+            nameFor={projectLabel}
+            showDescriptions={showDescriptions}
+            diagnostic={diagnostic}
+            onToggleHidden={(pid, hidden) => update(pid, { hidden })}
+            paginate={paginate}
+            page={tablePage}
+            setPage={setTablePage}
+          />
+        ))}
 
       {view === 'byType' && (
         <div className="space-y-4">
@@ -612,6 +650,68 @@ export function Overview() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function ReorderList({
+  rows,
+  nameFor,
+  onOpen,
+  onReorder,
+}: {
+  rows: Project[]
+  nameFor: (p: Project) => string
+  onOpen: (id: string) => void
+  onReorder: (ids: string[]) => void
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const ids = rows.map((r) => r.id)
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const from = ids.indexOf(String(active.id))
+    const to = ids.indexOf(String(over.id))
+    if (from < 0 || to < 0) return
+    onReorder(arrayMove(ids, from, to))
+  }
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <div className="divide-y divide-border rounded-md border border-border">
+          {rows.map((p) => (
+            <ReorderRow key={p.id} p={p} label={nameFor(p)} onOpen={onOpen} />
+          ))}
+          {rows.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground">No projects.</p>
+          )}
+        </div>
+      </SortableContext>
+    </DndContext>
+  )
+}
+
+function ReorderRow({ p, label, onOpen }: { p: Project; label: string; onOpen: (id: string) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: p.id,
+  })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+      <button
+        type="button"
+        className="cursor-grab text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-3.5" />
+      </button>
+      <ProjectLogo project={p} size="xs" />
+      <button type="button" onClick={() => onOpen(p.id)} className="min-w-0 flex-1 truncate text-left font-medium hover:underline">
+        {label}
+      </button>
+      <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
+      <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
     </div>
   )
 }

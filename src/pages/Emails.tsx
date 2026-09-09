@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AtSign } from 'lucide-react'
+import { AtSign, GripVertical, Lock, LockOpen } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Bars3Icon } from '@/components/ui/bars-3'
 import { ListBulletIcon } from '@/components/ui/list-bullet'
 import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
@@ -10,6 +26,7 @@ import { useEmails } from '@/store/useEmails'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
+import { useReorderLock } from '@/hooks/useReorderLock'
 import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
 import type { EmailAccount } from '@/lib/types'
 
@@ -19,9 +36,11 @@ const VIEW_KEY = 'northstar.emails.view'
 export function Emails() {
   const {
     groups, accounts, loaded, load, subscribe, addGroup, removeGroup,
-    addAccount, updateAccount, removeAccount,
+    addAccount, updateAccount, removeAccount, reorderGroups, reorderAccounts,
   } = useEmails()
   const diagnostic = useDiagnostic((s) => s.on)
+  const [unlocked, setUnlocked] = useReorderLock('emails')
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const [active, setActive] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [view, setView] = useState<EmailView>(() => {
@@ -100,24 +119,38 @@ export function Emails() {
             <Squares2X2Icon size={14} />
           </IconButton>
         </div>
+        <IconButton
+          title={unlocked ? 'Lock order' : 'Unlock to reorder groups & accounts'}
+          onClick={() => setUnlocked(!unlocked)}
+          className={'border border-border ' + (unlocked ? 'bg-primary/10 text-primary' : '')}
+        >
+          {unlocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
+        </IconButton>
       </div>
 
       <div className="flex flex-wrap items-center gap-1 border-b border-border">
-        {groups.map((group) => (
-          <button
-            key={group.id}
-            type="button"
-            onClick={() => setActive(group.id)}
-            className={
-              'relative h-8 px-2.5 text-xs font-medium transition-colors ' +
-              (active === group.id
-                ? 'text-foreground after:absolute after:inset-x-1 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary'
-                : 'text-muted-foreground hover:text-foreground')
-            }
-          >
-            {group.name}
-          </button>
-        ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e: DragEndEvent) => {
+            const { active: a, over } = e
+            if (!over || a.id === over.id) return
+            const ids = groups.map((g) => g.id)
+            reorderGroups(arrayMove(ids, ids.indexOf(String(a.id)), ids.indexOf(String(over.id))))
+          }}
+        >
+          <SortableContext items={groups.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
+            {groups.map((group) => (
+              <GroupTab
+                key={group.id}
+                group={group}
+                active={active === group.id}
+                unlocked={unlocked}
+                onSelect={() => setActive(group.id)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
         <button type="button" onClick={newGroup} className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-border px-2 text-xs text-muted-foreground hover:bg-muted">
           <PlusIcon size={12} /> Group
         </button>
@@ -143,7 +176,16 @@ export function Emails() {
           </div>
 
           {view === 'table' && (
-            <EmailTable accounts={current} updateAccount={updateAccount} removeAccount={removeAccount} diagnostic={diagnostic} emptyText={q ? 'No accounts match your search in this group.' : 'No accounts in this group yet.'} />
+            <EmailTable
+              accounts={current}
+              updateAccount={updateAccount}
+              removeAccount={removeAccount}
+              diagnostic={diagnostic}
+              reorderable={unlocked}
+              sensors={sensors}
+              onReorder={(ids) => reorderAccounts(ids)}
+              emptyText={q ? 'No accounts match your search in this group.' : 'No accounts in this group yet.'}
+            />
           )}
 
           {view === 'byGroup' && (
@@ -201,63 +243,174 @@ export function Emails() {
   )
 }
 
+type UpdateAccount = (id: string, patch: Partial<EmailAccount>) => Promise<{ error: string | null }>
+type Sensors = ReturnType<typeof useSensors>
+
+function GroupTab({
+  group,
+  active,
+  unlocked,
+  onSelect,
+}: {
+  group: { id: string; name: string }
+  active: boolean
+  unlocked: boolean
+  onSelect: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: group.id,
+  })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      type="button"
+      onClick={onSelect}
+      {...(unlocked ? attributes : {})}
+      {...(unlocked ? listeners : {})}
+      className={
+        'relative h-8 px-2.5 text-xs font-medium transition-colors ' +
+        (unlocked ? 'cursor-grab active:cursor-grabbing ' : '') +
+        (active
+          ? 'text-foreground after:absolute after:inset-x-1 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary'
+          : 'text-muted-foreground hover:text-foreground')
+      }
+    >
+      {group.name}
+    </button>
+  )
+}
+
+function EmailRow({
+  account,
+  updateAccount,
+  removeAccount,
+  diagnostic,
+  reorderable,
+}: {
+  account: EmailAccount
+  updateAccount: UpdateAccount
+  removeAccount: (id: string) => Promise<void>
+  diagnostic: boolean
+  reorderable: boolean
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: account.id,
+  })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : account.hidden ? 0.5 : 1,
+  }
+  return (
+    <tr ref={setNodeRef} style={style} className="group border-b border-border last:border-0">
+      {reorderable && (
+        <td className="px-1 py-1 align-top">
+          <button
+            type="button"
+            className="cursor-grab text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="size-3.5" />
+          </button>
+        </td>
+      )}
+      {diagnostic && (
+        <td className="px-1.5 py-1 text-center align-top">
+          <HideToggle hidden={account.hidden} onToggle={(v) => updateAccount(account.id, { hidden: v })} />
+        </td>
+      )}
+      <td className="px-2 py-1 align-top"><EditableText value={account.name} onSave={(value) => updateAccount(account.id, { name: value })} /></td>
+      <td className="px-2 py-1 align-top"><EditableText value={account.email} onSave={(value) => updateAccount(account.id, { email: value })} /></td>
+      <td className="px-2 py-1 align-top"><EditableText value={account.domain} onSave={(value) => updateAccount(account.id, { domain: value })} /></td>
+      <td className="px-2 py-1 align-top"><SecretField value={account.password} onChange={(event) => updateAccount(account.id, { password: event.target.value })} className="h-7" /></td>
+      <td className="px-2 py-1 align-top"><EditableText value={account.notes} placeholder="—" onSave={(value) => updateAccount(account.id, { notes: value })} /></td>
+      <td className="px-1 py-1 align-top">
+        <IconButton onClick={() => removeAccount(account.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive"><TrashIcon size={14} /></IconButton>
+      </td>
+    </tr>
+  )
+}
+
 function EmailTable({
   accounts,
   updateAccount,
   removeAccount,
   diagnostic,
+  reorderable = false,
+  sensors,
+  onReorder,
   emptyText,
 }: {
   accounts: EmailAccount[]
-  updateAccount: (id: string, patch: Partial<EmailAccount>) => Promise<{ error: string | null }>
+  updateAccount: UpdateAccount
   removeAccount: (id: string) => Promise<void>
   diagnostic: boolean
+  reorderable?: boolean
+  sensors?: Sensors
+  onReorder?: (ids: string[]) => void
   emptyText: string
 }) {
+  const cols = (reorderable ? 1 : 0) + (diagnostic ? 1 : 0) + 6
+  const body = (
+    <tbody>
+      {accounts.map((account) => (
+        <EmailRow
+          key={account.id}
+          account={account}
+          updateAccount={updateAccount}
+          removeAccount={removeAccount}
+          diagnostic={diagnostic}
+          reorderable={reorderable}
+        />
+      ))}
+      {accounts.length === 0 && (
+        <tr>
+          <td colSpan={cols} className="px-2 py-6 text-center text-xs text-muted-foreground">
+            {emptyText}
+          </td>
+        </tr>
+      )}
+    </tbody>
+  )
   return (
     <div className="overflow-x-auto rounded-md border border-border">
       <table className="w-full min-w-[640px] table-fixed text-sm">
         <colgroup>
+          {reorderable && <col className="w-7" />}
           {diagnostic && <col className="w-8" />}
           <col className="w-40" /><col className="w-48" /><col className="w-32" />
           <col className="w-32" /><col /><col className="w-8" />
         </colgroup>
         <thead>
           <tr className="border-b border-border bg-muted/40 text-left text-[11px] uppercase text-muted-foreground">
+            {reorderable && <th />}
             {diagnostic && <th />}
             <th className="px-2 py-1 font-medium">Name</th><th className="px-2 py-1 font-medium">Email</th>
             <th className="px-2 py-1 font-medium">Domain</th><th className="px-2 py-1 font-medium">Password</th>
             <th className="px-2 py-1 font-medium">Notes</th><th />
           </tr>
         </thead>
-        <tbody>
-          {accounts.map((account) => (
-            <tr
-              key={account.id}
-              className={
-                'group border-b border-border last:border-0' + (account.hidden ? ' opacity-50' : '')
-              }
-            >
-              {diagnostic && (
-                <td className="px-1.5 py-1 text-center align-top">
-                  <HideToggle
-                    hidden={account.hidden}
-                    onToggle={(v) => updateAccount(account.id, { hidden: v })}
-                  />
-                </td>
-              )}
-              <td className="px-2 py-1 align-top"><EditableText value={account.name} onSave={(value) => updateAccount(account.id, { name: value })} /></td>
-              <td className="px-2 py-1 align-top"><EditableText value={account.email} onSave={(value) => updateAccount(account.id, { email: value })} /></td>
-              <td className="px-2 py-1 align-top"><EditableText value={account.domain} onSave={(value) => updateAccount(account.id, { domain: value })} /></td>
-              <td className="px-2 py-1 align-top"><SecretField value={account.password} onChange={(event) => updateAccount(account.id, { password: event.target.value })} className="h-7" /></td>
-              <td className="px-2 py-1 align-top"><EditableText value={account.notes} placeholder="—" onSave={(value) => updateAccount(account.id, { notes: value })} /></td>
-              <td className="px-1 py-1 align-top">
-                <IconButton onClick={() => removeAccount(account.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive"><TrashIcon size={14} /></IconButton>
-              </td>
-            </tr>
-          ))}
-          {accounts.length === 0 && <tr><td colSpan={diagnostic ? 7 : 6} className="px-2 py-6 text-center text-xs text-muted-foreground">{emptyText}</td></tr>}
-        </tbody>
+        {reorderable && sensors && onReorder ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(e: DragEndEvent) => {
+              const { active, over } = e
+              if (!over || active.id === over.id) return
+              const ids = accounts.map((a) => a.id)
+              onReorder(arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id))))
+            }}
+          >
+            <SortableContext items={accounts.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+              {body}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          body
+        )}
       </table>
     </div>
   )

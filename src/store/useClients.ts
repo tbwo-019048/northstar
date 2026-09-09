@@ -14,6 +14,7 @@ interface ClientsState {
   create: (fields: Partial<Client>) => Promise<Client | null>
   update: (id: string, patch: Partial<Client>) => Promise<{ error: string | null }>
   remove: (id: string) => Promise<void>
+  reorder: (orderedIds: string[]) => Promise<void>
   addCompany: (clientId: string, fields?: Partial<ClientCompany>) => Promise<ClientCompany | null>
   updateCompany: (id: string, patch: Partial<ClientCompany>) => Promise<void>
   removeCompany: (id: string) => Promise<void>
@@ -91,6 +92,24 @@ export const useClients = create<ClientsState>((set, get) => ({
       return
     }
     notifySaved('Client removed.')
+  },
+
+  reorder: async (orderedIds) => {
+    const previous = get().clients
+    const pos = new Map(orderedIds.map((id, i) => [id, i]))
+    set({
+      clients: previous
+        .map((c) => (pos.has(c.id) ? { ...c, sort: pos.get(c.id)! } : c))
+        .sort((a, b) => a.sort - b.sort),
+    })
+    const results = await Promise.all(
+      orderedIds.map((id, i) => supabase.from('clients').update({ sort: i }).eq('id', id)),
+    )
+    const error = results.find((r) => r.error)?.error
+    if (error) {
+      set({ clients: previous, error: error.message })
+      notifySaveError(error.message)
+    } else notifySaved('Order saved.')
   },
 
   addCompany: async (clientId, fields) => {

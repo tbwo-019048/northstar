@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { GripVertical, Lock, LockOpen } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Bars3Icon } from '@/components/ui/bars-3'
 import { ChevronRightIcon } from '@/components/ui/chevron-right'
 import { ListBulletIcon } from '@/components/ui/list-bullet'
@@ -17,6 +33,8 @@ import { useTheme } from '@/store/useTheme'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
+import { useReorderLock } from '@/hooks/useReorderLock'
+import type { Client } from '@/lib/types'
 import { EditableText, IconButton, Input, Textarea } from '@/components/ui-lite'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/velobits/dialog'
 
@@ -25,10 +43,26 @@ const VIEW_KEY = 'northstar.clients.view'
 
 export function Clients() {
   const {
-    clients, loaded, load, subscribe, create, update, remove, links,
+    clients, loaded, load, subscribe, create, update, remove, reorder, links,
     linkToProject, unlinkFromProject, projectIdsForClient,
     addCompany, updateCompany, removeCompany,
   } = useClients()
+  const [unlocked, setUnlocked] = useReorderLock('clients')
+  const [globePaused, setGlobePaused] = useState(() => {
+    try {
+      return localStorage.getItem('northstar.clients.globePaused') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleGlobe = (v: boolean) => {
+    setGlobePaused(v)
+    try {
+      localStorage.setItem('northstar.clients.globePaused', v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }
   const companies = useClients((s) => s.companies)
   const companiesByClient = useMemo(() => {
     const map = new Map<string, typeof companies>()
@@ -177,6 +211,16 @@ export function Clients() {
             <Squares2X2Icon size={14} />
           </IconButton>
         </div>
+        <IconButton
+          title={unlocked ? 'Lock order' : 'Unlock to reorder (table view)'}
+          onClick={() => {
+            if (!unlocked) setView('table')
+            setUnlocked(!unlocked)
+          }}
+          className={'border border-border ' + (unlocked ? 'bg-primary/10 text-primary' : '')}
+        >
+          {unlocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
+        </IconButton>
         <button
           type="button"
           onClick={() => setAdding((value) => !value)}
@@ -188,12 +232,19 @@ export function Clients() {
 
       {globeEntries.length > 0 && (
         <div className="flex flex-col items-center gap-1 py-1">
-          <div className="aspect-[420/570] w-[min(260px,58vw)]">
-            <CountryGlobe entries={globeEntries} theme={theme} />
+          <div className="aspect-[420/570] w-[min(380px,74vw)]">
+            <CountryGlobe entries={globeEntries} theme={theme} paused={globePaused} />
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Where your clients and their projects are
-          </p>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span>Where your clients and their projects are</span>
+            <button
+              type="button"
+              onClick={() => toggleGlobe(!globePaused)}
+              className="rounded border border-border px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
+            >
+              {globePaused ? 'Play' : 'Pause'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -206,7 +257,15 @@ export function Clients() {
         </form>
       )}
 
-      {view === 'table' && (
+      {view === 'table' && unlocked && (
+        <ClientReorderList
+          clients={clients}
+          companiesOf={companiesOf}
+          onReorder={(ids) => reorder(ids)}
+        />
+      )}
+
+      {view === 'table' && !unlocked && (
         <div className="divide-y divide-border rounded-md border border-border">
           {rows.map((client) => {
             const isOpen = open === client.id
@@ -438,6 +497,64 @@ export function Clients() {
           </DialogContent>
         )}
       </Dialog>
+    </div>
+  )
+}
+
+function ClientReorderList({
+  clients,
+  companiesOf,
+  onReorder,
+}: {
+  clients: Client[]
+  companiesOf: (id: string) => { name: string }[]
+  onReorder: (ids: string[]) => void
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const ids = clients.map((c) => c.id)
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const from = ids.indexOf(String(active.id))
+    const to = ids.indexOf(String(over.id))
+    if (from < 0 || to < 0) return
+    onReorder(arrayMove(ids, from, to))
+  }
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <div className="divide-y divide-border rounded-md border border-border">
+          {clients.map((c) => (
+            <ClientReorderRow
+              key={c.id}
+              client={c}
+              company={companiesOf(c.id)[0]?.name}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  )
+}
+
+function ClientReorderRow({ client, company }: { client: Client; company?: string }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: client.id,
+  })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+      <button
+        type="button"
+        className="cursor-grab text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-3.5" />
+      </button>
+      <ClientImage clientId={client.id} name={client.name} url={client.photo_url ?? null} kind="photo" size="sm" />
+      <span className="min-w-0 flex-1 truncate font-medium">{client.name || 'Unnamed client'}</span>
+      <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:block">{company}</span>
     </div>
   )
 }

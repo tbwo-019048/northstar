@@ -15,6 +15,8 @@ interface EmailsState {
   addAccount: (groupId: string, fields: Partial<EmailAccount>) => Promise<EmailAccount | null>
   updateAccount: (id: string, patch: Partial<EmailAccount>) => Promise<{ error: string | null }>
   removeAccount: (id: string) => Promise<void>
+  reorderGroups: (orderedIds: string[]) => Promise<void>
+  reorderAccounts: (orderedIds: string[]) => Promise<void>
   subscribe: () => () => void
 }
 
@@ -104,6 +106,40 @@ export const useEmails = create<EmailsState>((set, get) => ({
     const { error } = await supabase.from('email_accounts').delete().eq('id', id)
     if (error) notifySaveError(error.message)
     else notifySaved('Email account removed.')
+  },
+
+  reorderGroups: async (orderedIds) => {
+    const previous = get().groups
+    const pos = new Map(orderedIds.map((id, i) => [id, i]))
+    set({
+      groups: previous
+        .map((g) => (pos.has(g.id) ? { ...g, sort: pos.get(g.id)! } : g))
+        .sort((a, b) => a.sort - b.sort),
+    })
+    const results = await Promise.all(
+      orderedIds.map((id, i) => supabase.from('email_groups').update({ sort: i }).eq('id', id)),
+    )
+    const error = results.find((r) => r.error)?.error
+    if (error) {
+      set({ groups: previous })
+      notifySaveError(error.message)
+    } else notifySaved('Order saved.')
+  },
+
+  reorderAccounts: async (orderedIds) => {
+    const previous = get().accounts
+    const pos = new Map(orderedIds.map((id, i) => [id, i]))
+    set({
+      accounts: previous.map((a) => (pos.has(a.id) ? { ...a, sort: pos.get(a.id)! } : a)),
+    })
+    const results = await Promise.all(
+      orderedIds.map((id, i) => supabase.from('email_accounts').update({ sort: i }).eq('id', id)),
+    )
+    const error = results.find((r) => r.error)?.error
+    if (error) {
+      set({ accounts: previous })
+      notifySaveError(error.message)
+    } else notifySaved('Order saved.')
   },
 
   subscribe: () => {

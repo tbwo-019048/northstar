@@ -14,6 +14,7 @@ export interface CountryGlobeEntry {
 interface CountryGlobeProps {
   entries: CountryGlobeEntry[]
   theme: 'light' | 'dark'
+  paused?: boolean
 }
 
 const WIDTH = 420
@@ -22,8 +23,7 @@ const CENTER_X = WIDTH / 2
 const CENTER_Y = 285
 const RADIUS = 168
 const START_ROTATION = -10
-const ROTATION_DEGREES_PER_MS = 0.0025
-const FRAME_INTERVAL_MS = 100
+const ROTATION_DEGREES_PER_MS = 0.0022
 const COLORS = ['#7dd3fc', '#38bdf8', '#2563eb', '#1d4ed8', '#60a5fa', '#0ea5e9']
 
 const collection = feature(
@@ -31,8 +31,13 @@ const collection = feature(
   atlas.objects.countries as unknown as Parameters<typeof feature>[1],
 ) as unknown as FeatureCollection<Geometry, { name?: string }>
 
-export function CountryGlobe({ entries, theme }: CountryGlobeProps) {
+export function CountryGlobe({ entries, theme, paused = false }: CountryGlobeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const pausedRef = useRef(paused)
+
+  useEffect(() => {
+    pausedRef.current = paused
+  }, [paused])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -48,21 +53,28 @@ export function CountryGlobe({ entries, theme }: CountryGlobeProps) {
     const countryColor = new Map(
       [...selectedCountries].map((country, index) => [country, COLORS[index % COLORS.length]]),
     )
-    const startedAt = performance.now()
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let animationFrame = 0
-    let lastDrawnAt = -Infinity
+    let lastNow = performance.now()
+    let rotationDeg = START_ROTATION
+
+    let drawn = false
 
     const draw = (now: number) => {
-      if (now - lastDrawnAt < FRAME_INTERVAL_MS) {
-        animationFrame = window.requestAnimationFrame(draw)
+      // Advance rotation by real elapsed time (only while running) so the spin
+      // is frame-rate independent, smooth, and freezes cleanly on pause.
+      const elapsed = now - lastNow
+      lastNow = now
+
+      if (pausedRef.current && drawn) {
+        if (!reduceMotion) animationFrame = window.requestAnimationFrame(draw)
         return
       }
-      lastDrawnAt = now
-
-      const rotation = reduceMotion
-        ? START_ROTATION
-        : (START_ROTATION + (now - startedAt) * ROTATION_DEGREES_PER_MS) % 360
+      if (!reduceMotion && !pausedRef.current) {
+        rotationDeg = (rotationDeg + elapsed * ROTATION_DEGREES_PER_MS) % 360
+      }
+      drawn = true
+      const rotation = reduceMotion ? START_ROTATION : rotationDeg
       const projection = geoOrthographic()
         .translate([CENTER_X, CENTER_Y])
         .scale(RADIUS)
