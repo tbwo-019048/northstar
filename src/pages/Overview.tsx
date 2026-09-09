@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Gauge } from 'lucide-react'
+import { ChartPieIcon } from '@/components/ui/chart-pie'
 import { UsersIcon } from '@/components/ui/users'
 import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
 import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
@@ -366,7 +366,7 @@ export function Overview() {
             onClick={() => setView('progress')}
             className={view === 'progress' ? 'bg-muted text-foreground' : ''}
           >
-            <Gauge className="size-3.5" />
+            <ChartPieIcon size={14} />
           </IconButton>
         </div>
 
