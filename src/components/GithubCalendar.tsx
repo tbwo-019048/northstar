@@ -1,21 +1,25 @@
 /**
- * A GitHub-style contribution calendar. `counts` maps 'YYYY-MM-DD' → commits.
- * Pure CSS grid, no dependency. Renders an all-empty grid when `counts` is {}.
+ * A GitHub-style contribution calendar, drawn as a single scalable SVG (no
+ * horizontal scrollbar). `counts` maps 'YYYY-MM-DD' → commits.
  */
 
-const CELL = 11
+const CELL = 12
 const GAP = 3
+const STEP = CELL + GAP
+const PAD_LEFT = 26 // weekday labels
+const PAD_TOP = 14 // month labels
+const LEGEND = 20
 const DAY_MS = 86_400_000
 
-function bucketClass(n: number): string {
-  if (n <= 0) return 'bg-muted'
-  if (n < 3) return 'bg-sky-200 dark:bg-sky-900'
-  if (n < 6) return 'bg-sky-400 dark:bg-sky-700'
-  if (n < 10) return 'bg-sky-500 dark:bg-sky-500'
-  return 'bg-sky-600 dark:bg-sky-400'
-}
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function bucketFill(n: number): string {
+  if (n <= 0) return 'color-mix(in srgb, currentColor 10%, transparent)'
+  if (n < 3) return 'color-mix(in srgb, var(--primary) 28%, transparent)'
+  if (n < 6) return 'color-mix(in srgb, var(--primary) 50%, transparent)'
+  if (n < 10) return 'color-mix(in srgb, var(--primary) 72%, transparent)'
+  return 'var(--primary)'
+}
 
 export function GithubCalendar({
   counts,
@@ -26,86 +30,101 @@ export function GithubCalendar({
   weeks?: number
   className?: string
 }) {
-  // Column 0 starts on the Sunday `weeks-1` weeks before the Sunday of this week.
   const today = new Date()
   const todayUTC = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
   const start = todayUTC - (today.getUTCDay() + (weeks - 1) * 7) * DAY_MS
 
-  const columns = Array.from({ length: weeks }, (_, w) =>
-    Array.from({ length: 7 }, (_, d) => {
-      const t = start + (w * 7 + d) * DAY_MS
-      const key = new Date(t).toISOString().slice(0, 10)
-      return { key, t, count: counts[key] ?? 0, future: t > todayUTC }
-    }),
-  )
+  const width = PAD_LEFT + weeks * STEP
+  const height = PAD_TOP + 7 * STEP + LEGEND
 
-  const monthLabels = columns.map((col, w) => {
-    const first = new Date(col[0].t)
-    const prev = w > 0 ? new Date(columns[w - 1][0].t) : null
-    return !prev || prev.getUTCMonth() !== first.getUTCMonth() ? MONTHS[first.getUTCMonth()] : ''
+  const columns = Array.from({ length: weeks }, (_, w) => {
+    const first = new Date(start + w * 7 * DAY_MS)
+    const prev = w > 0 ? new Date(start + (w - 1) * 7 * DAY_MS) : null
+    return {
+      month: !prev || prev.getUTCMonth() !== first.getUTCMonth() ? MONTHS[first.getUTCMonth()] : '',
+      days: Array.from({ length: 7 }, (_, d) => {
+        const t = start + (w * 7 + d) * DAY_MS
+        const key = new Date(t).toISOString().slice(0, 10)
+        return { key, t, count: counts[key] ?? 0, future: t > todayUTC }
+      }),
+    }
   })
 
-  const LABEL_W = 26
-
   return (
-    <div className={'inline-block overflow-x-auto text-left ' + (className ?? '')}>
-      <div className="flex" style={{ gap: GAP, paddingLeft: LABEL_W }}>
-        {monthLabels.map((label, w) => (
-          <span
-            key={w}
-            className="whitespace-nowrap text-[10px] text-muted-foreground"
-            style={{ width: CELL }}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
-      <div className="flex" style={{ gap: GAP }}>
-        <div
-          className="flex shrink-0 flex-col justify-around pr-1 text-[9px] leading-none text-muted-foreground"
-          style={{ width: LABEL_W, height: 7 * CELL + 6 * GAP }}
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
+      role="img"
+      aria-label="GitHub contribution calendar for the last year"
+      className={className}
+      style={{ maxWidth: width * 1.6 }}
+    >
+      <title>Commits over the last year</title>
+
+      {['Mon', 'Wed', 'Fri'].map((label, i) => (
+        <text
+          key={label}
+          x={0}
+          y={PAD_TOP + (i * 2 + 1) * STEP + CELL - 2}
+          fontSize={9}
+          fill="var(--muted-fg, #6b7280)"
         >
-          <span>Mon</span>
-          <span>Wed</span>
-          <span>Fri</span>
-        </div>
-        <div className="flex" style={{ gap: GAP }}>
-          {columns.map((col, w) => (
-            <div key={w} className="flex flex-col" style={{ gap: GAP }}>
-              {col.map((cell) => (
-                <div
-                  key={cell.key}
-                  title={
-                    cell.future
-                      ? undefined
-                      : `${cell.count} commit${cell.count === 1 ? '' : 's'} on ${new Date(
-                          cell.t,
-                        ).toLocaleDateString(undefined, { dateStyle: 'medium' })}`
-                  }
-                  className={
-                    'rounded-[2px] ' + (cell.future ? 'bg-transparent' : bucketClass(cell.count))
-                  }
-                  style={{ width: CELL, height: CELL }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div
-        className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground"
-        style={{ paddingLeft: LABEL_W }}
-      >
-        Less
-        {[0, 2, 5, 9, 12].map((n) => (
-          <span
+          {label}
+        </text>
+      ))}
+
+      {columns.map((col, w) => (
+        <g key={w} transform={`translate(${PAD_LEFT + w * STEP}, ${PAD_TOP})`}>
+          {col.month && (
+            <text x={0} y={-4} fontSize={9} fill="var(--muted-fg, #6b7280)">
+              {col.month}
+            </text>
+          )}
+          {col.days.map((cell, d) =>
+            cell.future ? null : (
+              <rect
+                key={cell.key}
+                x={0}
+                y={d * STEP}
+                width={CELL}
+                height={CELL}
+                rx={2}
+                fill={bucketFill(cell.count)}
+                stroke="currentColor"
+                strokeOpacity={0.12}
+                strokeWidth={1}
+              >
+                <title>
+                  {cell.count} commit{cell.count === 1 ? '' : 's'} on{' '}
+                  {new Date(cell.t).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                </title>
+              </rect>
+            ),
+          )}
+        </g>
+      ))}
+
+      <g transform={`translate(${PAD_LEFT}, ${PAD_TOP + 7 * STEP + 6})`}>
+        <text x={0} y={CELL - 2} fontSize={9} fill="var(--muted-fg, #6b7280)">
+          Less
+        </text>
+        {[0, 2, 5, 9, 12].map((n, i) => (
+          <rect
             key={n}
-            className={'rounded-[2px] ' + bucketClass(n)}
-            style={{ width: CELL, height: CELL }}
+            x={26 + i * STEP}
+            y={0}
+            width={CELL}
+            height={CELL}
+            rx={2}
+            fill={bucketFill(n)}
+            stroke="currentColor"
+            strokeOpacity={0.12}
           />
         ))}
-        More
-      </div>
-    </div>
+        <text x={26 + 5 * STEP + 4} y={CELL - 2} fontSize={9} fill="var(--muted-fg, #6b7280)">
+          More
+        </text>
+      </g>
+    </svg>
   )
 }

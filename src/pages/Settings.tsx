@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { GitBranch, Lock, LockOpen, Wrench } from 'lucide-react'
 import { ChevronLeftIcon } from '@/components/ui/chevron-left'
 import { ShieldExclamationIcon } from '@/components/ui/shield-exclamation'
+import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
 import { useAuth } from '@/store/useAuth'
-import { useSettings } from '@/store/useSettings'
+import { useSettings, getGithubToken } from '@/store/useSettings'
+import { fetchDefaultBranch } from '@/lib/github'
 import { useProjects } from '@/store/useProjects'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { useGridCols } from '@/store/useGridCols'
@@ -77,7 +79,10 @@ export function Settings() {
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
-        <MembersSettings />
+        <div className="space-y-4">
+          <MembersSettings />
+          <RepoTable />
+        </div>
 
       <div className="space-y-4 lg:sticky lg:top-15">
       <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm">
@@ -195,8 +200,6 @@ export function Settings() {
           </p>
         )}
       </section>
-
-      <RepoTable />
       </div>
       </div>
     </div>
@@ -205,13 +208,41 @@ export function Settings() {
 
 function RepoTable() {
   const { projects, loaded, load, subscribe, update } = useProjects()
+  const { githubTokenSet, loaded: settingsLoaded, load: loadSettings } = useSettings()
+  const [access, setAccess] = useState<Record<string, 'ok' | 'bad' | 'checking'>>({})
 
   useEffect(() => {
     if (!loaded) load()
     return subscribe()
   }, [loaded, load, subscribe])
 
+  useEffect(() => {
+    if (!settingsLoaded) loadSettings()
+  }, [settingsLoaded, loadSettings])
+
   const sites = projects.filter((p) => SITE_TYPES.includes(p.type))
+
+  const checkRepo = async (repo: string) => {
+    if (!repo || !githubTokenSet) return
+    setAccess((a) => ({ ...a, [repo]: 'checking' }))
+    const token = await getGithubToken()
+    if (!token) return
+    try {
+      await fetchDefaultBranch(repo, token)
+      setAccess((a) => ({ ...a, [repo]: 'ok' }))
+    } catch {
+      setAccess((a) => ({ ...a, [repo]: 'bad' }))
+    }
+  }
+
+  // Check every configured repo once the token + project list are ready.
+  useEffect(() => {
+    if (!githubTokenSet) return
+    for (const p of sites) {
+      if (p.github_repo && !(p.github_repo in access)) void checkRepo(p.github_repo)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [githubTokenSet, projects])
 
   return (
     <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm">
@@ -219,8 +250,8 @@ function RepoTable() {
         <GitBranch className="size-3.5" /> GitHub repositories
       </h2>
       <p className="text-xs text-muted-foreground">
-        Every website / app project and the repo it tracks. Lock a repo to make it read-only on
-        that project's Git tab.
+        Every website / app project and the repo it tracks. A red mark means the repo can't be
+        reached with the stored token. Lock a repo to make it read-only on that project's Git tab.
       </p>
       <div className="divide-y divide-border rounded-md border border-border">
         {sites.map((p) => (
@@ -237,9 +268,17 @@ function RepoTable() {
               onBlur={(e) => {
                 const v = e.target.value.trim()
                 if (v !== (p.github_repo ?? '')) update(p.id, { github_repo: v || null })
+                if (v) void checkRepo(v)
               }}
               className="h-7 flex-1"
             />
+            {p.github_repo && access[p.github_repo] === 'bad' && (
+              <ExclamationTriangleIcon
+                size={14}
+                className="shrink-0 text-destructive"
+                title="This repo can't be reached with the stored GitHub token"
+              />
+            )}
             <IconButton
               title={p.github_repo_locked ? 'Unlock (editable in the project)' : 'Lock to Settings only'}
               onClick={() => update(p.id, { github_repo_locked: !p.github_repo_locked })}

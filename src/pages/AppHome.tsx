@@ -57,9 +57,9 @@ export function AppHome() {
 
       <div className="grid flex-1 gap-8 lg:grid-cols-[3fr_2fr]">
         <section className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-center gap-2">
-            <span className="text-5xl font-semibold tabular-nums">{clients.length}</span>
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-5xl font-semibold leading-none tabular-nums">{clients.length}</span>
+            <span className="text-xs uppercase leading-tight tracking-wide text-muted-foreground">
               client{clients.length === 1 ? '' : 's'}
             </span>
           </div>
@@ -81,7 +81,7 @@ export function AppHome() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col justify-center gap-3">
           <p className="text-sm text-muted-foreground">
             {anyData ? (
               <>
