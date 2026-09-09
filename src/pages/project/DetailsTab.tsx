@@ -33,14 +33,20 @@ export function DetailsTab({ project, blocks }: { project: Project; blocks: Deta
   const has = (b: DetailsBlock) => blocks.includes(b)
 
   const grouped = useMemo(() => {
+    // When the built-in "Credentials & IDs" box is shown, drop any custom
+    // section with the same name so it doesn't render as a duplicate box.
+    // Its rows are kept — rename the section to bring them back.
+    const norm = (s: string) => s.toLowerCase().replace(/&|\band\b/g, '').replace(/[^a-z]/g, '')
+    const hideDup = blocks.includes('credentials')
     const m = new Map<string, typeof details>()
     for (const d of details.slice().sort((a, b) => a.sort - b.sort)) {
       const k = d.section || 'General'
+      if (hideDup && norm(k) === 'credentialsids') continue
       if (!m.has(k)) m.set(k, [])
       m.get(k)!.push(d)
     }
     return [...m.entries()]
-  }, [details])
+  }, [details, blocks])
 
   const [summary, setSummary, sumStatus] = useDebouncedSave(project.summary ?? '', async (v) => {
     await update(projectId, { summary: v })
