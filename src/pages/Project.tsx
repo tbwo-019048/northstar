@@ -4,6 +4,7 @@ import { ChevronLeftIcon } from '@/components/ui/chevron-left'
 import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
 import { PROJECT_TYPES, type ProjectType } from '@/lib/types'
+import { layoutFor, type TabKey } from '@/lib/projectLayout'
 import { EditableText, Select } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
 import { SummaryTab } from '@/pages/project/SummaryTab'
@@ -57,6 +58,9 @@ export function Project() {
 
   const project = useMemo(() => projects.find((p) => p.id === id), [projects, id])
   const active = tab ?? 'summary'
+  const layout = project ? layoutFor(project.type) : null
+  const tabs = TABS.filter((t) => !layout?.hiddenTabs.includes(t.key))
+  const labelFor = (key: TabKey, fallback: string) => layout?.tabLabels[key] ?? fallback
 
   if (!id) return <Navigate to="/app" replace />
   if (loaded && !project) {
@@ -65,6 +69,9 @@ export function Project() {
         Project not found. <Link to="/app" className="text-link underline">Back to overview</Link>
       </div>
     )
+  }
+  if (layout && tab && layout.hiddenTabs.includes(tab as TabKey)) {
+    return <Navigate to={`/app/project/${id}`} replace />
   }
 
   return (
@@ -121,7 +128,7 @@ export function Project() {
       )}
 
       <nav className="flex items-center gap-0.5 overflow-x-auto border-b border-border">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
@@ -133,21 +140,31 @@ export function Project() {
                 : 'text-muted-foreground hover:text-foreground')
             }
           >
-            {t.label}
+            {labelFor(t.key, t.label)}
           </button>
         ))}
       </nav>
 
       <div className="pt-1">
-        {active === 'summary' && project && <SummaryTab project={project} />}
-        {active === 'features' && <FeaturesTab projectId={id} />}
-        {active === 'details' && project && <DetailsTab project={project} />}
+        {active === 'summary' && project && layout && (
+          <SummaryTab project={project} blocks={layout.summary} />
+        )}
+        {active === 'features' && (
+          <FeaturesTab projectId={id} label={layout?.tabLabels.features} />
+        )}
+        {active === 'details' && project && layout && (
+          <DetailsTab project={project} blocks={layout.details} />
+        )}
         {active === 'assets' && <AssetsTab projectId={id} />}
-        {active === 'requests' && project && <RequestsTab project={project} />}
-        {active === 'todo' && <TodoTab projectId={id} />}
+        {active === 'requests' && project && (
+          <RequestsTab project={project} label={layout?.tabLabels.requests} />
+        )}
+        {active === 'todo' && <TodoTab projectId={id} label={layout?.tabLabels.todo} />}
         {active === 'pipeline' && project && <PipelineTab project={project} />}
         {active === 'planning' && <PlanningTab projectId={id} />}
-        {active === 'users' && project && <UsersTab project={project} />}
+        {active === 'users' && project && (
+          <UsersTab project={project} label={layout?.tabLabels.users} simple={layout?.simpleUsers} />
+        )}
         {active === 'git' && <GitTab projectId={id} />}
         {active === 'analysis' && project && <AnalysisTab project={project} />}
         {active === 'settings' && project && <ProjectSettingsTab project={project} />}

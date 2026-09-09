@@ -107,6 +107,7 @@ create table if not exists projects (
   position_colors jsonb not null default '{}'::jsonb,  -- { [position label]: hex } for Users cards
   priority_colors jsonb not null default '{}'::jsonb,  -- { [priority]: hex } for Requests/To-Do chips
   planning_prefs jsonb not null default '{}'::jsonb,   -- { wip: { [plan_status]: n }, swimlane } for the Planning board
+  platforms   jsonb not null default '[]'::jsonb,       -- target OS/platforms for an 'app' project
   tech_stack  jsonb not null default '[]'::jsonb,       -- [techStack catalog id, ...] shown in Details
   countries   jsonb not null default '[]'::jsonb,       -- country names represented by this project
   created_by  uuid references auth.users(id) on delete set null,
@@ -127,6 +128,7 @@ alter table projects add column if not exists private_token text;
 alter table projects add column if not exists position_colors jsonb not null default '{}'::jsonb;
 alter table projects add column if not exists priority_colors jsonb not null default '{}'::jsonb;
 alter table projects add column if not exists planning_prefs jsonb not null default '{}'::jsonb;
+alter table projects add column if not exists platforms jsonb not null default '[]'::jsonb;
 alter table projects add column if not exists tech_stack jsonb not null default '[]'::jsonb;
 alter table projects add column if not exists countries jsonb not null default '[]'::jsonb;
 drop trigger if exists trg_projects_updated on projects;

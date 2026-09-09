@@ -16,12 +16,14 @@ const FALLBACK_PRIORITY_COLOR: Record<Priority, string> = {
   low: '#0ea5e9',
 }
 
-export function RequestsTab({ project }: { project: Project }) {
+export function RequestsTab({ project, label }: { project: Project; label?: string }) {
   const projectId = project.id
   const rows = useProjectData((s) => s.rows.requests)
   const { add, patch, del } = useProjectData()
   const requests = asRequests(rows)
   const [open, setOpen] = useState<string | null>(null)
+  const heading = label ?? 'Requests'
+  const singular = (label ?? 'request').toLowerCase().replace(/s$/, '')
 
   const colorFor = (p: Priority) => project.priority_colors[p] ?? FALLBACK_PRIORITY_COLOR[p]
 
@@ -36,7 +38,7 @@ export function RequestsTab({ project }: { project: Project }) {
   const addReq = () =>
     add('requests', {
       project_id: projectId,
-      title: 'New request',
+      title: `New ${singular}`,
       priority: 'medium',
       status: 'todo',
       sort: openList.length,
@@ -119,7 +121,7 @@ export function RequestsTab({ project }: { project: Project }) {
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Requests · {openList.length}
+            {heading} · {openList.length}
           </h2>
           <button
             type="button"

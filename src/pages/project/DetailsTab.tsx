@@ -19,17 +19,18 @@ import {
   DialogTitle,
 } from '@/components/ui/velobits/dialog'
 import { PROJECT_STATES, type Project, type ProjectState } from '@/lib/types'
+import type { DetailsBlock } from '@/lib/projectLayout'
 import { formatState } from '@/lib/projectState'
 import { CountryPicker } from '@/components/CountryPicker'
 
-export function DetailsTab({ project }: { project: Project }) {
+export function DetailsTab({ project, blocks }: { project: Project; blocks: DetailsBlock[] }) {
   const projectId = project.id
   const rows = useProjectData((s) => s.rows.details)
   const { add, patch, del } = useProjectData()
   const { update } = useProjects()
   const details = asDetails(rows)
   const [newSection, setNewSection] = useState('')
-  const isAppOrSite = project.type === 'website' || project.type === 'app'
+  const has = (b: DetailsBlock) => blocks.includes(b)
 
   const grouped = useMemo(() => {
     const m = new Map<string, typeof details>()
@@ -50,64 +51,74 @@ export function DetailsTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-3">
-      <label className="block">
-        <span className="text-[11px] font-medium uppercase text-muted-foreground">Codename</span>
-        <Input
-          value={project.codename ?? ''}
-          onChange={(e) => update(projectId, { codename: e.target.value })}
-          placeholder="Optional — shown instead of the name when Codenames is on"
-          className="mt-1 w-full sm:w-56"
+      {has('codename') && (
+        <label className="block">
+          <span className="text-[11px] font-medium uppercase text-muted-foreground">Codename</span>
+          <Input
+            value={project.codename ?? ''}
+            onChange={(e) => update(projectId, { codename: e.target.value })}
+            placeholder="Optional — shown instead of the name when Codenames is on"
+            className="mt-1 w-full sm:w-56"
+          />
+        </label>
+      )}
+
+      {has('state') && (
+        <label className="block">
+          <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
+          <Select
+            value={project.state}
+            onChange={(e) => update(projectId, { state: e.target.value as ProjectState })}
+            className="mt-1 w-full sm:w-56"
+          >
+            {[...PROJECT_STATES, ...(PROJECT_STATES.includes(project.state) ? [] : [project.state])].map(
+              (s) => (
+                <option key={s} value={s}>
+                  {formatState(s)}
+                </option>
+              ),
+            )}
+          </Select>
+        </label>
+      )}
+
+      {has('hours') && (
+        <label className="block">
+          <span className="text-[11px] font-medium uppercase text-muted-foreground">Hours worked</span>
+          <Input
+            type="number"
+            step="0.5"
+            value={project.hours_worked ?? 0}
+            onChange={(e) => update(projectId, { hours_worked: Number(e.target.value) || 0 })}
+            className="mt-1 w-full"
+          />
+        </label>
+      )}
+
+      {has('summary') && (
+        <label className="block">
+          <span className="text-[11px] font-medium uppercase text-muted-foreground">
+            Summary {sumStatus !== 'idle' && <em className="not-italic text-primary">· {sumStatus}</em>}
+          </span>
+          <textarea
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            rows={2}
+            className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+            placeholder="What is this project, in a sentence or two…"
+          />
+        </label>
+      )}
+
+      {has('countries') && (
+        <CountryPicker
+          selected={project.countries ?? []}
+          onChange={(countries) => update(projectId, { countries })}
+          label="Project countries"
         />
-      </label>
+      )}
 
-      <label className="block">
-        <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
-        <Select
-          value={project.state}
-          onChange={(e) => update(projectId, { state: e.target.value as ProjectState })}
-          className="mt-1 w-full sm:w-56"
-        >
-          {[...PROJECT_STATES, ...(PROJECT_STATES.includes(project.state) ? [] : [project.state])].map(
-            (s) => (
-              <option key={s} value={s}>
-                {formatState(s)}
-              </option>
-            ),
-          )}
-        </Select>
-      </label>
-
-      <label className="block">
-        <span className="text-[11px] font-medium uppercase text-muted-foreground">Hours worked</span>
-        <Input
-          type="number"
-          step="0.5"
-          value={project.hours_worked ?? 0}
-          onChange={(e) => update(projectId, { hours_worked: Number(e.target.value) || 0 })}
-          className="mt-1 w-full"
-        />
-      </label>
-
-      <label className="block">
-        <span className="text-[11px] font-medium uppercase text-muted-foreground">
-          Summary {sumStatus !== 'idle' && <em className="not-italic text-primary">· {sumStatus}</em>}
-        </span>
-        <textarea
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          rows={2}
-          className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
-          placeholder="What is this project, in a sentence or two…"
-        />
-      </label>
-
-      <CountryPicker
-        selected={project.countries ?? []}
-        onChange={(countries) => update(projectId, { countries })}
-        label="Project countries"
-      />
-
-      {isAppOrSite && (
+      {has('credentials') && (
         <div className="overflow-hidden rounded-md border border-border">
           <div className="border-b border-border bg-muted/40 px-2 py-1">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -155,11 +166,11 @@ export function DetailsTab({ project }: { project: Project }) {
         </div>
       )}
 
-      <EnvVarsSection projectId={projectId} />
+      {has('environments') && <EnvVarsSection projectId={projectId} />}
 
-      <TechStackSection project={project} />
+      {has('techStack') && <TechStackSection project={project} />}
 
-      {grouped.map(([section, items]) => (
+      {has('sections') && grouped.map(([section, items]) => (
         <div key={section} className="overflow-hidden rounded-md border border-border">
           <div className="flex items-center justify-between border-b border-border bg-muted/40 px-2 py-1">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -195,26 +206,28 @@ export function DetailsTab({ project }: { project: Project }) {
         </div>
       ))}
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          const s = newSection.trim()
-          if (!s) return
-          addRow(s)
-          setNewSection('')
-        }}
-        className="flex items-center gap-1.5"
-      >
-        <Input
-          value={newSection}
-          onChange={(e) => setNewSection(e.target.value)}
-          placeholder="New section (e.g. UI, Libraries, Materials)"
-          className="max-w-xs"
-        />
-        <button className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted">
-          <PlusIcon size={12} /> Section
-        </button>
-      </form>
+      {has('sections') && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const s = newSection.trim()
+            if (!s) return
+            addRow(s)
+            setNewSection('')
+          }}
+          className="flex items-center gap-1.5"
+        >
+          <Input
+            value={newSection}
+            onChange={(e) => setNewSection(e.target.value)}
+            placeholder="New section (e.g. UI, Libraries, Materials)"
+            className="max-w-xs"
+          />
+          <button className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted">
+            <PlusIcon size={12} /> Section
+          </button>
+        </form>
+      )}
     </div>
   )
 }

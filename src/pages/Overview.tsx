@@ -38,6 +38,7 @@ type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'progress'
 const VIEW_KEY = 'northstar.overview.view'
 const CODENAME_KEY = 'northstar.overview.codenames'
 const PAGINATE_KEY = 'northstar.overview.paginate'
+const TABLEPAGE_KEY = 'northstar.overview.tablepage'
 const TABLE_PAGE_SIZE = 15
 
 export function Overview() {
@@ -87,7 +88,13 @@ export function Overview() {
     }
   })
   const [importMsg, setImportMsg] = useState<string | null>(null)
-  const [tablePage, setTablePage] = useState(0)
+  const [tablePage, setTablePage] = useState(() => {
+    try {
+      return Math.max(0, Number(localStorage.getItem(TABLEPAGE_KEY)) || 0)
+    } catch {
+      return 0
+    }
+  })
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -128,6 +135,14 @@ export function Overview() {
       /* ignore */
     }
   }, [paginate])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TABLEPAGE_KEY, String(tablePage))
+    } catch {
+      /* ignore */
+    }
+  }, [tablePage])
 
   const projectLabel = (p: Project) => (codenames && p.codename?.trim() ? p.codename : p.name)
 

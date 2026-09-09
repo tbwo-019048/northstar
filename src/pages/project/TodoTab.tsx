@@ -28,7 +28,7 @@ import { PRIORITIES, TODO_TYPES, type Todo, type TodoStatus } from '@/lib/types'
 import { Chip, EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 
-export function TodoTab({ projectId }: { projectId: string }) {
+export function TodoTab({ projectId, label }: { projectId: string; label?: string }) {
   const rows = useProjectData((s) => s.rows.todos)
   const { add, patch, del, reorder } = useProjectData()
   const todos = asTodos(rows)
@@ -96,7 +96,7 @@ export function TodoTab({ projectId }: { projectId: string }) {
       <div className="space-y-4">
         <TodoList
           id="todo"
-          title="To do"
+          title={label ?? 'To do'}
           items={lists.todo}
           expanded={expanded}
           setExpanded={setExpanded}

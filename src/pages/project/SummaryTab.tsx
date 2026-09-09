@@ -17,7 +17,8 @@ import { resolveFaviconUrl } from '@/lib/favicon'
 import { ScreenshotGallery } from '@/components/ScreenshotGallery'
 import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
 import { STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
-import { SITE_TYPES, type Project } from '@/lib/types'
+import { APP_PLATFORMS, SITE_TYPES, type Project } from '@/lib/types'
+import type { SummaryBlock } from '@/lib/projectLayout'
 import {
   Dialog,
   DialogContent,
@@ -27,10 +28,11 @@ import {
 
 type SiteField = 'website_url' | 'test_site_url'
 
-export function SummaryTab({ project }: { project: Project }) {
+export function SummaryTab({ project, blocks }: { project: Project; blocks: SummaryBlock[] }) {
   const rows = useProjectData((s) => s.rows)
   const nav = useNavigate()
   const { id } = useParams()
+  const has = (b: SummaryBlock) => blocks.includes(b)
   const hasSites = SITE_TYPES.includes(project.type)
 
   const stats = useMemo(() => {
@@ -72,83 +74,125 @@ export function SummaryTab({ project }: { project: Project }) {
         </button>
       </div>
 
-      {hasSites && (
+      {has('url') && hasSites && (
         <div className="space-y-2">
           <SiteLinkRow project={project} field="website_url" label="Live Site" />
           <SiteLinkRow project={project} field="test_site_url" label="Test Site" />
+          {project.type === 'app' && <PlatformPicker project={project} />}
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        {hasSites && (
-          <div className="min-w-0 flex-1">
-            <ScreenshotGallery project={project} />
-          </div>
-        )}
-        <div
-          className={
-            'flex flex-1 items-center justify-center ' +
-            (STATE_TEXT_CLASS[project.state] ?? '')
-          }
-        >
-          <HalfCircleProgress
-            value={statePercent(project.state)}
-            label={formatState(project.state)}
-            color="currentColor"
-            size="lg"
-          />
+      {(has('image') || has('progress')) && (
+        <div className="flex items-center gap-3">
+          {has('image') && (
+            <div className="min-w-0 flex-1">
+              <ScreenshotGallery project={project} />
+            </div>
+          )}
+          {has('progress') && (
+            <div
+              className={
+                'flex flex-1 items-center justify-center ' +
+                (STATE_TEXT_CLASS[project.state] ?? '')
+              }
+            >
+              <HalfCircleProgress
+                value={statePercent(project.state)}
+                label={formatState(project.state)}
+                color="currentColor"
+                size="lg"
+              />
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {project.summary && (
+      {has('summary') && project.summary && (
         <p className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
           {project.summary}
         </p>
       )}
 
-      <ClientsSection projectId={project.id} />
+      {has('clients') && <ClientsSection projectId={project.id} />}
 
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-5">
-        {tiles.map(([label, value, tab]) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => nav(`/app/project/${id}/${tab}`)}
-            className="bg-background px-3 py-2 text-left hover:bg-muted/40"
-          >
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-            <div className="text-lg font-semibold tabular-nums">{value}</div>
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Top priority to-dos
-          </h2>
-          <button
-            type="button"
-            onClick={() => nav(`/app/project/${id}/todo`)}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            View all <ArrowRightIcon size={12} />
-          </button>
-        </div>
-        <div className="divide-y divide-border rounded-md border border-border">
-          {stats.topTodos.map((t) => (
-            <div key={t.id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
-              <Chip tone="priority">{t.priority}</Chip>
-              <span className="min-w-0 flex-1 truncate">{t.title}</span>
-            </div>
+      {has('stats') && (
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-5">
+          {tiles.map(([label, value, tab]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => nav(`/app/project/${id}/${tab}`)}
+              className="bg-background px-3 py-2 text-left hover:bg-muted/40"
+            >
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+              <div className="text-lg font-semibold tabular-nums">{value}</div>
+            </button>
           ))}
-          {stats.topTodos.length === 0 && (
-            <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-              Nothing open — the To-Do list is clear.
-            </p>
-          )}
         </div>
-      </div>
+      )}
+
+      {has('topTodos') && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Top priority to-dos
+            </h2>
+            <button
+              type="button"
+              onClick={() => nav(`/app/project/${id}/todo`)}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              View all <ArrowRightIcon size={12} />
+            </button>
+          </div>
+          <div className="divide-y divide-border rounded-md border border-border">
+            {stats.topTodos.map((t) => (
+              <div key={t.id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                <Chip tone="priority">{t.priority}</Chip>
+                <span className="min-w-0 flex-1 truncate">{t.title}</span>
+              </div>
+            ))}
+            {stats.topTodos.length === 0 && (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                Nothing open — the To-Do list is clear.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** OS/platform chips for an app project. */
+function PlatformPicker({ project }: { project: Project }) {
+  const { update } = useProjects()
+  const selected = project.platforms ?? []
+  const toggle = (p: string) =>
+    update(project.id, {
+      platforms: selected.includes(p) ? selected.filter((x) => x !== p) : [...selected, p],
+    })
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-xs text-muted-foreground">Platforms:</span>
+      {APP_PLATFORMS.map((p) => {
+        const on = selected.includes(p)
+        return (
+          <button
+            key={p}
+            type="button"
+            onClick={() => toggle(p)}
+            className={
+              'h-6 rounded-md border px-2 text-xs ' +
+              (on
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border text-muted-foreground hover:bg-muted')
+            }
+          >
+            {p}
+          </button>
+        )
+      })}
     </div>
   )
 }

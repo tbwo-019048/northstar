@@ -3,20 +3,22 @@ import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asFeatures } from '@/store/useProjectData'
 import { EditableText, IconButton, Chip } from '@/components/ui-lite'
 
-export function FeaturesTab({ projectId }: { projectId: string }) {
+export function FeaturesTab({ projectId, label }: { projectId: string; label?: string }) {
   const rows = useProjectData((s) => s.rows.features)
   const { add, patch, del } = useProjectData()
   const features = asFeatures(rows).slice().sort((a, b) => a.sort - b.sort)
+  const heading = label ?? 'Features'
+  const newTitle = 'New ' + (label ? label.toLowerCase().replace(/s$/, '') : 'feature')
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Features · {features.length}
+          {heading} · {features.length}
         </h2>
         <button
           type="button"
-          onClick={() => add('features', { project_id: projectId, title: 'New feature', sort: features.length })}
+          onClick={() => add('features', { project_id: projectId, title: newTitle, sort: features.length })}
           className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
         >
           <PlusIcon size={12} /> Add

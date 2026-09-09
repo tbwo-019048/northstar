@@ -16,6 +16,7 @@ import { ProjectLogo } from '@/components/ProjectLogo'
 import { formatState } from '@/lib/projectState'
 import { techNames } from '@/lib/techStack'
 import { PLAN_STATUS_LABEL, PRIORITIES, SITE_TYPES, type Priority } from '@/lib/types'
+import { layoutFor } from '@/lib/projectLayout'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -96,6 +97,10 @@ export function ProjectPrint() {
   }
 
   const linkedClients = clientsForProject(project.id)
+  const layout = layoutFor(project.type)
+  const tabLabel = (key: 'features' | 'requests' | 'todo' | 'users', fallback: string) =>
+    layout.tabLabels[key] ?? fallback
+  const showPeople = !layout.hiddenTabs.includes('users')
 
   const fmtDate = (d: string | null) =>
     d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -145,14 +150,18 @@ export function ProjectPrint() {
 
         <Section title="At a glance">
           <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
-            {[
-              ['Features', data.features.length],
-              ['Open to-dos', data.openTodos.length],
-              ['Open requests', data.requests.length],
-              ['Users', data.people.length],
-              ['Plan items', data.plans.length],
-              ['Active pipelines', data.activePipelines],
-            ].map(([label, value]) => (
+            {(
+              [
+                [tabLabel('features', 'Features'), data.features.length],
+                [`Open ${tabLabel('todo', 'to-dos').toLowerCase()}`, data.openTodos.length],
+                [`Open ${tabLabel('requests', 'requests').toLowerCase()}`, data.requests.length],
+                ...(showPeople
+                  ? [[tabLabel('users', 'Users'), data.people.length] as [string, number]]
+                  : []),
+                ['Plan items', data.plans.length],
+                ['Active pipelines', data.activePipelines],
+              ] as [string, number][]
+            ).map(([label, value]) => (
               <div key={label} className="rounded border border-neutral-300 px-2 py-1.5">
                 <div className="text-[10px] uppercase tracking-wide text-neutral-500">{label}</div>
                 <div className="text-base font-semibold tabular-nums">{value}</div>
@@ -183,7 +192,7 @@ export function ProjectPrint() {
         )}
 
         {data.features.length > 0 && (
-          <Section title={`Features (${data.features.length})`}>
+          <Section title={`${tabLabel('features', 'Features')} (${data.features.length})`}>
             <ul className="list-disc space-y-0.5 pl-5">
               {data.features.map((f) => (
                 <li key={f.id}>
@@ -196,7 +205,7 @@ export function ProjectPrint() {
         )}
 
         {data.openTodos.length > 0 && (
-          <Section title={`Open to-dos (${data.openTodos.length})`}>
+          <Section title={`Open ${tabLabel('todo', 'to-dos').toLowerCase()} (${data.openTodos.length})`}>
             {PRIORITIES.map((p: Priority) => {
               const group = data.openTodos.filter((t) => t.priority === p)
               if (group.length === 0) return null
@@ -218,7 +227,7 @@ export function ProjectPrint() {
         )}
 
         {data.requests.length > 0 && (
-          <Section title={`Open requests (${data.requests.length})`}>
+          <Section title={`Open ${tabLabel('requests', 'requests').toLowerCase()} (${data.requests.length})`}>
             <ul className="list-disc space-y-0.5 pl-5">
               {data.requests.map((r) => (
                 <li key={r.id}>
@@ -253,8 +262,8 @@ export function ProjectPrint() {
           </Section>
         )}
 
-        {data.people.length > 0 && (
-          <Section title={`People (${data.people.length})`}>
+        {showPeople && data.people.length > 0 && (
+          <Section title={`${tabLabel('users', 'People')} (${data.people.length})`}>
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="border-b border-neutral-300 text-left text-neutral-500">

@@ -14,7 +14,7 @@ import {
 } from '@/store/useProjectData'
 import { useAuth } from '@/store/useAuth'
 import type { Person, PersonColumn, Project } from '@/lib/types'
-import { Chip, IconButton, Input, SecretField, Textarea } from '@/components/ui-lite'
+import { Chip, EditableText, IconButton, Input, SecretField, Textarea } from '@/components/ui-lite'
 import { PersonAvatar } from '@/components/PersonAvatar'
 import {
   Dialog,
@@ -26,8 +26,17 @@ import {
 type ViewMode = 'table' | 'card'
 const VIEW_KEY = 'northstar.users.view'
 
-export function UsersTab({ project }: { project: Project }) {
+export function UsersTab({
+  project,
+  label,
+  simple,
+}: {
+  project: Project
+  label?: string
+  simple?: boolean
+}) {
   const projectId = project.id
+  const heading = label ?? 'Users'
   const rows = useProjectData((s) => s.rows.project_people)
   const columnRows = useProjectData((s) => s.rows.person_columns)
   const commentRows = useProjectData((s) => s.rows.person_comments)
@@ -73,11 +82,24 @@ export function UsersTab({ project }: { project: Project }) {
     del('person_columns', id)
   }
 
+  if (simple) {
+    return (
+      <SimpleUsers
+        heading={heading}
+        people={people}
+        projectId={projectId}
+        add={add}
+        patch={patch}
+        del={del}
+      />
+    )
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Users · {people.length}
+          {heading} · {people.length}
         </h2>
         <button
           type="button"
@@ -225,6 +247,105 @@ export function UsersTab({ project }: { project: Project }) {
           </DialogContent>
         )}
       </Dialog>
+    </div>
+  )
+}
+
+type DataFns = ReturnType<typeof useProjectData.getState>
+
+/** Stripped-down list for types that just track contacts (e.g. Production
+ * "Customers"): name, contact detail, notes — no custom fields, avatars or
+ * comment threads. */
+function SimpleUsers({
+  heading,
+  people,
+  projectId,
+  add,
+  patch,
+  del,
+}: {
+  heading: string
+  people: Person[]
+  projectId: string
+  add: DataFns['add']
+  patch: DataFns['patch']
+  del: DataFns['del']
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {heading} · {people.length}
+        </h2>
+        <button
+          type="button"
+          onClick={() =>
+            add('project_people', { project_id: projectId, name: 'New person', sort: people.length })
+          }
+          className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
+        >
+          <PlusIcon size={12} /> Add
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+              <th className="px-2 py-1 font-medium">Name</th>
+              <th className="px-2 py-1 font-medium">Contact</th>
+              <th className="px-2 py-1 font-medium">Notes</th>
+              <th className="w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {people.map((p) => (
+              <tr key={p.id} className="group border-b border-border last:border-0">
+                <td className="px-2 py-0.5 align-top">
+                  <EditableText
+                    value={p.name}
+                    placeholder="Name"
+                    onSave={(v) => patch('project_people', p.id, { name: v })}
+                    className="font-medium"
+                  />
+                </td>
+                <td className="px-2 py-0.5 align-top">
+                  <EditableText
+                    value={p.position}
+                    placeholder="phone / email…"
+                    onSave={(v) => patch('project_people', p.id, { position: v })}
+                    className="text-muted-foreground"
+                  />
+                </td>
+                <td className="px-2 py-0.5 align-top">
+                  <EditableText
+                    value={p.notes}
+                    placeholder="—"
+                    multiline
+                    onSave={(v) => patch('project_people', p.id, { notes: v })}
+                  />
+                </td>
+                <td className="w-8 px-1 py-0.5">
+                  <IconButton
+                    onClick={() => {
+                      if (confirm(`Remove ${p.name || 'this person'}?`)) del('project_people', p.id)
+                    }}
+                    className="opacity-0 group-hover:opacity-100 hover:text-destructive"
+                  >
+                    <TrashIcon size={14} />
+                  </IconButton>
+                </td>
+              </tr>
+            ))}
+            {people.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-2 py-6 text-center text-xs text-muted-foreground">
+                  No {heading.toLowerCase()} yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

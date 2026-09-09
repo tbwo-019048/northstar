@@ -79,6 +79,9 @@ export const TODO_TYPES = ['feature', 'bug', 'chore', 'idea', 'research', 'other
  * Summary's Live/Test Site + screenshots only make sense for these. */
 export const SITE_TYPES: ProjectType[] = ['website', 'app']
 
+/** Target platforms an `app` project can declare, shown as chips in Summary. */
+export const APP_PLATFORMS = ['iOS', 'macOS', 'Android', 'Windows', 'Linux'] as const
+
 export interface Project {
   id: string
   name: string
@@ -100,6 +103,7 @@ export interface Project {
   position_colors: Record<string, string>
   priority_colors: Partial<Record<Priority, string>>
   planning_prefs: PlanningPrefs
+  platforms: string[]
   tech_stack: string[]
   countries: string[]
   created_by: string | null
