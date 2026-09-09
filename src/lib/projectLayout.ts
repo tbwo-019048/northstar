@@ -23,6 +23,7 @@ export type DetailsBlock =
   | 'hours'
   | 'summary'
   | 'countries'
+  | 'links'
   | 'credentials'
   | 'techStack'
   | 'environments'
@@ -49,12 +50,21 @@ const FULL_DETAILS: DetailsBlock[] = [
   'hours',
   'summary',
   'countries',
+  'links',
   'credentials',
   'techStack',
   'environments',
   'sections',
 ]
-const LEAN_DETAILS: DetailsBlock[] = ['codename', 'state', 'hours', 'summary', 'countries', 'sections']
+const LEAN_DETAILS: DetailsBlock[] = [
+  'codename',
+  'state',
+  'hours',
+  'summary',
+  'countries',
+  'links',
+  'sections',
+]
 
 const DEFAULT_LAYOUT: TypeLayout = {
   hiddenTabs: [],

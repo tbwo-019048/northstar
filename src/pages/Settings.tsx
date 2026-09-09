@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GitBranch, Wrench } from 'lucide-react'
+import { GitBranch, Lock, LockOpen, Wrench } from 'lucide-react'
 import { ChevronLeftIcon } from '@/components/ui/chevron-left'
 import { ShieldExclamationIcon } from '@/components/ui/shield-exclamation'
 import { useAuth } from '@/store/useAuth'
 import { useSettings } from '@/store/useSettings'
+import { useProjects } from '@/store/useProjects'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { useGridCols } from '@/store/useGridCols'
-import { Input } from '@/components/ui-lite'
+import { SITE_TYPES } from '@/lib/types'
+import { IconButton, Input } from '@/components/ui-lite'
 import { MembersSettings } from '@/components/MembersSettings'
 
 export function Settings() {
@@ -193,8 +195,66 @@ export function Settings() {
           </p>
         )}
       </section>
+
+      <RepoTable />
       </div>
       </div>
     </div>
+  )
+}
+
+function RepoTable() {
+  const { projects, loaded, load, subscribe, update } = useProjects()
+
+  useEffect(() => {
+    if (!loaded) load()
+    return subscribe()
+  }, [loaded, load, subscribe])
+
+  const sites = projects.filter((p) => SITE_TYPES.includes(p.type))
+
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm">
+      <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <GitBranch className="size-3.5" /> GitHub repositories
+      </h2>
+      <p className="text-xs text-muted-foreground">
+        Every website / app project and the repo it tracks. Lock a repo to make it read-only on
+        that project's Git tab.
+      </p>
+      <div className="divide-y divide-border rounded-md border border-border">
+        {sites.map((p) => (
+          <div key={p.id} className="flex items-center gap-2 px-2 py-1.5">
+            <Link
+              to={`/app/project/${p.id}/git`}
+              className="w-32 shrink-0 truncate text-sm font-medium hover:underline"
+            >
+              {p.name}
+            </Link>
+            <Input
+              defaultValue={p.github_repo ?? ''}
+              placeholder="owner/repo"
+              onBlur={(e) => {
+                const v = e.target.value.trim()
+                if (v !== (p.github_repo ?? '')) update(p.id, { github_repo: v || null })
+              }}
+              className="h-7 flex-1"
+            />
+            <IconButton
+              title={p.github_repo_locked ? 'Unlock (editable in the project)' : 'Lock to Settings only'}
+              onClick={() => update(p.id, { github_repo_locked: !p.github_repo_locked })}
+              className={p.github_repo_locked ? 'text-primary' : ''}
+            >
+              {p.github_repo_locked ? <Lock className="size-3.5" /> : <LockOpen className="size-3.5" />}
+            </IconButton>
+          </div>
+        ))}
+        {sites.length === 0 && (
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+            No website or app projects yet.
+          </p>
+        )}
+      </div>
+    </section>
   )
 }

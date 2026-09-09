@@ -139,21 +139,31 @@ export function GitTab({ projectId }: { projectId: string }) {
             >
               <ArrowTopRightOnSquareIcon size={12} />
             </a>
-            <button
-              type="button"
-              onClick={() => {
-                setRepoDraft(project.github_repo ?? '')
-                setEditing(true)
-              }}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <PencilIcon size={12} />
-            </button>
+            {project.github_repo_locked ? (
+              <span className="text-[11px] text-muted-foreground">
+                (locked in{' '}
+                <Link to="/app/settings" className="text-link underline">
+                  Settings
+                </Link>
+                )
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setRepoDraft(project.github_repo ?? '')
+                  setEditing(true)
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <PencilIcon size={12} />
+              </button>
+            )}
           </>
         )}
       </div>
 
-      {(editing || !project.github_repo) && (
+      {(editing || !project.github_repo) && !project.github_repo_locked && (
         <form onSubmit={saveRepo} className="flex items-center gap-1.5">
           <Input
             autoFocus

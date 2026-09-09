@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowDownTrayIcon } from '@/components/ui/arrow-down-tray'
 import { PlusIcon } from '@/components/ui/plus'
 import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
@@ -7,6 +8,7 @@ import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asDetails, asEnvVars } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
+import { useProjectLinks } from '@/store/useProjectLinks'
 import { EditableText, IconButton, Input, Select, SecretField } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { parseDotEnv, serializeDotEnv } from '@/lib/dotenv'
@@ -123,6 +125,8 @@ export function DetailsTab({ project, blocks }: { project: Project; blocks: Deta
           label="Project countries"
         />
       )}
+
+      {has('links') && <RelatedProjects projectId={projectId} />}
 
       {has('credentials') && (
         <div className="overflow-hidden rounded-md border border-border">
@@ -343,6 +347,93 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
           )}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+/** Symmetric project↔project links — chips + a picker, mirrors SummaryTab's
+ * ClientsSection. */
+function RelatedProjects({ projectId }: { projectId: string }) {
+  const nav = useNavigate()
+  const { projects, loaded: projectsLoaded, load: loadProjects } = useProjects()
+  const { loaded, load, subscribe, linkedIds, toggle } = useProjectLinks()
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  useEffect(() => {
+    if (!loaded) load()
+    return subscribe()
+  }, [loaded, load, subscribe])
+  useEffect(() => {
+    if (!projectsLoaded) loadProjects()
+  }, [projectsLoaded, loadProjects])
+
+  const ids = new Set(linkedIds(projectId))
+  const linked = projects.filter((p) => ids.has(p.id))
+  const others = projects.filter((p) => p.id !== projectId)
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Related projects
+        </h2>
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
+        >
+          <PlusIcon size={12} /> Link
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {linked.map((p) => (
+          <span key={p.id} className="group/chip inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs">
+            <button type="button" onClick={() => nav(`/app/project/${p.id}`)} className="hover:underline">
+              {p.name}
+            </button>
+            <button
+              type="button"
+              onClick={() => toggle(projectId, p.id)}
+              className="opacity-0 hover:text-destructive group-hover/chip:opacity-100"
+            >
+              <XMarkIcon size={12} />
+            </button>
+          </span>
+        ))}
+        {linked.length === 0 && <p className="text-xs text-muted-foreground">Not linked to any project yet.</p>}
+      </div>
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        {pickerOpen && (
+          <DialogContent aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle>Link a project</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-80 space-y-0.5 overflow-y-auto">
+              {others.map((p) => {
+                const active = ids.has(p.id)
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggle(projectId, p.id)}
+                    className={
+                      'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ' +
+                      (active ? 'bg-primary/10 text-foreground' : 'hover:bg-muted')
+                    }
+                  >
+                    {p.name}
+                    {active && <span className="text-xs text-primary">Linked</span>}
+                  </button>
+                )
+              })}
+              {others.length === 0 && (
+                <p className="px-2 py-6 text-center text-xs text-muted-foreground">No other projects.</p>
+              )}
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   )
 }
