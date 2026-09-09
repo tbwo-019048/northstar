@@ -37,6 +37,7 @@ const FALLBACK_TONE = 'bg-muted text-muted-foreground'
 type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'progress'
 const VIEW_KEY = 'northstar.overview.view'
 const CODENAME_KEY = 'northstar.overview.codenames'
+const PAGINATE_KEY = 'northstar.overview.paginate'
 const TABLE_PAGE_SIZE = 15
 
 export function Overview() {
@@ -62,6 +63,13 @@ export function Overview() {
       return localStorage.getItem(CODENAME_KEY) !== '0'
     } catch {
       return true
+    }
+  })
+  const [paginate, setPaginate] = useState(() => {
+    try {
+      return localStorage.getItem(PAGINATE_KEY) === '1'
+    } catch {
+      return false
     }
   })
   const [filter, setFilter] = useState<ProjectType | 'all'>('all')
@@ -112,6 +120,14 @@ export function Overview() {
       /* ignore */
     }
   }, [codenames])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PAGINATE_KEY, paginate ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [paginate])
 
   const projectLabel = (p: Project) => (codenames && p.codename?.trim() ? p.codename : p.name)
 
@@ -289,6 +305,18 @@ export function Overview() {
           />
           Codenames
         </label>
+        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={paginate}
+            onChange={(event) => {
+              setPaginate(event.target.checked)
+              setTablePage(0)
+            }}
+            className="size-3.5 accent-primary"
+          />
+          Paginate
+        </label>
         <Select
           value={filter}
           onChange={(e) => {
@@ -440,6 +468,7 @@ export function Overview() {
           onOpen={openProject}
           nameFor={projectLabel}
           showDescriptions={showDescriptions}
+          paginate={paginate}
           page={tablePage}
           setPage={setTablePage}
         />
@@ -567,6 +596,7 @@ function TablePage({
   onOpen,
   nameFor,
   showDescriptions,
+  paginate,
   page,
   setPage,
 }: {
@@ -575,9 +605,22 @@ function TablePage({
   onOpen: (id: string) => void
   nameFor: (p: Project) => string
   showDescriptions: boolean
+  paginate: boolean
   page: number
   setPage: (n: number) => void
 }) {
+  if (!paginate) {
+    return (
+      <ProjectTable
+        rows={rows}
+        loaded={loaded}
+        onOpen={onOpen}
+        nameFor={nameFor}
+        showDescriptions={showDescriptions}
+      />
+    )
+  }
+
   const pageCount = Math.max(1, Math.ceil(rows.length / TABLE_PAGE_SIZE))
   const safePage = Math.min(page, pageCount - 1)
   const start = safePage * TABLE_PAGE_SIZE
