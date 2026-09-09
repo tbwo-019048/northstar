@@ -10,8 +10,30 @@ import {
   asDetails,
 } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
+import { useSettings } from '@/store/useSettings'
+import { useGithubActivity, mergeCounts } from '@/store/useGithubActivity'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
+
+const DAY_MS = 86_400_000
+
+/** Weekly commit totals for the last `weeks` weeks, from a day → count map. */
+function weeklyCommits(days: Record<string, number>, weeks: number): { label: string; count: number }[] {
+  const now = new Date()
+  const sundayUTC =
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - now.getUTCDay() * DAY_MS
+  const out: { label: string; count: number }[] = []
+  for (let w = weeks - 1; w >= 0; w--) {
+    const weekStart = sundayUTC - w * 7 * DAY_MS
+    let count = 0
+    for (let d = 0; d < 7; d++) count += days[new Date(weekStart + d * DAY_MS).toISOString().slice(0, 10)] ?? 0
+    out.push({
+      label: new Date(weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      count,
+    })
+  }
+  return out
+}
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -100,11 +122,35 @@ function ComparisonChart({
 export function AnalysisTab({ project }: { project: Project }) {
   const rows = useProjectData((s) => s.rows)
   const { projects, loaded: projectsLoaded, load: loadProjects } = useProjects()
+  const { loaded: settingsLoaded, load: loadSettings } = useSettings()
+  const byRepo = useGithubActivity((s) => s.byRepo)
+  const loadGithub = useGithubActivity((s) => s.load)
   const [cross, setCross] = useState<CrossStats | null>(null)
 
   useEffect(() => {
     if (!projectsLoaded) void loadProjects()
   }, [projectsLoaded, loadProjects])
+
+  useEffect(() => {
+    if (!settingsLoaded) void loadSettings()
+  }, [settingsLoaded, loadSettings])
+
+  useEffect(() => {
+    if (project.github_repo) void loadGithub([project.github_repo])
+  }, [project.github_repo, loadGithub])
+
+  const ghState = project.github_repo ? byRepo[project.github_repo] : undefined
+  const ghDays = mergeCounts(byRepo, project.github_repo ? [project.github_repo] : [])
+  const ghTotal = Object.values(ghDays).reduce((a, b) => a + b, 0)
+  const ghTile: string | number = !project.github_repo
+    ? '—'
+    : ghState === 'error'
+      ? '—'
+      : ghState === undefined
+        ? '…'
+        : ghTotal
+  const commitWeeks = weeklyCommits(ghDays, 26)
+  const commitMax = Math.max(1, ...commitWeeks.map((w) => w.count))
 
   useEffect(() => {
     let alive = true
@@ -168,6 +214,7 @@ export function AnalysisTab({ project }: { project: Project }) {
     ['Plan items done', stats.plansDone],
     ['Active pipelines', stats.pipelinesActive],
     ['Detail entries', stats.detailRows],
+    ['GitHub commits (1y)', ghTile],
   ]
 
   const chartFor = (
@@ -220,6 +267,29 @@ export function AnalysisTab({ project }: { project: Project }) {
           </div>
         </div>
       </div>
+
+      {project.github_repo && Array.isArray(ghState) && (
+        <div className="space-y-1.5">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Commits over time · {project.github_repo}
+          </h2>
+          <div className="flex items-end gap-0.5 rounded-md border border-border p-2.5" style={{ height: 96 }}>
+            {commitWeeks.map((w, i) => (
+              <div
+                key={i}
+                title={`${w.count} commits — week of ${w.label}`}
+                className="min-w-0 flex-1 rounded-sm bg-primary/70 transition-all hover:bg-primary"
+                style={{ height: `${Math.max(2, (w.count / commitMax) * 100)}%` }}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>{commitWeeks[0]?.label}</span>
+            <span>26 weeks</span>
+            <span>{commitWeeks[commitWeeks.length - 1]?.label}</span>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
