@@ -9,10 +9,10 @@ const DAY_MS = 86_400_000
 
 function bucketClass(n: number): string {
   if (n <= 0) return 'bg-muted'
-  if (n < 3) return 'bg-green-200 dark:bg-green-900'
-  if (n < 6) return 'bg-green-400 dark:bg-green-700'
-  if (n < 10) return 'bg-green-500 dark:bg-green-500'
-  return 'bg-green-600 dark:bg-green-400'
+  if (n < 3) return 'bg-sky-200 dark:bg-sky-900'
+  if (n < 6) return 'bg-sky-400 dark:bg-sky-700'
+  if (n < 10) return 'bg-sky-500 dark:bg-sky-500'
+  return 'bg-sky-600 dark:bg-sky-400'
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

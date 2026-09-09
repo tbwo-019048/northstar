@@ -96,6 +96,7 @@ export interface Project {
   test_site_url: string | null
   default_screenshot: string | null
   github_repo: string | null
+  github_repo_locked?: boolean
   verification_token: string | null
   platform_project_id: string | null
   public_token: string | null
@@ -326,6 +327,13 @@ export interface Client {
 export interface ProjectClient {
   project_id: string
   client_id: string
+  created_at: string
+}
+
+/** Symmetric link between two projects; stored one row per unordered pair (a < b). */
+export interface ProjectLink {
+  a: string
+  b: string
   created_at: string
 }
 

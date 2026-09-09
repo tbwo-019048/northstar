@@ -100,6 +100,7 @@ create table if not exists projects (
   test_site_url text,                    -- staging/test site link, shown in Summary
   default_screenshot text,               -- 'live' | 'test' | a project_screenshots.id
   github_repo text,                      -- "owner/repo" this project tracks
+  github_repo_locked boolean not null default false, -- true = editable only from Settings
   verification_token   text,             -- app/website verification token, if any
   platform_project_id  text,             -- id of this project on its platform (e.g. Firebase/Vercel project id)
   public_token         text,
@@ -121,6 +122,7 @@ alter table projects add column if not exists website_url text;
 alter table projects add column if not exists test_site_url text;
 alter table projects add column if not exists default_screenshot text;
 alter table projects add column if not exists github_repo text;
+alter table projects add column if not exists github_repo_locked boolean not null default false;
 alter table projects add column if not exists verification_token text;
 alter table projects add column if not exists platform_project_id text;
 alter table projects add column if not exists public_token text;
@@ -411,6 +413,17 @@ create trigger trg_project_templates_updated before update on project_templates
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- Project links — symmetric "related projects", one row per unordered pair.
+-- ---------------------------------------------------------------------------
+create table if not exists project_links (
+  a          uuid not null references projects(id) on delete cascade,
+  b          uuid not null references projects(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (a, b),
+  check (a < b)
+);
+
+-- ---------------------------------------------------------------------------
 -- Groups & members — app-level roles, separate from Supabase Auth accounts.
 -- A member row maps a login (by email) to a group. The earliest-created
 -- auth user is flagged is_master and is the only one who can edit member_groups,
@@ -467,6 +480,14 @@ language sql stable security definer set search_path = public, auth as $$
   );
 $$;
 
+-- Lets any signed-in user set their OWN display name (members writes are
+-- otherwise Master-only).
+create or replace function set_my_display_name(new_name text)
+returns void language sql security definer set search_path = public, auth as $$
+  update members set display_name = coalesce(nullif(trim(new_name), ''), display_name)
+  where email = (select email from auth.users where id = auth.uid());
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Row Level Security — shared workspace: any authenticated user, full access
 -- to project data. Groups/members/app_settings are readable by everyone
@@ -478,7 +499,7 @@ begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets',
-    'project_templates'
+    'project_templates','project_links'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
@@ -514,7 +535,7 @@ begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets',
-    'project_templates'
+    'project_templates','project_links'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table %I', t);

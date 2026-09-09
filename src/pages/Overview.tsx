@@ -59,6 +59,7 @@ type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'progress'
 const VIEW_KEY = 'northstar.overview.view'
 const CODENAME_KEY = 'northstar.overview.codenames'
 const PAGINATE_KEY = 'northstar.overview.paginate'
+const RETIRED_KEY = 'northstar.overview.showRetired'
 const TABLEPAGE_KEY = 'northstar.overview.tablepage'
 const TABLE_PAGE_SIZE = 15
 
@@ -95,6 +96,13 @@ export function Overview() {
   const [paginate, setPaginate] = useState(() => {
     try {
       return localStorage.getItem(PAGINATE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const [showRetired, setShowRetired] = useState(() => {
+    try {
+      return localStorage.getItem(RETIRED_KEY) === '1'
     } catch {
       return false
     }
@@ -170,17 +178,26 @@ export function Overview() {
     }
   }, [tablePage])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(RETIRED_KEY, showRetired ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [showRetired])
+
   const projectLabel = (p: Project) => (codenames && p.codename?.trim() ? p.codename : p.name)
 
   const rows = useMemo(() => {
     const matched = projects.filter(
       (p) =>
         (filter === 'all' || p.type === filter) &&
+        (showRetired || p.state !== 'retired') &&
         (p.name.toLowerCase().includes(q.toLowerCase()) ||
           (p.codename ?? '').toLowerCase().includes(q.toLowerCase())),
     )
     return visibleRows(matched, diagnostic)
-  }, [projects, q, filter, diagnostic])
+  }, [projects, q, filter, diagnostic, showRetired])
 
   // A project's `type` can hold a value the current build doesn't know about
   // (e.g. the database enum hasn't been migrated yet) — keep it selectable
@@ -346,6 +363,15 @@ export function Overview() {
             className="size-3.5 accent-primary"
           />
           Codenames
+        </label>
+        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={showRetired}
+            onChange={(event) => setShowRetired(event.target.checked)}
+            className="size-3.5 accent-primary"
+          />
+          Retired
         </label>
         <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
           <input
