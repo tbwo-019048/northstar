@@ -52,19 +52,19 @@ export function AppHome() {
   const anyData = repos.some((r) => Array.isArray(byRepo[r]))
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 px-1 py-2">
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {name}.</h1>
+    <div className="flex min-h-[calc(100svh-8rem)] w-full flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Welcome back, {name}.</h1>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-3">
-          <div className="text-center">
-            <div className="text-4xl font-semibold tabular-nums">{clients.length}</div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+      <div className="grid flex-1 gap-8 lg:grid-cols-[3fr_2fr]">
+        <section className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-center gap-2">
+            <span className="text-5xl font-semibold tabular-nums">{clients.length}</span>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
               client{clients.length === 1 ? '' : 's'}
-            </div>
+            </span>
           </div>
-          <div className="text-muted-foreground">
-            <WorldMap highlight={projectCountries} />
+          <div className="flex-1 text-muted-foreground">
+            <WorldMap highlight={projectCountries} className="h-full w-full" />
           </div>
           <div className="flex flex-wrap justify-center gap-1">
             {projectCountries.length ? (
@@ -81,7 +81,7 @@ export function AppHome() {
           </div>
         </section>
 
-        <section className="space-y-2">
+        <section className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
             {anyData ? (
               <>
@@ -98,7 +98,9 @@ export function AppHome() {
               </>
             )}
           </p>
-          <GithubCalendar counts={counts} />
+          <div className="rounded-xl border border-border bg-panel p-3">
+            <GithubCalendar counts={counts} />
+          </div>
         </section>
       </div>
     </div>
