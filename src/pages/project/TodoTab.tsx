@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useDroppable } from '@dnd-kit/core'
 import { GripVertical } from 'lucide-react'
 import { ChevronRightIcon } from '@/components/ui/chevron-right'
+import { ArrowRightIcon } from '@/components/ui/arrow-right'
 import { PaperClipIcon } from '@/components/ui/paper-clip'
 import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
@@ -33,9 +34,38 @@ import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 
 export function TodoTab({ projectId, label }: { projectId: string; label?: string }) {
   const rows = useProjectData((s) => s.rows.todos)
+  const pipelineRows = useProjectData((s) => s.rows.pipelines)
+  const pipelineItemRows = useProjectData((s) => s.rows.pipeline_items)
   const { add, patch, del, reorder } = useProjectData()
   const diagnostic = useDiagnostic((s) => s.on)
   const todos = visibleRows(asTodos(rows), diagnostic)
+
+  const sentToPipeline = new Set(
+    pipelineItemRows.map((i) => i.source_todo_id).filter(Boolean) as string[],
+  )
+  const addToPipeline = async (todo: Todo) => {
+    if (sentToPipeline.has(todo.id)) return
+    let pipeline: { id: string } | null | undefined =
+      pipelineRows.find((p) => p.status === 'active') ?? pipelineRows[0]
+    if (!pipeline) {
+      pipeline = await add('pipelines', {
+        project_id: projectId,
+        name: 'Pipeline 1',
+        status: 'active',
+        sort: 0,
+      })
+    }
+    if (!pipeline) return
+    const pid = pipeline.id
+    const count = pipelineItemRows.filter((i) => i.pipeline_id === pid).length
+    await add('pipeline_items', {
+      pipeline_id: pid,
+      body: todo.title,
+      done: false,
+      source_todo_id: todo.id,
+      sort: count,
+    })
+  }
   const [activeId, setActiveId] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -108,6 +138,8 @@ export function TodoTab({ projectId, label }: { projectId: string; label?: strin
           del={del}
           onAdd={addTodo}
           diagnostic={diagnostic}
+          toPipeline={addToPipeline}
+          sentToPipeline={sentToPipeline}
         />
         <TodoList
           id="completed"
@@ -118,6 +150,8 @@ export function TodoTab({ projectId, label }: { projectId: string; label?: strin
           patch={patch}
           del={del}
           diagnostic={diagnostic}
+          toPipeline={addToPipeline}
+          sentToPipeline={sentToPipeline}
           dim
         />
       </div>
@@ -145,6 +179,8 @@ function TodoList({
   del,
   onAdd,
   diagnostic,
+  toPipeline,
+  sentToPipeline,
   dim,
 }: {
   id: TodoStatus
@@ -156,6 +192,8 @@ function TodoList({
   del: DelFn
   onAdd?: () => void
   diagnostic: boolean
+  toPipeline: (t: Todo) => void
+  sentToPipeline: Set<string>
   dim?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -195,6 +233,7 @@ function TodoList({
                   patch={patch}
                   del={del}
                   diagnostic={diagnostic}
+                  onToPipeline={sentToPipeline.has(t.id) ? undefined : () => toPipeline(t)}
                 />
               ))}
               {items.length === 0 && (
@@ -219,6 +258,7 @@ function TodoRow({
   patch,
   del,
   diagnostic,
+  onToPipeline,
 }: {
   todo: Todo
   open: boolean
@@ -226,6 +266,7 @@ function TodoRow({
   patch: PatchFn
   del: DelFn
   diagnostic: boolean
+  onToPipeline?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: todo.id,
@@ -309,6 +350,13 @@ function TodoRow({
           </span>
         </td>
         <td className="w-8 px-1">
+          {onToPipeline && (
+            <IconButton onClick={onToPipeline} title="Add to Pipeline" className="hover:text-primary">
+              <ArrowRightIcon size={14} />
+            </IconButton>
+          )}
+        </td>
+        <td className="w-8 px-1">
           <IconButton
             onClick={() => del('todos', todo.id)}
             className="hover:text-destructive"
@@ -319,7 +367,7 @@ function TodoRow({
       </tr>
       {open && (
         <tr className="border-b border-border bg-muted/20">
-          <td colSpan={diagnostic ? 8 : 7} className="px-3 py-2">
+          <td colSpan={diagnostic ? 9 : 8} className="px-3 py-2">
             <TodoDetail todo={todo} patch={patch} />
           </td>
         </tr>

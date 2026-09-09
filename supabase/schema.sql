@@ -202,10 +202,12 @@ create table if not exists todos (
   status      todo_status not null default 'todo',
   description text not null default '',
   attachments jsonb not null default '[]'::jsonb, -- [{ name, url }]
+  source_request_id uuid,                         -- the request a "Send to To-Do" button came from
   sort        integer not null default 0,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+alter table todos add column if not exists source_request_id uuid;
 drop trigger if exists trg_todos_updated on todos;
 create trigger trg_todos_updated before update on todos
   for each row execute function set_updated_at();
@@ -226,12 +228,14 @@ create table if not exists features (
   project_id  uuid not null references projects(id) on delete cascade,
   title       text not null default '',
   description text not null default '',
-  source      text not null default 'manual',   -- manual | pipeline | planning
+  source      text not null default 'manual',   -- manual | pipeline | planning | todo
   source_plan_item_id uuid,                      -- FK added after plan_items exists (below)
+  source_todo_id uuid,                            -- the to-do this feature was completed from
   sort        integer not null default 0,
   created_at  timestamptz not null default now()
 );
 alter table features add column if not exists source_plan_item_id uuid;
+alter table features add column if not exists source_todo_id uuid;
 
 -- ---------------------------------------------------------------------------
 -- Details (dynamic key/value grouped rows)
@@ -275,11 +279,13 @@ create table if not exists pipelines (
   name           text not null default 'Pipeline',
   status         pipeline_status not null default 'active',
   estimate_hours numeric not null default 0,  -- added to projects.hours_worked on completion
+  estimate_manual boolean not null default false, -- true once the estimate is typed by hand
   sort           integer not null default 0,
   created_at     timestamptz not null default now(),
   completed_at   timestamptz
 );
 alter table pipelines add column if not exists estimate_hours numeric not null default 0;
+alter table pipelines add column if not exists estimate_manual boolean not null default false;
 
 -- ---------------------------------------------------------------------------
 -- Screenshots — manually uploaded, alongside the auto Live/Test Site
@@ -314,9 +320,13 @@ create table if not exists pipeline_items (
   pipeline_id uuid not null references pipelines(id) on delete cascade,
   body        text not null default '',
   done        boolean not null default false,
+  estimate_hours numeric not null default 0,      -- optional per-point time; sums to the estimate
+  source_todo_id uuid,                             -- the to-do an "Add to Pipeline" button came from
   sort        integer not null default 0,
   created_at  timestamptz not null default now()
 );
+alter table pipeline_items add column if not exists estimate_hours numeric not null default 0;
+alter table pipeline_items add column if not exists source_todo_id uuid;
 
 -- ---------------------------------------------------------------------------
 -- Planning — a per-project timeline / kanban of planned work items, each with

@@ -1,10 +1,11 @@
 import { Fragment, useMemo, useState } from 'react'
 import { CheckIcon } from '@/components/ui/check'
 import { ChevronRightIcon } from '@/components/ui/chevron-right'
+import { ArrowRightIcon } from '@/components/ui/arrow-right'
 import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
 import { ArrowUturnLeftIcon } from '@/components/ui/arrow-uturn-left'
-import { useProjectData, asRequests } from '@/store/useProjectData'
+import { useProjectData, asRequests, asTodos } from '@/store/useProjectData'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
@@ -22,7 +23,9 @@ const FALLBACK_PRIORITY_COLOR: Record<Priority, string> = {
 export function RequestsTab({ project, label }: { project: Project; label?: string }) {
   const projectId = project.id
   const rows = useProjectData((s) => s.rows.requests)
+  const todoRows = useProjectData((s) => s.rows.todos)
   const { add, patch, del } = useProjectData()
+  const todos = asTodos(todoRows)
   const diagnostic = useDiagnostic((s) => s.on)
   const requests = visibleRows(asRequests(rows), diagnostic)
   const [open, setOpen] = useState<string | null>(null)
@@ -47,6 +50,22 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
       status: 'todo',
       sort: openList.length,
     })
+
+  const sendToTodo = async (r: (typeof requests)[number]) => {
+    if (todos.some((t) => t.source_request_id === r.id)) return
+    await add('todos', {
+      project_id: projectId,
+      title: r.title,
+      subtitle: r.subtitle,
+      description: r.notes,
+      type: 'feature',
+      priority: r.priority,
+      status: 'todo',
+      source_request_id: r.id,
+      sort: todos.length,
+    })
+    await patch('requests', r.id, { status: 'completed' })
+  }
 
   const Row = ({ r }: { r: (typeof requests)[number] }) => (
     <Fragment>
@@ -100,6 +119,17 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
           />
         </td>
         <td className="w-8 px-1">
+          {r.status === 'todo' && !todos.some((t) => t.source_request_id === r.id) && (
+            <IconButton
+              onClick={() => sendToTodo(r)}
+              className="hover:text-primary"
+              title="Send to To-Do"
+            >
+              <ArrowRightIcon size={14} />
+            </IconButton>
+          )}
+        </td>
+        <td className="w-8 px-1">
           <IconButton
             onClick={() =>
               patch('requests', r.id, { status: r.status === 'todo' ? 'completed' : 'todo' })
@@ -120,7 +150,7 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
         <tr className="border-b border-border bg-muted/20">
           {diagnostic && <td />}
           <td />
-          <td colSpan={5} className="px-2 py-2">
+          <td colSpan={6} className="px-2 py-2">
             <ReqNotes id={r.id} initial={r.notes} onSave={(v) => patch('requests', r.id, { notes: v })} />
           </td>
         </tr>

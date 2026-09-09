@@ -177,6 +177,7 @@ export interface Todo {
   description: string
   attachments: Attachment[]
   source_plan_item_id?: string | null
+  source_request_id?: string | null
   hidden?: boolean
   sort: number
   created_at: string
@@ -196,8 +197,9 @@ export interface Feature {
   project_id: string
   title: string
   description: string
-  source: 'manual' | 'pipeline' | 'planning'
+  source: 'manual' | 'pipeline' | 'planning' | 'todo'
   source_plan_item_id?: string | null
+  source_todo_id?: string | null
   hidden?: boolean
   sort: number
   created_at: string
@@ -234,6 +236,7 @@ export interface Pipeline {
   name: string
   status: PipelineStatus
   estimate_hours: number
+  estimate_manual?: boolean
   sort: number
   created_at: string
   completed_at: string | null
@@ -297,6 +300,8 @@ export interface PipelineItem {
   pipeline_id: string
   body: string
   done: boolean
+  estimate_hours: number
+  source_todo_id?: string | null
   sort: number
   created_at: string
 }

@@ -51,6 +51,9 @@ export function PipelineTab({ project }: { project: Project }) {
     () => items.filter((i) => i.pipeline_id === selected).sort((a, b) => a.sort - b.sort),
     [items, selected],
   )
+  const autoEstimate = currentItems.reduce((sum, i) => sum + (i.estimate_hours || 0), 0)
+  const estimateHours =
+    current && current.estimate_manual ? current.estimate_hours || 0 : autoEstimate
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -130,7 +133,7 @@ export function PipelineTab({ project }: { project: Project }) {
 
   const completePipeline = async () => {
     if (!current) return
-    const estimate = current.estimate_hours || 0
+    const estimate = estimateHours
     const hoursNote = estimate > 0 ? ` and ${estimate}h added to the project total` : ''
     if (
       !confirm(
@@ -215,16 +218,39 @@ export function PipelineTab({ project }: { project: Project }) {
               Estimate
               <Input
                 type="number"
-                step="0.5"
+                step="0.25"
                 min="0"
                 disabled={current.status !== 'active'}
-                value={current.estimate_hours || 0}
+                value={estimateHours}
                 onChange={(e) =>
-                  patch('pipelines', current.id, { estimate_hours: Number(e.target.value) || 0 })
+                  patch('pipelines', current.id, {
+                    estimate_hours: Number(e.target.value) || 0,
+                    estimate_manual: true,
+                  })
                 }
                 className="h-6 w-16"
+                title={
+                  current.estimate_manual
+                    ? 'Manual estimate — overrides the sum of point times'
+                    : 'Auto: sum of point times'
+                }
               />
               h
+              {current.estimate_manual && current.status === 'active' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    patch('pipelines', current.id, {
+                      estimate_manual: false,
+                      estimate_hours: autoEstimate,
+                    })
+                  }
+                  className="text-muted-foreground hover:text-foreground"
+                  title={`Reset to the sum of point times (${autoEstimate}h)`}
+                >
+                  ↺ auto
+                </button>
+              )}
             </label>
             <button
               type="button"
@@ -246,7 +272,7 @@ export function PipelineTab({ project }: { project: Project }) {
                 <button
                   type="button"
                   onClick={addItem}
-                  className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
+                  className="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   <PlusIcon size={12} /> Point
                 </button>
@@ -358,6 +384,19 @@ function PipelineRow({
           (item.done ? 'text-muted-foreground line-through' : '')
         }
       />
+      <label className="flex shrink-0 items-center gap-0.5 text-[10px] text-muted-foreground">
+        <input
+          type="number"
+          step="0.25"
+          min="0"
+          disabled={!editable}
+          value={item.estimate_hours || 0}
+          onChange={(e) => patch({ estimate_hours: Number(e.target.value) || 0 })}
+          title="Estimated hours for this point"
+          className="h-6 w-12 rounded border border-border bg-background px-1 text-right text-[11px] tabular-nums outline-none focus:border-ring disabled:opacity-60"
+        />
+        h
+      </label>
       {editable && (
         <IconButton onClick={remove} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
           <TrashIcon size={14} />
