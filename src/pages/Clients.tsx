@@ -10,8 +10,10 @@ import { TrashIcon } from '@/components/ui/trash'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { ClientImage } from '@/components/ClientImage'
 import { CountryPicker } from '@/components/CountryPicker'
+import { CountryGlobe, type CountryGlobeEntry } from '@/components/CountryGlobe'
 import { useClients } from '@/store/useClients'
 import { useProjects } from '@/store/useProjects'
+import { useTheme } from '@/store/useTheme'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
@@ -39,7 +41,30 @@ export function Clients() {
   const companiesOf = (clientId: string) => companiesByClient.get(clientId) ?? []
   const { projects, loaded: projectsLoaded, load: loadProjects } = useProjects()
   const diagnostic = useDiagnostic((s) => s.on)
+  const theme = useTheme((s) => s.theme)
   const nav = useNavigate()
+
+  const globeEntries = useMemo<CountryGlobeEntry[]>(
+    () => [
+      ...clients.flatMap((client) =>
+        (client.countries ?? []).map((country) => ({
+          id: client.id,
+          country,
+          kind: 'client' as const,
+          label: client.name || companiesByClient.get(client.id)?.[0]?.name || 'Client',
+        })),
+      ),
+      ...projects.flatMap((project) =>
+        (project.countries ?? []).map((country) => ({
+          id: project.id,
+          country,
+          kind: 'project' as const,
+          label: project.name,
+        })),
+      ),
+    ],
+    [clients, companiesByClient, projects],
+  )
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -160,6 +185,17 @@ export function Clients() {
           <PlusIcon size={14} /> New
         </button>
       </div>
+
+      {globeEntries.length > 0 && (
+        <div className="flex flex-col items-center gap-1 py-1">
+          <div className="aspect-[420/570] w-[min(260px,58vw)]">
+            <CountryGlobe entries={globeEntries} theme={theme} />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Where your clients and their projects are
+          </p>
+        </div>
+      )}
 
       {adding && (
         <form onSubmit={onCreate} className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-muted/30 p-2">

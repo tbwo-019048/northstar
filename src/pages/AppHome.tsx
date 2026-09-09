@@ -1,7 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo } from 'react'
-import { CountryGlobe, type CountryGlobeEntry } from '@/components/CountryGlobe'
-import { useClients } from '@/store/useClients'
-import { useProjects } from '@/store/useProjects'
+import { lazy, Suspense } from 'react'
+import { NorthStarIcon } from '@/components/NorthStarIcon'
 import { useTheme } from '@/store/useTheme'
 
 const PhotonBeam = lazy(() => import('@/components/ui/photon-beam'))
@@ -9,46 +7,6 @@ const PhotonBeam = lazy(() => import('@/components/ui/photon-beam'))
 /** Atmospheric authenticated home, distinct from the public marketing page. */
 export function AppHome() {
   const theme = useTheme((state) => state.theme)
-  const { clients, loaded: clientsLoaded, load: loadClients, subscribe: subscribeClients } = useClients()
-  const clientCompanies = useClients((state) => state.companies)
-  const { projects, loaded: projectsLoaded, load: loadProjects, subscribe: subscribeProjects } = useProjects()
-
-  useEffect(() => {
-    if (!clientsLoaded) void loadClients()
-    const unsubscribe = subscribeClients()
-    return unsubscribe
-  }, [clientsLoaded, loadClients, subscribeClients])
-
-  useEffect(() => {
-    if (!projectsLoaded) void loadProjects()
-    const unsubscribe = subscribeProjects()
-    return unsubscribe
-  }, [projectsLoaded, loadProjects, subscribeProjects])
-
-  const globeEntries = useMemo<CountryGlobeEntry[]>(
-    () => [
-      ...clients.flatMap((client) =>
-        (client.countries ?? []).map((country) => ({
-          id: client.id,
-          country,
-          kind: 'client' as const,
-          label:
-            client.name ||
-            clientCompanies.find((co) => co.client_id === client.id)?.name ||
-            'Client',
-        })),
-      ),
-      ...projects.flatMap((project) =>
-        (project.countries ?? []).map((country) => ({
-          id: project.id,
-          country,
-          kind: 'project' as const,
-          label: project.name,
-        })),
-      ),
-    ],
-    [clients, clientCompanies, projects],
-  )
 
   return (
     <div
@@ -103,9 +61,14 @@ export function AppHome() {
         <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Leading the way.</h1>
       </div>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="aspect-[420/570] w-[min(33.333vw,62vh)]">
-          <CountryGlobe entries={globeEntries} theme={theme} />
-        </div>
+        <NorthStarIcon
+          className={
+            'w-[min(52vw,68vh)] ' +
+            (theme === 'dark'
+              ? 'drop-shadow-[0_0_80px_rgba(56,169,226,0.4)]'
+              : 'drop-shadow-[0_0_60px_rgba(37,99,235,0.25)]')
+          }
+        />
       </div>
     </div>
   )
