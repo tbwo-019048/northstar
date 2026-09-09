@@ -98,6 +98,14 @@ const numToPriority = (n: number): string =>
 
 type Get = () => ProjectDataState
 
+// Timestamp of the last local mutation. The realtime subscription defers its
+// reload while this is recent so a burst of edits (e.g. typing in a kanban
+// card) doesn't trigger a refetch on every keystroke's autosave.
+let lastLocalWrite = 0
+const markLocalWrite = () => {
+  lastLocalWrite = Date.now()
+}
+
 async function mirrorRequestToPlan(get: Get, request: Row) {
   const projectId = get().projectId
   if (!projectId) return
@@ -175,7 +183,12 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
   reset: () => set({ projectId: null, rows: empty(), loading: false }),
 
   load: async (projectId) => {
-    set({ loading: true, projectId, rows: empty() })
+    // Keep the current rows on screen while a refetch of the SAME project is in
+    // flight — otherwise a realtime-triggered reload blanks everything for a
+    // round trip, which unmounts any open modal / drag context ("closing and
+    // reopening as if loading"). Only clear when actually switching projects.
+    const switching = get().projectId !== projectId
+    set({ loading: true, projectId, ...(switching ? { rows: empty() } : {}) })
     const base = await Promise.all(
       PROJECT_TABLES.map((t) =>
         supabase.from(t).select('*').eq('project_id', projectId).order('sort', { ascending: true }),
@@ -225,6 +238,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       return null
     }
     set((s) => ({ rows: { ...s.rows, [table]: [...s.rows[table], data as Row] } }))
+    markLocalWrite()
     notifySaved('Item added.')
     if (table === 'requests') void mirrorRequestToPlan(get, data as Row)
     return data as never
@@ -245,6 +259,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       notifySaveError(error.message)
       return { error: error.message }
     }
+    markLocalWrite()
     notifySaved()
     if (table === 'plan_items' && typeof values.status === 'string') {
       void advancePlanItem(get, id, values.status)
@@ -271,6 +286,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       notifySaveError(error.message)
       return
     }
+    markLocalWrite()
     notifySaved('Item removed.')
   },
 
@@ -290,7 +306,10 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     const results = await Promise.all(ids.map((id, i) => supabase.from(table).update({ sort: i }).eq('id', id)))
     const error = results.find((result) => result.error)?.error
     if (error) notifySaveError(error.message)
-    else notifySaved('Order saved.')
+    else {
+      markLocalWrite()
+      notifySaved('Order saved.')
+    }
   },
 
   subscribe: (projectId) => {
@@ -298,7 +317,11 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     const bump = () => {
       if (get().projectId !== projectId) return
       if (t) clearTimeout(t)
-      t = setTimeout(() => get().load(projectId), 400)
+      // Hold off while local edits are still landing, so autosave keystrokes
+      // don't each trigger a full refetch.
+      const sinceWrite = Date.now() - lastLocalWrite
+      const wait = sinceWrite < 1500 ? 1900 - sinceWrite : 400
+      t = setTimeout(() => get().load(projectId), wait)
     }
     const ch = supabase.channel(`project-${projectId}`)
     const ALL: TableName[] = [
