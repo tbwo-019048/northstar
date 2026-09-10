@@ -24,6 +24,7 @@ import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asPipelines, asPipelineItems } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
+import { useConfirm } from '@/store/useConfirm'
 import type { PipelineItem, Project } from '@/lib/types'
 
 export function PipelineTab({ project }: { project: Project }) {
@@ -32,6 +33,7 @@ export function PipelineTab({ project }: { project: Project }) {
   const pipeRows = useProjectData((s) => s.rows.pipelines)
   const itemRows = useProjectData((s) => s.rows.pipeline_items)
   const { add, patch, del, reorder } = useProjectData()
+  const confirm = useConfirm()
   const pipelines = asPipelines(pipeRows).sort((a, b) => a.sort - b.sort)
   const items = asPipelineItems(itemRows)
 
@@ -136,9 +138,12 @@ export function PipelineTab({ project }: { project: Project }) {
     const estimate = estimateHours
     const hoursNote = estimate > 0 ? ` and ${estimate}h added to the project total` : ''
     if (
-      !confirm(
-        `Complete "${current.name}"? Its ${currentItems.length} points move to Features${hoursNote}.`,
-      )
+      !(await confirm({
+        title: `Complete "${current.name}"?`,
+        message: `Its ${currentItems.length} points move to Features${hoursNote}.`,
+        confirmLabel: 'Complete',
+        tone: 'default',
+      }))
     )
       return
     for (const it of currentItems) {

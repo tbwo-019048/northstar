@@ -40,6 +40,7 @@ import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type Pr
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
 import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
+import { useConfirm } from '@/store/useConfirm'
 import { parseCSV, toCSV, downloadText } from '@/lib/csv'
 import { STATE_CHIP_CLASS, STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
 
@@ -52,6 +53,9 @@ const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   location: 'bg-lime-500/20 text-lime-700 dark:text-lime-300',
   written: 'bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300',
   writing: 'bg-pink-500/15 text-pink-700 dark:text-pink-300',
+  game: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  novel: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  music: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300',
   other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
 }
 const FALLBACK_TONE = 'bg-muted text-muted-foreground'
@@ -82,6 +86,7 @@ export function Overview() {
     projectIdsForClient,
   } = useClients()
   const diagnostic = useDiagnostic((s) => s.on)
+  const confirm = useConfirm()
   const gridCols = useGridCols((s) => s.cols)
   const gridStyle = { gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }
   const nav = useNavigate()
@@ -263,8 +268,13 @@ export function Overview() {
   }
 
   const openProject = (id: string) => nav(`/app/project/${id}`)
-  const deleteProject = (project: Project) => {
-    if (confirm(`Delete "${projectLabel(project)}" and all of its project data?`)) {
+  const deleteProject = async (project: Project) => {
+    if (
+      await confirm({
+        title: `Delete "${projectLabel(project)}"?`,
+        message: 'All of its project data will be removed permanently.',
+      })
+    ) {
       void remove(project.id)
     }
   }

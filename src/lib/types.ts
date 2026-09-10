@@ -7,6 +7,9 @@ export type ProjectType =
   | 'location'
   | 'written'
   | 'writing'
+  | 'game'
+  | 'novel'
+  | 'music'
   | 'other'
 export type ProjectState =
   | 'concept'
@@ -46,6 +49,9 @@ export const PROJECT_TYPES: ProjectType[] = [
   'location',
   'written',
   'writing',
+  'game',
+  'novel',
+  'music',
   'other',
 ]
 export const PROJECT_STATES: ProjectState[] = [
@@ -303,6 +309,29 @@ export interface PipelineItem {
   done: boolean
   estimate_hours: number
   source_todo_id?: string | null
+  sort: number
+  created_at: string
+}
+
+/** A website/app project's own sign-in — one row per project. */
+export interface ProjectCredentials {
+  id: string
+  project_id: string
+  username: string
+  password: string
+  verification_token: string
+  sort: number
+  created_at: string
+  updated_at: string
+}
+
+/** A Supabase account tied to a website/app project — many per project. */
+export interface ProjectSupabaseAccount {
+  id: string
+  project_id: string
+  email: string
+  password: string
+  project_name: string
   sort: number
   created_at: string
 }

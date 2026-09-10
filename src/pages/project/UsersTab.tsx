@@ -16,6 +16,7 @@ import { useAuth } from '@/store/useAuth'
 import type { Person, PersonColumn, Project } from '@/lib/types'
 import { Chip, EditableText, IconButton, Input, SecretField, Textarea } from '@/components/ui-lite'
 import { PersonAvatar } from '@/components/PersonAvatar'
+import { useConfirm } from '@/store/useConfirm'
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export function UsersTab({
   const columnRows = useProjectData((s) => s.rows.person_columns)
   const commentRows = useProjectData((s) => s.rows.person_comments)
   const { add, del, patch } = useProjectData()
+  const confirm = useConfirm()
   const people = asPeople(rows).slice().sort((a, b) => a.sort - b.sort)
   const columns = asPersonColumns(columnRows).slice().sort((a, b) => a.sort - b.sort)
   const comments = asPersonComments(commentRows)
@@ -77,8 +79,15 @@ export function UsersTab({
     add('person_columns', { project_id: projectId, label, sort: columns.length })
   }
 
-  const removeColumn = (id: string) => {
-    if (!confirm('Remove this field? Its values will be lost.')) return
+  const removeColumn = async (id: string) => {
+    if (
+      !(await confirm({
+        title: 'Remove this field?',
+        message: 'Its values will be lost.',
+        confirmLabel: 'Remove',
+      }))
+    )
+      return
     del('person_columns', id)
   }
 
@@ -179,8 +188,8 @@ export function UsersTab({
                   />
                 </div>
                 <IconButton
-                  onClick={() => {
-                    if (confirm(`Remove ${open.name || 'this user'}?`)) {
+                  onClick={async () => {
+                    if (await confirm({ title: `Remove ${open.name || 'this user'}?` })) {
                       del('project_people', open.id)
                       setOpenId(null)
                     }
@@ -271,6 +280,7 @@ function SimpleUsers({
   patch: DataFns['patch']
   del: DataFns['del']
 }) {
+  const confirm = useConfirm()
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -326,8 +336,9 @@ function SimpleUsers({
                 </td>
                 <td className="w-8 px-1 py-0.5">
                   <IconButton
-                    onClick={() => {
-                      if (confirm(`Remove ${p.name || 'this person'}?`)) del('project_people', p.id)
+                    onClick={async () => {
+                      if (await confirm({ title: `Remove ${p.name || 'this person'}?` }))
+                        del('project_people', p.id)
                     }}
                     className="opacity-0 group-hover:opacity-100 hover:text-destructive"
                   >

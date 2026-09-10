@@ -6,6 +6,7 @@ import { TrashIcon } from '@/components/ui/trash'
 import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
 import { useProjects } from '@/store/useProjects'
 import { useTemplates } from '@/store/useTemplates'
+import { useConfirm } from '@/store/useConfirm'
 import {
   useProjectData,
   asPeople,
@@ -197,6 +198,7 @@ function templateCounts(t: ProjectTemplate): string {
 
 function TemplatesSection({ project }: { project: Project }) {
   const { templates, loaded, load, subscribe, create, update, remove } = useTemplates()
+  const confirm = useConfirm()
   const detailRows = useProjectData((s) => s.rows.details)
   const featureRows = useProjectData((s) => s.rows.features)
   const todoRows = useProjectData((s) => s.rows.todos)
@@ -315,8 +317,9 @@ function TemplatesSection({ project }: { project: Project }) {
             </div>
             <button
               type="button"
-              onClick={() => {
-                if (confirm(`Delete template "${t.name || 'Untitled'}"?`)) remove(t.id)
+              onClick={async () => {
+                if (await confirm({ title: `Delete template "${t.name || 'Untitled'}"?` }))
+                  remove(t.id)
               }}
               className="grid size-6 place-items-center rounded text-muted-foreground hover:text-destructive"
             >

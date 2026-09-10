@@ -14,8 +14,10 @@ import { useGridCols } from '@/store/useGridCols'
 import { SITE_TYPES } from '@/lib/types'
 import { IconButton, Input, PasswordInput } from '@/components/ui-lite'
 import { MembersSettings } from '@/components/MembersSettings'
+import { useConfirm } from '@/store/useConfirm'
 
 export function Settings() {
+  const confirm = useConfirm()
   const isMaster = useAuth((s) => s.isMaster)
   const member = useAuth((s) => s.member)
   const setDisplayName = useAuth((s) => s.setDisplayName)
@@ -55,7 +57,13 @@ export function Settings() {
   }
 
   const onClear = async () => {
-    if (!confirm('Remove the stored GitHub token? Git history tabs will stop loading until a new one is added.'))
+    if (
+      !(await confirm({
+        title: 'Remove the stored GitHub token?',
+        message: 'Git history tabs will stop loading until a new one is added.',
+        confirmLabel: 'Remove token',
+      }))
+    )
       return
     await clearGithubToken()
     setStatus('Token removed.')

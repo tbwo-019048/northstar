@@ -9,6 +9,7 @@ import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjectData, asDetails, asEnvVars } from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { useProjectLinks } from '@/store/useProjectLinks'
+import { useConfirm } from '@/store/useConfirm'
 import { EditableText, IconButton, Input, Select, SecretField } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { parseDotEnv, serializeDotEnv } from '@/lib/dotenv'
@@ -59,48 +60,55 @@ export function DetailsTab({ project, blocks }: { project: Project; blocks: Deta
 
   return (
     <div className="space-y-3">
-      {has('codename') && (
-        <label className="block">
-          <span className="text-[11px] font-medium uppercase text-muted-foreground">Codename</span>
-          <Input
-            value={project.codename ?? ''}
-            onChange={(e) => update(projectId, { codename: e.target.value })}
-            placeholder="Optional — shown instead of the name when Codenames is on"
-            className="mt-1 w-full sm:w-56"
-          />
-        </label>
-      )}
+      {(has('codename') || has('state') || has('hours')) && (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {has('codename') && (
+            <label className="block">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Codename</span>
+              <Input
+                value={project.codename ?? ''}
+                onChange={(e) => update(projectId, { codename: e.target.value })}
+                placeholder="Optional — shown instead of the name when Codenames is on"
+                className="mt-1 w-full"
+              />
+            </label>
+          )}
 
-      {has('state') && (
-        <label className="block">
-          <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
-          <Select
-            value={project.state}
-            onChange={(e) => update(projectId, { state: e.target.value as ProjectState })}
-            className="mt-1 w-full sm:w-56"
-          >
-            {[...PROJECT_STATES, ...(PROJECT_STATES.includes(project.state) ? [] : [project.state])].map(
-              (s) => (
-                <option key={s} value={s}>
-                  {formatState(s)}
-                </option>
-              ),
-            )}
-          </Select>
-        </label>
-      )}
+          {has('state') && (
+            <label className="block">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
+              <Select
+                value={project.state}
+                onChange={(e) => update(projectId, { state: e.target.value as ProjectState })}
+                className="mt-1 w-full"
+              >
+                {[
+                  ...PROJECT_STATES,
+                  ...(PROJECT_STATES.includes(project.state) ? [] : [project.state]),
+                ].map((s) => (
+                  <option key={s} value={s}>
+                    {formatState(s)}
+                  </option>
+                ))}
+              </Select>
+            </label>
+          )}
 
-      {has('hours') && (
-        <label className="block">
-          <span className="text-[11px] font-medium uppercase text-muted-foreground">Hours worked</span>
-          <Input
-            type="number"
-            step="0.5"
-            value={project.hours_worked ?? 0}
-            onChange={(e) => update(projectId, { hours_worked: Number(e.target.value) || 0 })}
-            className="mt-1 w-full"
-          />
-        </label>
+          {has('hours') && (
+            <label className="block">
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">
+                Hours worked
+              </span>
+              <Input
+                type="number"
+                step="0.5"
+                value={project.hours_worked ?? 0}
+                onChange={(e) => update(projectId, { hours_worked: Number(e.target.value) || 0 })}
+                className="mt-1 w-full"
+              />
+            </label>
+          )}
+        </div>
       )}
 
       {has('summary') && (
@@ -245,6 +253,7 @@ export function DetailsTab({ project, blocks }: { project: Project; blocks: Deta
 function EnvVarsSection({ projectId }: { projectId: string }) {
   const rows = useProjectData((s) => s.rows.env_vars)
   const { add, patch, del } = useProjectData()
+  const confirm = useConfirm()
   const vars = asEnvVars(rows).slice().sort((a, b) => a.sort - b.sort)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -257,7 +266,12 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
     }
     if (
       vars.length > 0 &&
-      !confirm(`Replace the ${vars.length} existing variable(s) with the ${parsed.length} from this file?`)
+      !(await confirm({
+        title: 'Replace existing variables?',
+        message: `The ${vars.length} existing variable(s) will be replaced with the ${parsed.length} from this file.`,
+        confirmLabel: 'Replace',
+        tone: 'default',
+      }))
     ) {
       return
     }

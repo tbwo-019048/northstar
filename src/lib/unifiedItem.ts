@@ -1,6 +1,7 @@
 import {
   planBand,
   PLAN_STATUS_LABEL,
+  type PipelineItem,
   type PlanItem,
   type PlanStatus,
   type Priority,
@@ -17,7 +18,7 @@ import {
  * comparators. Nothing here touches React or Supabase.
  */
 
-export type ItemSource = 'todo' | 'plan'
+export type ItemSource = 'todo' | 'plan' | 'pipeline'
 export type Completion = 'active' | 'done' | 'all'
 export type PriorityBand = 'urgent' | 'high' | 'medium' | 'low'
 
@@ -28,6 +29,7 @@ export interface UnifiedItem {
   projectId: string
   title: string
   subtitle: string | null // todo only
+  pipelineId: string | null // pipeline only
   description: string
   status: TodoStatus | PlanStatus
   statusLabel: string
@@ -83,6 +85,7 @@ export function toUnifiedFromTodo(t: Todo): UnifiedItem {
     projectId: t.project_id,
     title: t.title,
     subtitle: t.subtitle || null,
+    pipelineId: null,
     description: t.description,
     status: t.status,
     statusLabel: TODO_STATUS_LABEL[t.status],
@@ -110,6 +113,7 @@ export function toUnifiedFromPlan(p: PlanItem): UnifiedItem {
     projectId: p.project_id,
     title: p.title,
     subtitle: null,
+    pipelineId: null,
     description: p.description,
     status: p.status,
     statusLabel: PLAN_STATUS_LABEL[p.status],
@@ -126,6 +130,34 @@ export function toUnifiedFromPlan(p: PlanItem): UnifiedItem {
     createdAt: p.created_at,
     updatedAt: p.updated_at,
     hidden: p.hidden ?? false,
+  }
+}
+
+export function toUnifiedFromPipeline(p: PipelineItem, projectId: string): UnifiedItem {
+  return {
+    source: 'pipeline',
+    id: p.id,
+    key: `pipeline:${p.id}`,
+    projectId,
+    title: p.body || 'Untitled point',
+    subtitle: null,
+    pipelineId: p.pipeline_id,
+    description: '',
+    status: p.done ? 'completed' : 'todo',
+    statusLabel: p.done ? 'Done' : 'Open',
+    done: p.done,
+    ready: !p.done,
+    priorityRank: 0,
+    priorityBand: 'low',
+    priorityLabel: '—',
+    todoPriority: null,
+    planPriority: null,
+    type: null,
+    startDate: null,
+    dueDate: null,
+    createdAt: p.created_at,
+    updatedAt: p.created_at,
+    hidden: false,
   }
 }
 

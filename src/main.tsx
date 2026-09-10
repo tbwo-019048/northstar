@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { TooltipProvider } from '@/components/ui/velobits/tooltip'
 import { ConfigGate } from '@/components/ConfigGate'
 import { ChangeNotificationHost } from '@/components/ChangeNotification'
+import { ConfirmDialogHost } from '@/components/ConfirmDialog'
 import './index.css'
 import App from './App.tsx'
 
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')!).render(
           <App />
         </ConfigGate>
         <ChangeNotificationHost />
+        <ConfirmDialogHost />
       </TooltipProvider>
     </BrowserRouter>
   </StrictMode>,

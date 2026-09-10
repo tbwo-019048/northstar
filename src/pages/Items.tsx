@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useItems } from '@/store/useItems'
 import { useProjects } from '@/store/useProjects'
 import { useDiagnostic } from '@/store/useDiagnostic'
+import { useConfirm } from '@/store/useConfirm'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { visibleRows } from '@/lib/hidden'
 import {
@@ -27,6 +28,7 @@ import {
   SORTS,
   TODO_STATUS_CHIP,
   TODO_STATUS_LABEL,
+  toUnifiedFromPipeline,
   toUnifiedFromPlan,
   toUnifiedFromTodo,
   type Completion,
@@ -46,6 +48,12 @@ const COMPLETIONS: { value: Completion; label: string }[] = [
 const DEFAULTS: Record<string, string> = { completion: 'active', sort: 'updated' }
 /** Column count used for the expanded-row `colSpan` (spans every rendered cell). */
 const COLS = 10
+
+const SOURCE_LABEL: Record<ItemSource, string> = {
+  todo: 'To-Do',
+  plan: 'Plan',
+  pipeline: 'Pipeline',
+}
 
 function relTime(iso: string): string {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
@@ -73,6 +81,8 @@ export function Items() {
   const {
     todos,
     planItems,
+    pipelineItems,
+    pipelineProjectById,
     comments,
     loaded,
     load,
@@ -168,9 +178,12 @@ export function Items() {
     const list: UnifiedItem[] = [
       ...todos.map(toUnifiedFromTodo),
       ...planItems.map(toUnifiedFromPlan),
+      ...pipelineItems.map((p) =>
+        toUnifiedFromPipeline(p, pipelineProjectById[p.pipeline_id] ?? ''),
+      ),
     ]
     return visibleRows(list, diagnostic).filter((it) => projectsById.has(it.projectId))
-  }, [todos, planItems, diagnostic, projectsById])
+  }, [todos, planItems, pipelineItems, pipelineProjectById, diagnostic, projectsById])
 
   const filtered = useMemo(() => {
     const q = f.q.trim().toLowerCase()
@@ -267,6 +280,7 @@ export function Items() {
           <option value="">All sources</option>
           <option value="todo">To-Do</option>
           <option value="plan">Planning</option>
+          <option value="pipeline">Pipeline</option>
         </Select>
 
         <Select
@@ -584,6 +598,9 @@ function PriorityCell({ item }: { item: UnifiedItem }) {
   if (item.source === 'todo' && item.todoPriority) {
     return <Chip tone="priority">{item.todoPriority}</Chip>
   }
+  if (item.source === 'pipeline' || item.planPriority == null) {
+    return <span className="text-muted-foreground">—</span>
+  }
   return (
     <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
       {item.planPriority}/10
@@ -626,6 +643,7 @@ function ItemRow({
   delComment: ReturnType<typeof useItems.getState>['delComment']
   onDeleted: () => void
 }) {
+  const confirm = useConfirm()
   return (
     <Fragment>
       <tr
@@ -656,7 +674,7 @@ function ItemRow({
             className="block max-w-full text-left"
           >
             <span className="line-clamp-2 font-medium">{item.title || 'Untitled'}</span>
-            {item.subtitle && (
+            {open && item.subtitle && (
               <span className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                 {item.subtitle}
               </span>
@@ -669,7 +687,7 @@ function ItemRow({
                 {project.name}
               </Link>
             )}
-            <span className="md:hidden">· {item.source === 'todo' ? 'To-Do' : 'Plan'}</span>
+            <span className="md:hidden">· {SOURCE_LABEL[item.source]}</span>
             <span className="md:hidden">· {relTime(item.updatedAt)}</span>
           </div>
         </td>
@@ -686,7 +704,7 @@ function ItemRow({
           )}
         </td>
         <td className="hidden px-2.5 py-1 md:table-cell">
-          <Chip tone="neutral">{item.source === 'todo' ? 'To-Do' : 'Plan'}</Chip>
+          <Chip tone="neutral">{SOURCE_LABEL[item.source]}</Chip>
         </td>
         <td className="px-2.5 py-1">
           <StateCell item={item} />
@@ -702,8 +720,13 @@ function ItemRow({
         </td>
         <td className="w-8 px-1">
           <IconButton
-            onClick={() => {
-              if (confirm(`Delete "${item.title || 'this item'}"? This removes the record permanently.`)) {
+            onClick={async () => {
+              if (
+                await confirm({
+                  title: `Delete "${item.title || 'this item'}"?`,
+                  message: 'This removes the record permanently.',
+                })
+              ) {
                 void del(item.source, item.id)
                 onDeleted()
               }
@@ -760,6 +783,7 @@ function ItemEditor({
   delComment: ReturnType<typeof useItems.getState>['delComment']
   onDeleted: () => void
 }) {
+  const confirm = useConfirm()
   const [desc, setDesc, descStatus] = useDebouncedSave(item.description, async (v) => {
     await patch(item.source, item.id, { description: v })
   })
@@ -770,6 +794,71 @@ function ItemEditor({
   }, [item.source, item.id, loadComments])
 
   const set = (values: Record<string, unknown>) => void patch(item.source, item.id, values)
+
+  if (item.source === 'pipeline') {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <span>Created {new Date(item.createdAt).toLocaleDateString()}</span>
+          {project && (
+            <Link
+              to={`/app/project/${project.id}/pipeline`}
+              className="inline-flex items-center gap-1 text-link underline"
+            >
+              Open in {project.name} → Pipeline <ArrowTopRightOnSquareIcon size={11} />
+            </Link>
+          )}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-[11px] font-medium uppercase text-muted-foreground">Point</span>
+            <EditableText
+              value={item.title}
+              placeholder="Pipeline point"
+              onSave={(v) => set({ body: v })}
+              className="mt-0.5 font-medium"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
+            <Select
+              value={item.done ? 'done' : 'open'}
+              onChange={(e) => set({ done: e.target.value === 'done' })}
+              className="mt-0.5 w-full"
+            >
+              <option value="open">Open</option>
+              <option value="done">Done</option>
+            </Select>
+          </label>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground">
+          Pipeline points are ticked off on the project's Pipeline tab. No comments here.
+        </p>
+
+        <div className="flex justify-end border-t border-border pt-2">
+          <button
+            type="button"
+            onClick={async () => {
+              if (
+                await confirm({
+                  title: `Delete "${item.title || 'this point'}"?`,
+                  message: 'This removes the pipeline point permanently.',
+                })
+              ) {
+                void del(item.source, item.id)
+                onDeleted()
+              }
+            }}
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs text-muted-foreground hover:border-destructive hover:text-destructive"
+          >
+            <TrashIcon size={13} /> Delete
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">
@@ -988,8 +1077,13 @@ function ItemEditor({
         )}
         <button
           type="button"
-          onClick={() => {
-            if (confirm(`Delete "${item.title || 'this item'}"? This removes the record permanently.`)) {
+          onClick={async () => {
+            if (
+              await confirm({
+                title: `Delete "${item.title || 'this item'}"?`,
+                message: 'This removes the record permanently.',
+              })
+            ) {
               void del(item.source, item.id)
               onDeleted()
             }

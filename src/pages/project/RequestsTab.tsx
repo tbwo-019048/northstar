@@ -103,12 +103,14 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
         </td>
         <td className="px-1 py-0.5">
           <EditableText value={r.title} onSave={(v) => patch('requests', r.id, { title: v })} className="font-medium" />
-          <EditableText
-            value={r.subtitle}
-            placeholder="add subtitle…"
-            onSave={(v) => patch('requests', r.id, { subtitle: v })}
-            className="text-xs text-muted-foreground"
-          />
+          {open === r.id && (
+            <EditableText
+              value={r.subtitle}
+              placeholder="add subtitle…"
+              onSave={(v) => patch('requests', r.id, { subtitle: v })}
+              className="text-xs text-muted-foreground"
+            />
+          )}
         </td>
         <td className="w-36 px-1 py-0.5">
           <EditableText

@@ -38,6 +38,7 @@ import {
 } from '@/lib/types'
 import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
+import { useConfirm } from '@/store/useConfirm'
 import {
   Dialog,
   DialogContent,
@@ -546,6 +547,7 @@ function PlanItemModal({
   onClose: () => void
 }) {
   const { add: addRow, del: delRow } = useProjectData()
+  const confirm = useConfirm()
   const commentRows = useProjectData((s) => s.rows.plan_comments)
   const comments = asPlanComments(commentRows)
     .filter((c) => c.plan_item_id === item.id)
@@ -744,8 +746,8 @@ function PlanItemModal({
       <div className="flex justify-end border-t border-border pt-3">
         <button
           type="button"
-          onClick={() => {
-            if (confirm('Delete this plan item?')) {
+          onClick={async () => {
+            if (await confirm({ title: 'Delete this plan item?' })) {
               del('plan_items', item.id)
               onClose()
             }

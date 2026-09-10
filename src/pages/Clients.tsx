@@ -27,6 +27,8 @@ import { XMarkIcon } from '@/components/ui/x-mark'
 import { ClientImage } from '@/components/ClientImage'
 import { CountryPicker } from '@/components/CountryPicker'
 import { CountryGlobe, type CountryGlobeEntry } from '@/components/CountryGlobe'
+import { WorldMap } from '@/components/WorldMap'
+import { SegmentedControl } from '@/components/ui/velobits/segmented-control'
 import { useClients } from '@/store/useClients'
 import { useProjects } from '@/store/useProjects'
 import { useTheme } from '@/store/useTheme'
@@ -38,6 +40,7 @@ import { useGridCols } from '@/store/useGridCols'
 import type { Client } from '@/lib/types'
 import { EditableText, IconButton, Input, Textarea } from '@/components/ui-lite'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/velobits/dialog'
+import { useConfirm } from '@/store/useConfirm'
 
 type ClientView = 'table' | 'byCompany' | 'grid'
 const VIEW_KEY = 'northstar.clients.view'
@@ -49,6 +52,7 @@ export function Clients() {
     addCompany, updateCompany, removeCompany,
   } = useClients()
   const [unlocked, setUnlocked] = useReorderLock('clients')
+  const confirm = useConfirm()
   const gridCols = useGridCols((s) => s.cols)
   const [globePaused, setGlobePaused] = useState(() => {
     try {
@@ -61,6 +65,22 @@ export function Clients() {
     setGlobePaused(v)
     try {
       localStorage.setItem('northstar.clients.globePaused', v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }
+  const [mapMode, setMapMode] = useState<'globe' | 'flat'>(() => {
+    try {
+      return localStorage.getItem('northstar.clients.mapMode') === 'flat' ? 'flat' : 'globe'
+    } catch {
+      return 'globe'
+    }
+  })
+  const chooseMapMode = (v: string) => {
+    const mode = v === 'flat' ? 'flat' : 'globe'
+    setMapMode(mode)
+    try {
+      localStorage.setItem('northstar.clients.mapMode', mode)
     } catch {
       /* ignore */
     }
@@ -100,6 +120,10 @@ export function Clients() {
       ),
     ],
     [clients, companiesByClient, projects],
+  )
+  const highlightCountries = useMemo(
+    () => [...new Set(globeEntries.map((e) => e.country))],
+    [globeEntries],
   )
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -234,18 +258,35 @@ export function Clients() {
 
       {globeEntries.length > 0 && (
         <div className="flex flex-col items-center gap-1 py-1">
-          <div className="aspect-[420/570] w-[min(380px,74vw)]">
-            <CountryGlobe entries={globeEntries} theme={theme} paused={globePaused} />
-          </div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          {mapMode === 'globe' ? (
+            <div className="aspect-[420/570] w-[min(380px,74vw)]">
+              <CountryGlobe entries={globeEntries} theme={theme} paused={globePaused} />
+            </div>
+          ) : (
+            <div className="w-full max-w-3xl text-muted-foreground">
+              <WorldMap highlight={highlightCountries} className="w-full" />
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
             <span>Where your clients and their projects are</span>
-            <button
-              type="button"
-              onClick={() => toggleGlobe(!globePaused)}
-              className="rounded border border-border px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
-            >
-              {globePaused ? 'Play' : 'Pause'}
-            </button>
+            <SegmentedControl
+              aria-label="Map style"
+              value={mapMode}
+              onValueChange={chooseMapMode}
+              options={[
+                { value: 'globe', label: 'Globe' },
+                { value: 'flat', label: 'Flat' },
+              ]}
+            />
+            {mapMode === 'globe' && (
+              <button
+                type="button"
+                onClick={() => toggleGlobe(!globePaused)}
+                className="rounded border border-border px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
+              >
+                {globePaused ? 'Play' : 'Pause'}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -290,8 +331,9 @@ export function Clients() {
                   <span className="hidden w-44 shrink-0 truncate text-xs text-muted-foreground md:block">{client.email}</span>
                   <span className="hidden w-28 shrink-0 truncate text-xs text-muted-foreground lg:block">{client.phone}</span>
                   <IconButton
-                    onClick={() => {
-                      if (confirm(`Delete ${client.name || 'this client'}?`)) remove(client.id)
+                    onClick={async () => {
+                      if (await confirm({ title: `Delete ${client.name || 'this client'}?` }))
+                        remove(client.id)
                     }}
                     className="hover:text-destructive"
                   >
@@ -346,8 +388,9 @@ export function Clients() {
                               className="max-w-[180px]"
                             />
                             <IconButton
-                              onClick={() => {
-                                if (confirm(`Remove ${co.name || 'this company'}?`)) removeCompany(co.id)
+                              onClick={async () => {
+                                if (await confirm({ title: `Remove ${co.name || 'this company'}?` }))
+                                  removeCompany(co.id)
                               }}
                               className="ml-auto hover:text-destructive"
                             >

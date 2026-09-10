@@ -8,7 +8,7 @@
 -- ---------------------------------------------------------------------------
 do $$ begin
   create type project_type as enum
-    ('website', 'app', 'production', 'physical', 'mechanical', 'location', 'written', 'writing', 'other');
+    ('website', 'app', 'production', 'physical', 'mechanical', 'location', 'written', 'writing', 'game', 'novel', 'music', 'other');
 exception when duplicate_object then null; end $$;
 
 -- Migration for a database created before 'website'/'app'/'production' existed:
@@ -55,6 +55,27 @@ begin
     where t.typname = 'project_type' and e.enumlabel = 'writing'
   ) then
     alter type project_type add value 'writing';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'game'
+  ) then
+    alter type project_type add value 'game';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'novel'
+  ) then
+    alter type project_type add value 'novel';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'music'
+  ) then
+    alter type project_type add value 'music';
   end if;
 end $$;
 
@@ -731,6 +752,50 @@ begin
   foreach t in array array[
     'clients','client_companies','project_clients','email_groups','email_accounts'
   ] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists "auth full access" on %I', t);
+    execute format(
+      'create policy "auth full access" on %I for all to authenticated using (true) with check (true)', t);
+    begin
+      execute format('alter publication supabase_realtime add table %I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Project credentials — a website/app project's own sign-in (one row per
+-- project) plus any Supabase accounts tied to it (many per project). Surfaced
+-- on the Summary tab for website/app projects.
+-- ---------------------------------------------------------------------------
+create table if not exists project_credentials (
+  id                 uuid primary key default gen_random_uuid(),
+  project_id         uuid not null unique references projects(id) on delete cascade,
+  username           text not null default '',
+  password           text not null default '',
+  verification_token text not null default '',
+  sort               integer not null default 0,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+drop trigger if exists trg_project_credentials_updated on project_credentials;
+create trigger trg_project_credentials_updated before update on project_credentials
+  for each row execute function set_updated_at();
+
+create table if not exists project_supabase (
+  id           uuid primary key default gen_random_uuid(),
+  project_id   uuid not null references projects(id) on delete cascade,
+  email        text not null default '',
+  password     text not null default '',
+  project_name text not null default '',
+  sort         integer not null default 0,
+  created_at   timestamptz not null default now()
+);
+
+do $$
+declare t text;
+begin
+  foreach t in array array['project_credentials', 'project_supabase'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
     execute format(

@@ -332,12 +332,14 @@ function TodoRow({
             onSave={(v) => patch('todos', todo.id, { title: v })}
             className="font-medium"
           />
-          <EditableText
-            value={todo.subtitle}
-            placeholder="add subtitle…"
-            onSave={(v) => patch('todos', todo.id, { subtitle: v })}
-            className="text-xs text-muted-foreground"
-          />
+          {open && (
+            <EditableText
+              value={todo.subtitle}
+              placeholder="add subtitle…"
+              onSave={(v) => patch('todos', todo.id, { subtitle: v })}
+              className="text-xs text-muted-foreground"
+            />
+          )}
         </td>
         <td className="w-16 px-1 py-0.5 text-right">
           <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">

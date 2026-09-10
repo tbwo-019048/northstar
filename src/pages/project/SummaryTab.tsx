@@ -8,11 +8,23 @@ import { PhotoIcon } from '@/components/ui/photo'
 import { LinkIcon } from '@/components/ui/link'
 import { PencilIcon } from '@/components/ui/pencil'
 import { PlusIcon } from '@/components/ui/plus'
+import { TrashIcon } from '@/components/ui/trash'
 import { XMarkIcon } from '@/components/ui/x-mark'
-import { useProjectData, asTodos, asFeatures, asRequests, asPeople, asPipelines } from '@/store/useProjectData'
+import {
+  useProjectData,
+  asTodos,
+  asFeatures,
+  asRequests,
+  asPeople,
+  asPipelines,
+  asCredentials,
+  asSupabaseAccounts,
+} from '@/store/useProjectData'
 import { useProjects } from '@/store/useProjects'
 import { useClients } from '@/store/useClients'
-import { Chip, Input } from '@/components/ui-lite'
+import { useConfirm } from '@/store/useConfirm'
+import { Chip, IconButton, Input, SecretField } from '@/components/ui-lite'
+import { PipelineTab } from '@/pages/project/PipelineTab'
 import { resolveFaviconUrl } from '@/lib/favicon'
 import { ScreenshotGallery } from '@/components/ScreenshotGallery'
 import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
@@ -114,6 +126,22 @@ export function SummaryTab({ project, blocks }: { project: Project; blocks: Summ
       )}
 
       {has('clients') && <ClientsSection projectId={project.id} />}
+
+      {hasSites && (
+        <>
+          <LoginSection projectId={project.id} />
+          <SupabaseSection projectId={project.id} />
+        </>
+      )}
+
+      {!hasSites && (
+        <div className="space-y-1.5">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Pipeline
+          </h2>
+          <PipelineTab project={project} />
+        </div>
+      )}
 
       {has('stats') && (
         <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3 lg:grid-cols-5">
@@ -396,6 +424,128 @@ function ClientsSection({ projectId }: { projectId: string }) {
           </DialogContent>
         )}
       </Dialog>
+    </div>
+  )
+}
+
+/** A website/app project's own sign-in — one row per project. */
+function LoginSection({ projectId }: { projectId: string }) {
+  const rows = useProjectData((s) => s.rows.project_credentials)
+  const { add, patch } = useProjectData()
+  const cred = asCredentials(rows)[0]
+
+  return (
+    <div className="space-y-1.5">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Login</h2>
+      {!cred ? (
+        <button
+          type="button"
+          onClick={() => add('project_credentials', { project_id: projectId, sort: 0 })}
+          className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted"
+        >
+          <PlusIcon size={12} /> Set up login
+        </button>
+      ) : (
+        <div className="grid gap-3 rounded-md border border-border bg-muted/20 p-2 sm:grid-cols-3">
+          <label className="block">
+            <span className="text-[11px] font-medium uppercase text-muted-foreground">
+              Username / email
+            </span>
+            <Input
+              className="mt-1"
+              value={cred.username}
+              onChange={(e) => patch('project_credentials', cred.id, { username: e.target.value })}
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium uppercase text-muted-foreground">Password</span>
+            <SecretField
+              className="mt-1"
+              value={cred.password}
+              onChange={(e) => patch('project_credentials', cred.id, { password: e.target.value })}
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium uppercase text-muted-foreground">
+              Verification token
+            </span>
+            <SecretField
+              className="mt-1"
+              value={cred.verification_token}
+              placeholder="optional"
+              onChange={(e) =>
+                patch('project_credentials', cred.id, { verification_token: e.target.value })
+              }
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Supabase accounts tied to a website/app project — email, password, project. */
+function SupabaseSection({ projectId }: { projectId: string }) {
+  const rows = useProjectData((s) => s.rows.project_supabase)
+  const { add, patch, del } = useProjectData()
+  const confirm = useConfirm()
+  const accounts = asSupabaseAccounts(rows).slice().sort((a, b) => a.sort - b.sort)
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Supabase
+        </h2>
+        <button
+          type="button"
+          onClick={() =>
+            add('project_supabase', { project_id: projectId, sort: accounts.length })
+          }
+          className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted"
+        >
+          <PlusIcon size={12} /> Add
+        </button>
+      </div>
+      <div className="space-y-1.5">
+        {accounts.map((acc) => (
+          <div
+            key={acc.id}
+            className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/20 p-2"
+          >
+            <Input
+              value={acc.project_name}
+              onChange={(e) => patch('project_supabase', acc.id, { project_name: e.target.value })}
+              placeholder="Project name"
+              className="max-w-[200px]"
+            />
+            <Input
+              value={acc.email}
+              onChange={(e) => patch('project_supabase', acc.id, { email: e.target.value })}
+              placeholder="email"
+              className="max-w-[220px]"
+            />
+            <SecretField
+              value={acc.password}
+              onChange={(e) => patch('project_supabase', acc.id, { password: e.target.value })}
+              placeholder="password"
+              className="max-w-[180px]"
+            />
+            <IconButton
+              onClick={async () => {
+                if (await confirm({ title: 'Remove this Supabase account?', confirmLabel: 'Remove' }))
+                  del('project_supabase', acc.id)
+              }}
+              className="ml-auto hover:text-destructive"
+            >
+              <TrashIcon size={14} />
+            </IconButton>
+          </div>
+        ))}
+        {accounts.length === 0 && (
+          <p className="text-xs text-muted-foreground">No Supabase accounts yet.</p>
+        )}
+      </div>
     </div>
   )
 }

@@ -29,6 +29,7 @@ import { HideToggle } from '@/components/HideToggle'
 import { useReorderLock } from '@/hooks/useReorderLock'
 import { useGridCols } from '@/store/useGridCols'
 import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
+import { useConfirm } from '@/store/useConfirm'
 import type { EmailAccount } from '@/lib/types'
 
 type EmailView = 'table' | 'byGroup' | 'grid'
@@ -40,6 +41,7 @@ export function Emails() {
     addAccount, updateAccount, removeAccount, reorderGroups, reorderAccounts,
   } = useEmails()
   const diagnostic = useDiagnostic((s) => s.on)
+  const confirm = useConfirm()
   const [unlocked, setUnlocked] = useReorderLock('emails')
   const gridCols = useGridCols((s) => s.cols)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -96,7 +98,14 @@ export function Emails() {
   const removeCurrentGroup = async () => {
     if (!active) return
     const group = groups.find((entry) => entry.id === active)
-    if (!group || !confirm(`Delete "${group.name}" and every email account in it?`)) return
+    if (!group) return
+    if (
+      !(await confirm({
+        title: `Delete "${group.name}"?`,
+        message: 'Every email account in this group will be removed.',
+      }))
+    )
+      return
     await removeGroup(active)
   }
 

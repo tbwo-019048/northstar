@@ -98,6 +98,9 @@ export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
   location: lean('Destinations', { requests: 'Locations' }),
   written: lean('Targets'),
   writing: lean('Targets'),
+  game: DEFAULT_LAYOUT,
+  novel: lean('Chapters'),
+  music: lean('Tracks'),
   other: DEFAULT_LAYOUT,
 }
 

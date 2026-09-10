@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { PlanComment, PlanItem, Todo, TodoComment } from '@/lib/types'
+import type { PipelineItem, PlanComment, PlanItem, Todo, TodoComment } from '@/lib/types'
 import type { ItemSource } from '@/lib/unifiedItem'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 import { useAuth } from '@/store/useAuth'
@@ -11,6 +11,9 @@ type ItemComment = TodoComment | PlanComment
 interface ItemsState {
   todos: Todo[]
   planItems: PlanItem[]
+  pipelineItems: PipelineItem[]
+  /** pipeline_id → project_id, so a pipeline point knows which project it's in. */
+  pipelineProjectById: Record<string, string>
   /** Comment threads, loaded lazily. Key: `${source}:${itemId}`. */
   comments: Record<string, ItemComment[]>
   loading: boolean
@@ -30,7 +33,8 @@ interface ItemsState {
   subscribe: () => () => void
 }
 
-const TABLE = (s: ItemSource) => (s === 'todo' ? 'todos' : 'plan_items')
+const TABLE = (s: ItemSource) =>
+  s === 'todo' ? 'todos' : s === 'pipeline' ? 'pipeline_items' : 'plan_items'
 const CT = (s: ItemSource) => (s === 'todo' ? 'todo_comments' : 'plan_comments')
 const CFK = (s: ItemSource) => (s === 'todo' ? 'todo_id' : 'plan_item_id')
 const ckey = (s: ItemSource, id: string) => `${s}:${id}`
@@ -46,6 +50,8 @@ const markLocalWrite = () => {
 export const useItems = create<ItemsState>((set, get) => ({
   todos: [],
   planItems: [],
+  pipelineItems: [],
+  pipelineProjectById: {},
   comments: {},
   loading: false,
   loaded: false,
@@ -55,13 +61,21 @@ export const useItems = create<ItemsState>((set, get) => ({
     set({ loading: true })
     // No project_id filter — the project-data tables are `for all to
     // authenticated using (true)`, so a global select is intended here.
-    const [t, p] = await Promise.all([
+    const [t, p, pl, pli] = await Promise.all([
       supabase.from('todos').select('*').order('updated_at', { ascending: false }),
       supabase.from('plan_items').select('*').order('updated_at', { ascending: false }),
+      supabase.from('pipelines').select('id, project_id'),
+      supabase.from('pipeline_items').select('*').order('sort', { ascending: true }),
     ])
+    const pipelineProjectById: Record<string, string> = {}
+    for (const row of (pl.data as { id: string; project_id: string }[]) ?? []) {
+      pipelineProjectById[row.id] = row.project_id
+    }
     set({
       todos: (t.data as Todo[]) ?? [],
       planItems: (p.data as PlanItem[]) ?? [],
+      pipelineItems: (pli.data as PipelineItem[]) ?? [],
+      pipelineProjectById,
       loading: false,
       loaded: true,
       error: t.error?.message ?? p.error?.message ?? null,
@@ -83,9 +97,17 @@ export const useItems = create<ItemsState>((set, get) => ({
   },
 
   patch: async (source, id, values) => {
-    const before = { todos: get().todos, planItems: get().planItems }
+    const before = {
+      todos: get().todos,
+      planItems: get().planItems,
+      pipelineItems: get().pipelineItems,
+    }
     if (source === 'todo') {
       set((s) => ({ todos: s.todos.map((r) => (r.id === id ? { ...r, ...values } : r)) }))
+    } else if (source === 'pipeline') {
+      set((s) => ({
+        pipelineItems: s.pipelineItems.map((r) => (r.id === id ? { ...r, ...values } : r)),
+      }))
     } else {
       set((s) => ({ planItems: s.planItems.map((r) => (r.id === id ? { ...r, ...values } : r)) }))
     }
@@ -106,8 +128,14 @@ export const useItems = create<ItemsState>((set, get) => ({
   },
 
   del: async (source, id) => {
-    const before = { todos: get().todos, planItems: get().planItems }
+    const before = {
+      todos: get().todos,
+      planItems: get().planItems,
+      pipelineItems: get().pipelineItems,
+    }
     if (source === 'todo') set((s) => ({ todos: s.todos.filter((r) => r.id !== id) }))
+    else if (source === 'pipeline')
+      set((s) => ({ pipelineItems: s.pipelineItems.filter((r) => r.id !== id) }))
     else set((s) => ({ planItems: s.planItems.filter((r) => r.id !== id) }))
     const { error } = await supabase.from(TABLE(source)).delete().eq('id', id)
     if (error) {
@@ -121,6 +149,7 @@ export const useItems = create<ItemsState>((set, get) => ({
   },
 
   loadComments: async (source, id) => {
+    if (source === 'pipeline') return
     const key = ckey(source, id)
     if (get().comments[key]) return
     const { data } = await supabase
@@ -132,6 +161,7 @@ export const useItems = create<ItemsState>((set, get) => ({
   },
 
   addComment: async (source, id, body) => {
+    if (source === 'pipeline') return
     const text = body.trim()
     if (!text) return
     const key = ckey(source, id)
@@ -153,6 +183,7 @@ export const useItems = create<ItemsState>((set, get) => ({
   },
 
   delComment: async (source, itemId, commentId) => {
+    if (source === 'pipeline') return
     const key = ckey(source, itemId)
     const previous = get().comments[key] ?? []
     set((s) => ({
@@ -197,6 +228,8 @@ export const useItems = create<ItemsState>((set, get) => ({
       .channel('items-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, bump)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_items' }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pipelines' }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pipeline_items' }, bump)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'todo_comments' }, bumpComments)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_comments' }, bumpComments)
       .subscribe()

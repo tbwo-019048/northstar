@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { mshotUrl } from '@/lib/screenshot'
 import { IconButton } from '@/components/ui-lite'
 import { NorthStarIcon } from '@/components/NorthStarIcon'
+import { useConfirm } from '@/store/useConfirm'
 import { Safari } from '@/components/ui/safari-browser'
 import type { Project } from '@/lib/types'
 
@@ -61,6 +62,7 @@ export function ScreenshotGallery({ project }: { project: Project }) {
   const rows = useProjectData((s) => s.rows.project_screenshots)
   const { add, del } = useProjectData()
   const { update } = useProjects()
+  const confirm = useConfirm()
   const screenshots = asScreenshots(rows).slice().sort((a, b) => a.sort - b.sort)
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
@@ -164,7 +166,7 @@ export function ScreenshotGallery({ project }: { project: Project }) {
 
   const removeActive = async () => {
     if (!active || !active.deletable) return
-    if (!confirm('Remove this screenshot?')) return
+    if (!(await confirm({ title: 'Remove this screenshot?', confirmLabel: 'Remove' }))) return
     await del('project_screenshots', active.key)
     setPickedKey(null)
   }
