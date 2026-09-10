@@ -26,6 +26,7 @@ import { PlusIcon } from '@/components/ui/plus'
 import { Bars3Icon } from '@/components/ui/bars-3'
 import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
 import { ArrowUpTrayIcon } from '@/components/ui/arrow-up-tray'
+import { TrashIcon } from '@/components/ui/trash'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { useProjects } from '@/store/useProjects'
 import { useClients } from '@/store/useClients'
@@ -64,7 +65,7 @@ const TABLEPAGE_KEY = 'northstar.overview.tablepage'
 const TABLE_PAGE_SIZE = 15
 
 export function Overview() {
-  const { projects, loaded, load, create, update, reorder, subscribe, error, clearError } =
+  const { projects, loaded, load, create, update, remove, reorder, subscribe, error, clearError } =
     useProjects()
   const [unlocked, setUnlocked] = useReorderLock('projects')
   const {
@@ -262,6 +263,11 @@ export function Overview() {
   }
 
   const openProject = (id: string) => nav(`/app/project/${id}`)
+  const deleteProject = (project: Project) => {
+    if (confirm(`Delete "${projectLabel(project)}" and all of its project data?`)) {
+      void remove(project.id)
+    }
+  }
 
   const exportCsv = () => {
     const csv = toCSV(
@@ -546,6 +552,7 @@ export function Overview() {
             rows={projects}
             nameFor={projectLabel}
             onOpen={openProject}
+            onDelete={deleteProject}
             onReorder={(ids) => reorder(ids)}
           />
         ) : (
@@ -553,6 +560,7 @@ export function Overview() {
             rows={rows}
             loaded={loaded}
             onOpen={openProject}
+            onDelete={deleteProject}
             nameFor={projectLabel}
             showDescriptions={showDescriptions}
             diagnostic={diagnostic}
@@ -574,6 +582,7 @@ export function Overview() {
                 rows={list}
                 loaded={loaded}
                 onOpen={openProject}
+                onDelete={deleteProject}
                 compact
                 nameFor={projectLabel}
                 showDescriptions={showDescriptions}
@@ -601,6 +610,7 @@ export function Overview() {
                 rows={list}
                 loaded={loaded}
                 onOpen={openProject}
+                onDelete={deleteProject}
                 compact
                 nameFor={projectLabel}
                 showDescriptions={showDescriptions}
@@ -620,26 +630,29 @@ export function Overview() {
       {view === 'grid' && (
         <div className="grid gap-2" style={gridStyle}>
           {rows.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => openProject(p.id)}
-              className="flex flex-col items-center gap-1.5 rounded-md p-2 text-center hover:bg-muted/60"
-            >
-              <ProjectLogo project={p} size="lg" />
-              {/* Fixed height + line-clamp (not min-height, and not just an
-                  overflow-visible box) — reserves the exact same room in
-                  every tile no matter how many lines the name wraps to, and
-                  clips a 3rd+ line with an ellipsis instead of letting it
-                  spill down into the state chip below. */}
-              <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
-                {projectLabel(p)}
-              </span>
-              <div className="flex flex-wrap items-center justify-center gap-1">
-                <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
-                <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
-              </div>
-            </button>
+            <div key={p.id} className="group relative rounded-md hover:bg-muted/60">
+              <button
+                type="button"
+                onClick={() => openProject(p.id)}
+                className="flex w-full flex-col items-center gap-1.5 rounded-md p-2 text-center"
+              >
+                <ProjectLogo project={p} size="lg" />
+                <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
+                  {projectLabel(p)}
+                </span>
+                <div className="flex flex-wrap items-center justify-center gap-1">
+                  <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+                  <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
+                </div>
+              </button>
+              <IconButton
+                title={`Delete ${projectLabel(p)}`}
+                onClick={() => deleteProject(p)}
+                className="absolute right-1 top-1 bg-background/80 text-muted-foreground opacity-70 shadow-sm hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+              >
+                <TrashIcon size={14} />
+              </IconButton>
+            </div>
           ))}
           {rows.length === 0 && (
             <p className="col-span-full px-3 py-6 text-center text-xs text-muted-foreground">
@@ -652,25 +665,33 @@ export function Overview() {
       {view === 'progress' && (
         <div className="grid gap-2" style={gridStyle}>
           {rows.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => openProject(p.id)}
-              className="flex flex-col items-center gap-1.5 rounded-md border border-border p-2 text-center hover:bg-muted/50"
-            >
-              <span className="line-clamp-2 h-8 w-full break-words text-xs font-medium leading-4">
-                {projectLabel(p)}
-              </span>
-              <div className={STATE_TEXT_CLASS[p.state] ?? 'text-muted-foreground'}>
-                <HalfCircleProgress
-                  value={statePercent(p.state)}
-                  label={formatState(p.state)}
-                  color="currentColor"
-                  size="xs"
-                />
-              </div>
-              <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
-            </button>
+            <div key={p.id} className="group relative rounded-md border border-border hover:bg-muted/50">
+              <button
+                type="button"
+                onClick={() => openProject(p.id)}
+                className="flex w-full flex-col items-center gap-1.5 rounded-md p-2 text-center"
+              >
+                <span className="line-clamp-2 h-8 w-full break-words text-xs font-medium leading-4">
+                  {projectLabel(p)}
+                </span>
+                <div className={STATE_TEXT_CLASS[p.state] ?? 'text-muted-foreground'}>
+                  <HalfCircleProgress
+                    value={statePercent(p.state)}
+                    label={formatState(p.state)}
+                    color="currentColor"
+                    size="xs"
+                  />
+                </div>
+                <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+              </button>
+              <IconButton
+                title={`Delete ${projectLabel(p)}`}
+                onClick={() => deleteProject(p)}
+                className="absolute right-1 top-1 bg-background/80 text-muted-foreground opacity-70 shadow-sm hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+              >
+                <TrashIcon size={14} />
+              </IconButton>
+            </div>
           ))}
           {rows.length === 0 && (
             <p className="col-span-full px-3 py-6 text-center text-xs text-muted-foreground">
@@ -687,11 +708,13 @@ function ReorderList({
   rows,
   nameFor,
   onOpen,
+  onDelete,
   onReorder,
 }: {
   rows: Project[]
   nameFor: (p: Project) => string
   onOpen: (id: string) => void
+  onDelete: (project: Project) => void
   onReorder: (ids: string[]) => void
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
@@ -709,7 +732,7 @@ function ReorderList({
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         <div className="divide-y divide-border rounded-md border border-border">
           {rows.map((p) => (
-            <ReorderRow key={p.id} p={p} label={nameFor(p)} onOpen={onOpen} />
+            <ReorderRow key={p.id} p={p} label={nameFor(p)} onOpen={onOpen} onDelete={onDelete} />
           ))}
           {rows.length === 0 && (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">No projects.</p>
@@ -720,7 +743,7 @@ function ReorderList({
   )
 }
 
-function ReorderRow({ p, label, onOpen }: { p: Project; label: string; onOpen: (id: string) => void }) {
+function ReorderRow({ p, label, onOpen, onDelete }: { p: Project; label: string; onOpen: (id: string) => void; onDelete: (project: Project) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: p.id,
   })
@@ -741,6 +764,9 @@ function ReorderRow({ p, label, onOpen }: { p: Project; label: string; onOpen: (
       </button>
       <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
       <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+      <IconButton title={`Delete ${label}`} onClick={() => onDelete(p)} className="hover:text-destructive">
+        <TrashIcon size={14} />
+      </IconButton>
     </div>
   )
 }
@@ -749,6 +775,7 @@ function TablePage({
   rows,
   loaded,
   onOpen,
+  onDelete,
   nameFor,
   showDescriptions,
   diagnostic,
@@ -760,6 +787,7 @@ function TablePage({
   rows: Project[]
   loaded: boolean
   onOpen: (id: string) => void
+  onDelete: (project: Project) => void
   nameFor: (p: Project) => string
   showDescriptions: boolean
   diagnostic: boolean
@@ -774,6 +802,7 @@ function TablePage({
         rows={rows}
         loaded={loaded}
         onOpen={onOpen}
+        onDelete={onDelete}
         nameFor={nameFor}
         showDescriptions={showDescriptions}
         diagnostic={diagnostic}
@@ -793,6 +822,7 @@ function TablePage({
         rows={pageRows}
         loaded={loaded}
         onOpen={onOpen}
+        onDelete={onDelete}
         nameFor={nameFor}
         showDescriptions={showDescriptions}
         diagnostic={diagnostic}
@@ -834,6 +864,7 @@ function ProjectTable({
   rows,
   loaded,
   onOpen,
+  onDelete,
   compact,
   nameFor,
   showDescriptions,
@@ -843,6 +874,7 @@ function ProjectTable({
   rows: Project[]
   loaded: boolean
   onOpen: (id: string) => void
+  onDelete: (project: Project) => void
   compact?: boolean
   nameFor: (p: Project) => string
   showDescriptions: boolean
@@ -863,6 +895,7 @@ function ProjectTable({
           <col className="w-28" />
           <col className="w-16" />
           <col className="w-24" />
+          <col className="w-8" />
         </colgroup>
         {!compact && (
           <thead>
@@ -873,6 +906,7 @@ function ProjectTable({
               <th className="px-2.5 py-1 font-medium">State</th>
               <th className="px-2.5 py-1 text-right font-medium">Hours</th>
               <th className="px-2.5 py-1 text-right font-medium">Updated</th>
+              <th />
             </tr>
           </thead>
         )}
@@ -918,11 +952,23 @@ function ProjectTable({
               <td className="px-2.5 py-1 text-right text-xs text-muted-foreground">
                 {new Date(p.updated_at).toLocaleDateString()}
               </td>
+              <td className="px-1 py-1">
+                <IconButton
+                  title={`Delete ${nameFor(p)}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onDelete(p)
+                  }}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <TrashIcon size={14} />
+                </IconButton>
+              </td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={6} className="px-3 py-6 text-center text-xs text-muted-foreground">
+              <td colSpan={7} className="px-3 py-6 text-center text-xs text-muted-foreground">
                 {loaded ? 'No projects yet.' : 'Loading…'}
               </td>
             </tr>
