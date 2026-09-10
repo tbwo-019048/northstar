@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+import { create, type StoreApi } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type {
   Detail,
@@ -18,6 +18,7 @@ import type {
   TodoComment,
 } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
+import { ensureTodoFeature } from '@/lib/todoToFeature'
 
 type Row = { id: string; [k: string]: unknown }
 
@@ -88,6 +89,7 @@ const empty = (): Record<TableName, Row[]> => ({
 })
 
 type Get = () => ProjectDataState
+type Set = StoreApi<ProjectDataState>['setState']
 
 // Timestamp of the last local mutation. The realtime subscription defers its
 // reload while this is recent so a burst of edits (e.g. typing in a kanban
@@ -99,19 +101,19 @@ const markLocalWrite = () => {
 
 /** Completing a To-Do records it as a Feature (once). Requests → To-Dos and
  * To-Dos → Pipeline points are driven by explicit buttons, not hooks. */
-async function todoToFeature(get: Get, todoId: string) {
+async function todoToFeature(get: Get, set: Set, todoId: string) {
   const projectId = get().projectId
   const todo = get().rows.todos.find((t) => t.id === todoId)
   if (!projectId || !todo) return
   if (get().rows.features.some((f) => f.source_todo_id === todoId)) return
-  await get().add('features', {
+  const created = await ensureTodoFeature({
+    id: todoId,
     project_id: projectId,
     title: (todo.title as string) || 'Feature',
     description: (todo.description as string) ?? '',
-    source: 'todo',
-    source_todo_id: todoId,
-    sort: get().rows.features.length,
   })
+  if (created)
+    set((s) => ({ rows: { ...s.rows, features: [...s.rows.features, created as unknown as Row] } }))
 }
 
 export const useProjectData = create<ProjectDataState>((set, get) => ({
@@ -200,7 +202,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     markLocalWrite()
     notifySaved()
     if (table === 'todos' && values.status === 'completed') {
-      void todoToFeature(get, id)
+      void todoToFeature(get, set, id)
     }
     return { error: null }
   },

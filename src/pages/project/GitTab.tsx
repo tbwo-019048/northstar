@@ -9,11 +9,12 @@ import { useSettings, getGithubToken } from '@/store/useSettings'
 import {
   fetchBranches,
   fetchCommits,
-  fetchDefaultBranch,
+  fetchRepoMeta,
   type GithubBranch,
   type GithubCommit,
 } from '@/lib/github'
 import { Input } from '@/components/ui-lite'
+import { RepoVisibilityBadge } from '@/components/RepoVisibilityBadge'
 import { computeGitGraph, GitGraphRow, GRAPH_ROW_H } from '@/components/GitTree'
 
 function timeAgo(iso: string) {
@@ -34,6 +35,7 @@ export function GitTab({ projectId }: { projectId: string }) {
   const [repoDraft, setRepoDraft] = useState(project?.github_repo ?? '')
   const [branches, setBranches] = useState<GithubBranch[]>([])
   const [branch, setBranch] = useState<string | null>(null)
+  const [repoPrivate, setRepoPrivate] = useState<boolean | null>(null)
   const [commits, setCommits] = useState<GithubCommit[]>([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -48,19 +50,21 @@ export function GitTab({ projectId }: { projectId: string }) {
   useEffect(() => {
     setBranch(null)
     setBranches([])
+    setRepoPrivate(null)
     if (!project?.github_repo || !githubTokenSet) return
     let cancelled = false
     ;(async () => {
       const token = await getGithubToken()
       if (!token) return
       try {
-        const [list, def] = await Promise.all([
+        const [list, meta] = await Promise.all([
           fetchBranches(project.github_repo!, token),
-          fetchDefaultBranch(project.github_repo!, token),
+          fetchRepoMeta(project.github_repo!, token),
         ])
         if (cancelled) return
         setBranches(list)
-        setBranch(def)
+        setBranch(meta.defaultBranch)
+        setRepoPrivate(meta.private)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load branches.')
       }
@@ -139,6 +143,7 @@ export function GitTab({ projectId }: { projectId: string }) {
             >
               <ArrowTopRightOnSquareIcon size={12} />
             </a>
+            <RepoVisibilityBadge isPrivate={repoPrivate} />
             {project.github_repo_locked ? (
               <span className="text-[11px] text-muted-foreground">
                 (locked in{' '}

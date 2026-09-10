@@ -21,12 +21,16 @@ const shapes = collection.features
   .filter((s) => s.d)
 
 /** Flat Natural Earth world map; countries in `highlight` are filled with the
- * brand colour, the rest sit as a faint neutral base. */
+ * brand colour (or, when `shadeByCountry` maps them, that per-country shade of
+ * blue), the rest sit as a faint neutral base. */
 export function WorldMap({
   highlight,
+  shadeByCountry,
   className,
 }: {
   highlight: string[]
+  /** Country name → CSS colour. Overrides the flat brand fill for that country. */
+  shadeByCountry?: Record<string, string>
   className?: string
 }) {
   const on = new Set(highlight)
@@ -46,7 +50,7 @@ export function WorldMap({
             <path
               key={s.name}
               d={s.d}
-              fill={active ? 'var(--primary)' : 'currentColor'}
+              fill={active ? (shadeByCountry?.[s.name] ?? 'var(--primary)') : 'currentColor'}
               fillOpacity={active ? 0.9 : 0.12}
               stroke="currentColor"
               strokeOpacity={0.15}

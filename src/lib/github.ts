@@ -55,7 +55,17 @@ async function ghFetch(url: string, token: string, notFoundMessage: string) {
   return res
 }
 
-export async function fetchDefaultBranch(repo: string, token: string): Promise<string> {
+export interface RepoMeta {
+  defaultBranch: string
+  /** true = private repo, false = public. */
+  private: boolean
+  /** GitHub's finer-grained value: 'public' | 'private' | 'internal'. */
+  visibility: string
+}
+
+/** One `GET /repos/{owner}/{repo}` call — the repo's default branch plus
+ * whether it's public or private. */
+export async function fetchRepoMeta(repo: string, token: string): Promise<RepoMeta> {
   const parsed = parseRepo(repo)
   if (!parsed) throw new GithubApiError(`"${repo}" doesn't look like "owner/repo".`)
   const res = await ghFetch(
@@ -63,8 +73,20 @@ export async function fetchDefaultBranch(repo: string, token: string): Promise<s
     token,
     `Repository "${parsed.owner}/${parsed.repo}" not found (or the token can't see it).`,
   )
-  const data = (await res.json()) as { default_branch: string }
-  return data.default_branch
+  const data = (await res.json()) as {
+    default_branch: string
+    private: boolean
+    visibility?: string
+  }
+  return {
+    defaultBranch: data.default_branch,
+    private: data.private,
+    visibility: data.visibility ?? (data.private ? 'private' : 'public'),
+  }
+}
+
+export async function fetchDefaultBranch(repo: string, token: string): Promise<string> {
+  return (await fetchRepoMeta(repo, token)).defaultBranch
 }
 
 export async function fetchBranches(repo: string, token: string): Promise<GithubBranch[]> {

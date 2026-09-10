@@ -8,6 +8,7 @@ import { Project } from '@/pages/Project'
 import { Settings } from '@/pages/Settings'
 import { Clients } from '@/pages/Clients'
 import { Emails } from '@/pages/Emails'
+import { Items } from '@/pages/Items'
 import { AppHome } from '@/pages/AppHome'
 import { ProjectPrint } from '@/pages/ProjectPrint'
 import { AppLayout } from '@/components/AppLayout'
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/app" element={<Overview />} />
         <Route path="/app/landing" element={<AppHome />} />
         <Route path="/app/settings" element={<Settings />} />
+        <Route path="/app/items" element={<Items />} />
         <Route path="/app/clients" element={<Clients />} />
         <Route path="/app/emails" element={<Emails />} />
         <Route path="/app/project/:id" element={<Project />} />

@@ -8,6 +8,16 @@ import { useGithubActivity, mergeCounts } from '@/store/useGithubActivity'
 import { GithubCalendar } from '@/components/GithubCalendar'
 import { WorldMap } from '@/components/WorldMap'
 
+/** A ramp of blue "shades" for the map — light tints → brand → deep shades of
+ * `var(--primary)`, spread evenly across `n` projects so each project's
+ * countries read as its own blue. */
+function projectBlue(i: number, n: number): string {
+  if (n <= 1) return 'var(--primary)'
+  const t = i / (n - 1) // 0 = first project … 1 = last
+  if (t < 0.5) return `color-mix(in srgb, var(--primary) ${Math.round(55 + t * 90)}%, white)`
+  return `color-mix(in srgb, var(--primary) ${Math.round(100 - (t - 0.5) * 80)}%, black)`
+}
+
 /** Authenticated home — where your projects are (left) and your GitHub
  * activity (right). */
 export function AppHome() {
@@ -41,6 +51,15 @@ export function AppHome() {
     () => [...new Set(projects.flatMap((p) => p.countries ?? []))].sort((a, b) => a.localeCompare(b)),
     [projects],
   )
+  const shadeByCountry = useMemo(() => {
+    const map: Record<string, string> = {}
+    const ordered = [...projects].sort((a, b) => a.position - b.position)
+    ordered.forEach((p, i) => {
+      const blue = projectBlue(i, ordered.length)
+      for (const c of p.countries ?? []) if (!(c in map)) map[c] = blue // first project wins a shared country
+    })
+    return map
+  }, [projects])
 
   useEffect(() => {
     if (repos.length) void loadGithub(repos)
@@ -64,12 +83,23 @@ export function AppHome() {
             </span>
           </div>
           <div className="flex-1 text-muted-foreground">
-            <WorldMap highlight={projectCountries} className="h-full w-full" />
+            <WorldMap
+              highlight={projectCountries}
+              shadeByCountry={shadeByCountry}
+              className="h-full w-full"
+            />
           </div>
           <div className="flex flex-wrap justify-center gap-1">
             {projectCountries.length ? (
               projectCountries.map((c) => (
-                <span key={c} className="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary">
+                <span
+                  key={c}
+                  className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary"
+                >
+                  <span
+                    className="inline-block size-2 rounded-full"
+                    style={{ background: shadeByCountry[c] ?? 'var(--primary)' }}
+                  />
                   {c}
                 </span>
               ))

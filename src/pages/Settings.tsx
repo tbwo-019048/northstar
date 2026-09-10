@@ -6,7 +6,8 @@ import { ShieldExclamationIcon } from '@/components/ui/shield-exclamation'
 import { ExclamationTriangleIcon } from '@/components/ui/exclamation-triangle'
 import { useAuth } from '@/store/useAuth'
 import { useSettings, getGithubToken } from '@/store/useSettings'
-import { fetchDefaultBranch } from '@/lib/github'
+import { fetchRepoMeta } from '@/lib/github'
+import { RepoVisibilityBadge } from '@/components/RepoVisibilityBadge'
 import { useProjects } from '@/store/useProjects'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { useGridCols } from '@/store/useGridCols'
@@ -209,7 +210,9 @@ export function Settings() {
 function RepoTable() {
   const { projects, loaded, load, subscribe, update } = useProjects()
   const { githubTokenSet, loaded: settingsLoaded, load: loadSettings } = useSettings()
-  const [access, setAccess] = useState<Record<string, 'ok' | 'bad' | 'checking'>>({})
+  const [access, setAccess] = useState<
+    Record<string, { status: 'ok' | 'bad' | 'checking'; private?: boolean }>
+  >({})
 
   useEffect(() => {
     if (!loaded) load()
@@ -224,14 +227,14 @@ function RepoTable() {
 
   const checkRepo = async (repo: string) => {
     if (!repo || !githubTokenSet) return
-    setAccess((a) => ({ ...a, [repo]: 'checking' }))
+    setAccess((a) => ({ ...a, [repo]: { status: 'checking' } }))
     const token = await getGithubToken()
     if (!token) return
     try {
-      await fetchDefaultBranch(repo, token)
-      setAccess((a) => ({ ...a, [repo]: 'ok' }))
+      const meta = await fetchRepoMeta(repo, token)
+      setAccess((a) => ({ ...a, [repo]: { status: 'ok', private: meta.private } }))
     } catch {
-      setAccess((a) => ({ ...a, [repo]: 'bad' }))
+      setAccess((a) => ({ ...a, [repo]: { status: 'bad' } }))
     }
   }
 
@@ -250,8 +253,9 @@ function RepoTable() {
         <GitBranch className="size-3.5" /> GitHub repositories
       </h2>
       <p className="text-xs text-muted-foreground">
-        Every website / app project and the repo it tracks. A red mark means the repo can't be
-        reached with the stored token. Lock a repo to make it read-only on that project's Git tab.
+        Every website / app project and the repo it tracks, and whether it's public or private. A
+        red mark means the repo can't be reached with the stored token. Lock a repo to make it
+        read-only on that project's Git tab.
       </p>
       <div className="divide-y divide-border rounded-md border border-border">
         {sites.map((p) => (
@@ -272,12 +276,15 @@ function RepoTable() {
               }}
               className="h-7 flex-1"
             />
-            {p.github_repo && access[p.github_repo] === 'bad' && (
+            {p.github_repo && access[p.github_repo]?.status === 'bad' && (
               <ExclamationTriangleIcon
                 size={14}
                 className="shrink-0 text-destructive"
                 title="This repo can't be reached with the stored GitHub token"
               />
+            )}
+            {p.github_repo && access[p.github_repo]?.status === 'ok' && (
+              <RepoVisibilityBadge isPrivate={access[p.github_repo]?.private} className="shrink-0" />
             )}
             <IconButton
               title={p.github_repo_locked ? 'Unlock (editable in the project)' : 'Lock to Settings only'}

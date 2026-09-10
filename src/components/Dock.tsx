@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { HomeIcon } from '@/components/ui/home'
 import { FolderIcon } from '@/components/ui/folder'
+import { ClipboardDocumentCheckIcon } from '@/components/ui/clipboard-document-check'
 import { EnvelopeIcon } from '@/components/ui/envelope'
 import { UsersIcon } from '@/components/ui/users'
 import { Cog6ToothIcon } from '@/components/ui/cog-6-tooth'
@@ -18,6 +19,7 @@ interface DockItem {
 const ITEMS: DockItem[] = [
   { to: '/app/landing', label: 'Home', icon: HomeIcon, end: true },
   { to: '/app', label: 'Projects', icon: FolderIcon, end: true },
+  { to: '/app/items', label: 'Items', icon: ClipboardDocumentCheckIcon },
   { to: '/app/emails', label: 'Emails', icon: EnvelopeIcon },
   { to: '/app/clients', label: 'Clients', icon: UsersIcon },
   { to: '/app/settings', label: 'Settings', icon: Cog6ToothIcon },
