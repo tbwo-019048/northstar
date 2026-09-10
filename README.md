@@ -1,5 +1,7 @@
 # NorthStar
 
+> **Production:** [northstar-web-version.vercel.app](https://northstar-web-version.vercel.app/) — this is the live prod site.
+
 A compact, card-free project console. React + Vite + Tailwind v4 + **VeloBits UI**, backed by
 **Supabase** for auth, storage, autosave and cross-device sync.
 
