@@ -12,7 +12,7 @@ import { useProjects } from '@/store/useProjects'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { useGridCols } from '@/store/useGridCols'
 import { SITE_TYPES } from '@/lib/types'
-import { IconButton, Input } from '@/components/ui-lite'
+import { IconButton, Input, PasswordInput } from '@/components/ui-lite'
 import { MembersSettings } from '@/components/MembersSettings'
 
 export function Settings() {
@@ -167,8 +167,7 @@ export function Settings() {
         {isMaster ? (
           <>
             <form onSubmit={onSave} className="space-y-2">
-              <Input
-                type="password"
+              <PasswordInput
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder={githubTokenSet ? 'Token saved — enter a new one to replace it' : 'ghp_… or github_pat_…'}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
 import { LockClosedIcon } from '@/components/ui/lock-closed'
 import { useAuth } from '@/store/useAuth'
 import { APP_ACCESS_TOKEN } from '@/lib/supabase'
@@ -14,6 +15,7 @@ export function Login() {
   const [token, setToken] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -92,14 +94,25 @@ export function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
             />
-            <input
-              type="password"
-              autoComplete="current-password"
-              className={field}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                className={`${field} pr-9`}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
             {err && <p className="text-xs text-destructive">{err}</p>}
             <button
               disabled={busy}

@@ -22,6 +22,36 @@ export const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'in
 )
 Input.displayName = 'Input'
 
+/** Password / verification-token input with a show/hide toggle. */
+export const PasswordInput = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
+  ({ className, ...props }, ref) => {
+    const [visible, setVisible] = React.useState(false)
+    return (
+      <div className="relative">
+        <input
+          ref={ref}
+          {...props}
+          type={visible ? 'text' : 'password'}
+          className={cn(
+            'h-7 w-full rounded-md border border-border bg-background px-2 pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50',
+            className,
+          )}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Hide' : 'Show'}
+          className="absolute inset-y-0 right-0 flex w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {visible ? <EyeSlashIcon className="size-3.5" /> : <EyeIcon className="size-3.5" />}
+        </button>
+      </div>
+    )
+  },
+)
+PasswordInput.displayName = 'PasswordInput'
+
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(
   ({ className, ...props }, ref) => (
     <textarea
