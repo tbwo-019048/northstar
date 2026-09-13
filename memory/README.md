@@ -48,3 +48,7 @@ This folder records completed implementation tasks and durable project context. 
   - Replaced the low-contrast light palette with stronger blue beam and signal colours, increased line opacity, and disabled the full-scene bloom in light mode so the pale background no longer washes out the geometry.
   - Preserved the existing dark-mode glow and palette.
   - Verification: production build and `git diff --check` passed; browser QA confirmed a clearly visible Photon beam in both light and dark modes. Temporary QA access was removed afterward.
+- 2026-09-13 — Fixed global item completion and dense grid cards:
+  - Added a source-aware one-click completion control to every global Items row. It updates To-Dos and plan items through their status field and pipeline points through their boolean done field, and also supports reopening completed items.
+  - Project and client grid views now switch to compact image, name, and location-only cards whenever the shared grid setting is above six columns. Six columns and below retain the full card details.
+  - Verification: the production build passed, lint produced only the repository's existing warnings, `git diff --check` passed, and the live Supabase pipeline-item update path accepted the completion payload in a rolled-back transaction.

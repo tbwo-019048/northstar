@@ -5,6 +5,7 @@ import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
 import { PlusIcon } from '@/components/ui/plus'
 import { TrashIcon } from '@/components/ui/trash'
 import { ArrowTopRightOnSquareIcon } from '@/components/ui/arrow-top-right-on-square'
+import { CheckIcon } from '@/components/ui/check'
 import { Chip, EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { HideToggle } from '@/components/HideToggle'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/velobits/dialog'
@@ -616,6 +617,40 @@ function StateCell({ item }: { item: UnifiedItem }) {
   return <Chip className={cls}>{item.statusLabel}</Chip>
 }
 
+function CompletionToggle({ item, patch }: { item: UnifiedItem; patch: PatchFn }) {
+  const [saving, setSaving] = useState(false)
+  const label = item.done ? `Reopen ${item.title || 'item'}` : `Complete ${item.title || 'item'}`
+
+  const toggle = async () => {
+    if (saving) return
+    setSaving(true)
+    const values =
+      item.source === 'pipeline'
+        ? { done: !item.done }
+        : { status: item.done ? (item.source === 'todo' ? 'todo' : 'requested') : 'completed' }
+    await patch(item.source, item.id, values)
+    setSaving(false)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void toggle()}
+      disabled={saving}
+      aria-label={label}
+      title={label}
+      className={
+        'grid size-5 place-items-center rounded-full border transition-colors disabled:cursor-wait disabled:opacity-60 ' +
+        (item.done
+          ? 'border-emerald-500 bg-emerald-500 text-white'
+          : 'border-border text-transparent hover:border-primary hover:bg-primary/10')
+      }
+    >
+      <CheckIcon size={12} />
+    </button>
+  )
+}
+
 function ItemRow({
   item,
   project,
@@ -668,18 +703,21 @@ function ItemRow({
           </IconButton>
         </td>
         <td className="px-2.5 py-1">
-          <button
-            type="button"
-            onClick={toggle}
-            className="block max-w-full text-left"
-          >
-            <span className="line-clamp-2 font-medium">{item.title || 'Untitled'}</span>
-            {open && item.subtitle && (
-              <span className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                {item.subtitle}
-              </span>
-            )}
-          </button>
+          <div className="flex min-w-0 items-start gap-2">
+            <CompletionToggle item={item} patch={patch} />
+            <button
+              type="button"
+              onClick={toggle}
+              className="block min-w-0 flex-1 text-left"
+            >
+              <span className="line-clamp-2 font-medium">{item.title || 'Untitled'}</span>
+              {open && item.subtitle && (
+                <span className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                  {item.subtitle}
+                </span>
+              )}
+            </button>
+          </div>
           {/* compact sub-line for narrow screens */}
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground lg:hidden">
             {project && (

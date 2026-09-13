@@ -88,6 +88,7 @@ export function Overview() {
   const diagnostic = useDiagnostic((s) => s.on)
   const confirm = useConfirm()
   const gridCols = useGridCols((s) => s.cols)
+  const compactGrid = gridCols > 6
   const gridStyle = { gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }
   const nav = useNavigate()
   const [q, setQ] = useState('')
@@ -650,10 +651,19 @@ export function Overview() {
                 <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
                   {projectLabel(p)}
                 </span>
-                <div className="flex flex-wrap items-center justify-center gap-1">
-                  <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
-                  <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
-                </div>
+                {compactGrid ? (
+                  <span
+                    className="line-clamp-2 w-full text-center text-[10px] leading-3 text-muted-foreground"
+                    title={p.countries?.join(', ') || 'No location'}
+                  >
+                    {p.countries?.join(', ') || 'No location'}
+                  </span>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-center gap-1">
+                    <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+                    <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
+                  </div>
+                )}
               </button>
               <IconButton
                 title={`Delete ${projectLabel(p)}`}

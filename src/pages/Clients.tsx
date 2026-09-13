@@ -54,6 +54,7 @@ export function Clients() {
   const [unlocked, setUnlocked] = useReorderLock('clients')
   const confirm = useConfirm()
   const gridCols = useGridCols((s) => s.cols)
+  const compactGrid = gridCols > 6
   const [globePaused, setGlobePaused] = useState(() => {
     try {
       return localStorage.getItem('northstar.clients.globePaused') === '1'
@@ -483,37 +484,62 @@ export function Clients() {
           style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}
         >
           {rows.map((client) => (
-            <button key={client.id} type="button" onClick={() => editClient(client.id)} className="rounded-xl border border-border bg-panel p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
-              <div className="flex items-start gap-3">
-                <ClientImage clientId={client.id} name={client.name} url={client.photo_url ?? null} kind="photo" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{client.name || 'Unnamed client'}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {companiesOf(client.id).map((co) => co.name).join(', ') || 'Independent'}
+            <button
+              key={client.id}
+              type="button"
+              onClick={() => editClient(client.id)}
+              className={
+                'rounded-xl border border-border bg-panel text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ' +
+                (compactGrid ? 'p-2' : 'p-4')
+              }
+            >
+              {compactGrid ? (
+                <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
+                  <ClientImage clientId={client.id} name={client.name} url={client.photo_url ?? null} kind="photo" />
+                  <p className="line-clamp-2 w-full break-words text-xs font-semibold leading-4">
+                    {client.name || 'Unnamed client'}
+                  </p>
+                  <p
+                    className="line-clamp-2 w-full text-[10px] leading-3 text-muted-foreground"
+                    title={client.countries?.join(', ') || 'No location'}
+                  >
+                    {client.countries?.join(', ') || 'No location'}
                   </p>
                 </div>
-                {companiesOf(client.id)[0] && (
-                  <ClientImage
-                    clientId={client.id}
-                    name={companiesOf(client.id)[0].name}
-                    url={companiesOf(client.id)[0].logo_url ?? null}
-                    kind="company-logo"
-                    slot={companiesOf(client.id)[0].id}
-                    size="sm"
-                  />
-                )}
-              </div>
-              <div className="mt-4 space-y-1 text-xs text-muted-foreground">
-                <p className="truncate">{client.email || 'No email address'}</p>
-                <p className="truncate">
-                  {companiesOf(client.id).map((co) => co.email_domain).filter(Boolean).join(', ') || 'No email domain'}
-                </p>
-              </div>
-              {client.countries?.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {client.countries.slice(0, 3).map((country) => <span key={country} className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{country}</span>)}
-                  {client.countries.length > 3 && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">+{client.countries.length - 3}</span>}
-                </div>
+              ) : (
+                <>
+                  <div className="flex items-start gap-3">
+                    <ClientImage clientId={client.id} name={client.name} url={client.photo_url ?? null} kind="photo" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{client.name || 'Unnamed client'}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {companiesOf(client.id).map((co) => co.name).join(', ') || 'Independent'}
+                      </p>
+                    </div>
+                    {companiesOf(client.id)[0] && (
+                      <ClientImage
+                        clientId={client.id}
+                        name={companiesOf(client.id)[0].name}
+                        url={companiesOf(client.id)[0].logo_url ?? null}
+                        kind="company-logo"
+                        slot={companiesOf(client.id)[0].id}
+                        size="sm"
+                      />
+                    )}
+                  </div>
+                  <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+                    <p className="truncate">{client.email || 'No email address'}</p>
+                    <p className="truncate">
+                      {companiesOf(client.id).map((co) => co.email_domain).filter(Boolean).join(', ') || 'No email domain'}
+                    </p>
+                  </div>
+                  {client.countries?.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {client.countries.slice(0, 3).map((country) => <span key={country} className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">{country}</span>)}
+                      {client.countries.length > 3 && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">+{client.countries.length - 3}</span>}
+                    </div>
+                  )}
+                </>
               )}
             </button>
           ))}
