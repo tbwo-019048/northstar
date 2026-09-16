@@ -26,6 +26,7 @@ import { TrashIcon } from '@/components/ui/trash'
 import { XMarkIcon } from '@/components/ui/x-mark'
 import { ClientImage } from '@/components/ClientImage'
 import { CountryPicker } from '@/components/CountryPicker'
+import { StateSelect } from '@/components/StateSelect'
 import { CountryGlobe, type CountryGlobeEntry } from '@/components/CountryGlobe'
 import { WorldMap } from '@/components/WorldMap'
 import { SegmentedControl } from '@/components/ui/velobits/segmented-control'
@@ -343,6 +344,12 @@ export function Clients() {
                 </div>
                 {isOpen && (
                   <div className="space-y-4 border-t border-border bg-muted/20 px-3 py-3">
+                    <div className="flex justify-end">
+                      <StateSelect
+                        value={client.environment}
+                        onChange={(environment) => void update(client.id, { environment })}
+                      />
+                    </div>
                     <div className="flex flex-wrap items-start gap-5 rounded-lg border border-border bg-background/60 p-3">
                       <div className="space-y-1.5 text-center">
                         <ClientImage
@@ -381,6 +388,12 @@ export function Clients() {
                               onChange={(event) => updateCompany(co.id, { name: event.target.value })}
                               placeholder="Company name"
                               className="max-w-[220px]"
+                            />
+                            <StateSelect
+                              value={co.environment}
+                              labelled={false}
+                              onChange={(environment) => void updateCompany(co.id, { environment })}
+                              className="shrink-0"
                             />
                             <Input
                               value={co.email_domain}

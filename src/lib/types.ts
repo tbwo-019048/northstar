@@ -24,6 +24,12 @@ export type TodoStatus = 'todo' | 'completed'
 export type Priority = 'urgent' | 'high' | 'medium' | 'low'
 export type PipelineStatus = 'active' | 'completed' | 'archived'
 export type PlanStatus = 'requested' | 'in_progress' | 'delayed' | 'completed' | 'failed'
+export type { WorkspaceState } from '@/lib/workspaceState'
+import type { WorkspaceState } from '@/lib/workspaceState'
+
+export interface StateScoped {
+  environment: WorkspaceState
+}
 
 export const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low']
 export const PLAN_STATUSES: PlanStatus[] = [
@@ -88,7 +94,7 @@ export const SITE_TYPES: ProjectType[] = ['website', 'app']
 /** Target platforms an `app` project can declare, shown as chips in Summary. */
 export const APP_PLATFORMS = ['iOS', 'macOS', 'Android', 'Windows', 'Linux'] as const
 
-export interface Project {
+export interface Project extends StateScoped {
   id: string
   name: string
   codename: string
@@ -126,7 +132,7 @@ export interface PlanningPrefs {
   swimlane?: 'none' | 'priority'
 }
 
-export interface Person {
+export interface Person extends StateScoped {
   id: string
   project_id: string
   username: string
@@ -142,7 +148,7 @@ export interface Person {
 }
 
 /** A project-defined extra column shown on the Users table. */
-export interface PersonColumn {
+export interface PersonColumn extends StateScoped {
   id: string
   project_id: string
   label: string
@@ -151,7 +157,7 @@ export interface PersonColumn {
 }
 
 /** One row parsed from an uploaded .env file. */
-export interface EnvVar {
+export interface EnvVar extends StateScoped {
   id: string
   project_id: string
   key: string
@@ -173,7 +179,7 @@ export interface Attachment {
   url: string
 }
 
-export interface Todo {
+export interface Todo extends StateScoped {
   id: string
   project_id: string
   title: string
@@ -199,7 +205,7 @@ export interface TodoComment {
   created_at: string
 }
 
-export interface Feature {
+export interface Feature extends StateScoped {
   id: string
   project_id: string
   title: string
@@ -212,7 +218,7 @@ export interface Feature {
   created_at: string
 }
 
-export interface Detail {
+export interface Detail extends StateScoped {
   id: string
   project_id: string
   section: string
@@ -222,7 +228,7 @@ export interface Detail {
   created_at: string
 }
 
-export interface RequestItem {
+export interface RequestItem extends StateScoped {
   id: string
   project_id: string
   title: string
@@ -237,7 +243,7 @@ export interface RequestItem {
   updated_at: string
 }
 
-export interface Pipeline {
+export interface Pipeline extends StateScoped {
   id: string
   project_id: string
   name: string
@@ -254,7 +260,7 @@ export interface PlanPhoto {
   caption?: string
 }
 
-export interface PlanItem {
+export interface PlanItem extends StateScoped {
   id: string
   project_id: string
   title: string
@@ -279,7 +285,7 @@ export interface PlanComment {
   created_at: string
 }
 
-export interface ProjectScreenshot {
+export interface ProjectScreenshot extends StateScoped {
   id: string
   project_id: string
   url: string
@@ -290,7 +296,7 @@ export interface ProjectScreenshot {
 
 export type AssetKind = 'link' | 'file'
 
-export interface ProjectAsset {
+export interface ProjectAsset extends StateScoped {
   id: string
   project_id: string
   kind: AssetKind
@@ -302,7 +308,7 @@ export interface ProjectAsset {
   created_at: string
 }
 
-export interface PipelineItem {
+export interface PipelineItem extends StateScoped {
   id: string
   pipeline_id: string
   body: string
@@ -314,7 +320,7 @@ export interface PipelineItem {
 }
 
 /** A website/app project's own sign-in — one row per project. */
-export interface ProjectCredentials {
+export interface ProjectCredentials extends StateScoped {
   id: string
   project_id: string
   username: string
@@ -326,7 +332,7 @@ export interface ProjectCredentials {
 }
 
 /** A Supabase account tied to a website/app project — many per project. */
-export interface ProjectSupabaseAccount {
+export interface ProjectSupabaseAccount extends StateScoped {
   id: string
   project_id: string
   email: string
@@ -336,7 +342,7 @@ export interface ProjectSupabaseAccount {
   created_at: string
 }
 
-export interface Client {
+export interface Client extends StateScoped {
   id: string
   name: string
   company: string
@@ -368,7 +374,7 @@ export interface ProjectLink {
 
 /** One company/brand a client operates under. A client can have several; the
  * legacy scalar `Client.company` fields are frozen in favour of these. */
-export interface ClientCompany {
+export interface ClientCompany extends StateScoped {
   id: string
   client_id: string
   name: string
@@ -379,14 +385,14 @@ export interface ClientCompany {
   updated_at: string
 }
 
-export interface EmailGroup {
+export interface EmailGroup extends StateScoped {
   id: string
   name: string
   sort: number
   created_at: string
 }
 
-export interface EmailAccount {
+export interface EmailAccount extends StateScoped {
   id: string
   group_id: string
   name: string
@@ -435,7 +441,7 @@ export interface TemplatePayload {
   pipelines?: { name: string; estimate_hours?: number; items: string[] }[]
 }
 
-export interface ProjectTemplate {
+export interface ProjectTemplate extends StateScoped {
   id: string
   name: string
   description: string

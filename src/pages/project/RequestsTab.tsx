@@ -12,6 +12,7 @@ import { HideToggle } from '@/components/HideToggle'
 import { PRIORITIES, type Priority, type Project } from '@/lib/types'
 import { EditableText, IconButton, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
+import { StateSelect } from '@/components/StateSelect'
 
 const FALLBACK_PRIORITY_COLOR: Record<Priority, string> = {
   urgent: '#ef4444',
@@ -153,6 +154,11 @@ export function RequestsTab({ project, label }: { project: Project; label?: stri
           {diagnostic && <td />}
           <td />
           <td colSpan={6} className="px-2 py-2">
+            <StateSelect
+              value={r.environment}
+              onChange={(environment) => void patch('requests', r.id, { environment })}
+              className="mb-2"
+            />
             <ReqNotes id={r.id} initial={r.notes} onSave={(v) => patch('requests', r.id, { notes: v })} />
           </td>
         </tr>

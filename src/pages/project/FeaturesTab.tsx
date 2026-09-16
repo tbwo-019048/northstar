@@ -9,6 +9,7 @@ import { Markdown } from '@/components/Markdown'
 import { EditableText, IconButton, Chip } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import type { Feature } from '@/lib/types'
+import { StateSelect } from '@/components/StateSelect'
 
 type Mode = 'view' | 'edit'
 const MODE_KEY = 'northstar.features.mode'
@@ -113,6 +114,7 @@ export function FeaturesTab({ projectId, label }: { projectId: string; label?: s
                 await patch('features', f.id, { description: v })
               }}
               onToggleHidden={(v) => patch('features', f.id, { hidden: v })}
+              onState={(environment) => patch('features', f.id, { environment })}
               onDelete={() => del('features', f.id)}
             />
           ))}
@@ -128,6 +130,7 @@ function FeatureEditRow({
   onTitle,
   onDescription,
   onToggleHidden,
+  onState,
   onDelete,
 }: {
   feature: Feature
@@ -135,6 +138,7 @@ function FeatureEditRow({
   onTitle: (v: string) => void
   onDescription: (v: string) => void | Promise<void>
   onToggleHidden: (v: boolean) => void
+  onState: (v: Feature['environment']) => void
   onDelete: () => void
 }) {
   const [desc, setDesc, status] = useDebouncedSave(feature.description, onDescription)
@@ -157,6 +161,7 @@ function FeatureEditRow({
           />
         </div>
         {feature.source === 'pipeline' && <Chip>from pipeline</Chip>}
+        <StateSelect value={feature.environment} labelled={false} onChange={onState} />
         {status !== 'idle' && <span className="text-[10px] text-primary">{status}</span>}
         <IconButton onClick={onDelete} className="hover:text-destructive">
           <TrashIcon size={14} />

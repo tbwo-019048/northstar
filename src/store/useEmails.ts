@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { EmailAccount, EmailGroup } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
+import { getActiveEnvironment } from '@/store/useSettings'
 
 interface EmailsState {
   groups: EmailGroup[]
@@ -11,6 +12,7 @@ interface EmailsState {
   error: string | null
   load: () => Promise<void>
   addGroup: (name: string) => Promise<EmailGroup | null>
+  updateGroup: (id: string, patch: Partial<EmailGroup>) => Promise<void>
   removeGroup: (id: string) => Promise<void>
   addAccount: (groupId: string, fields: Partial<EmailAccount>) => Promise<EmailAccount | null>
   updateAccount: (id: string, patch: Partial<EmailAccount>) => Promise<{ error: string | null }>
@@ -30,8 +32,8 @@ export const useEmails = create<EmailsState>((set, get) => ({
   load: async () => {
     set({ loading: true })
     const [groupsRes, accountsRes] = await Promise.all([
-      supabase.from('email_groups').select('*').order('sort', { ascending: true }),
-      supabase.from('email_accounts').select('*').order('sort', { ascending: true }),
+      supabase.from('email_groups').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
+      supabase.from('email_accounts').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
     ])
     set({
       groups: (groupsRes.data as EmailGroup[]) ?? [],
@@ -45,7 +47,7 @@ export const useEmails = create<EmailsState>((set, get) => ({
   addGroup: async (name) => {
     const { data, error } = await supabase
       .from('email_groups')
-      .insert({ name, sort: get().groups.length })
+      .insert({ name, sort: get().groups.length, environment: getActiveEnvironment() })
       .select('*')
       .single()
     if (error || !data) {
@@ -56,6 +58,21 @@ export const useEmails = create<EmailsState>((set, get) => ({
     set({ groups: [...get().groups, data as EmailGroup] })
     notifySaved('Email group created.')
     return data as EmailGroup
+  },
+
+  updateGroup: async (id, patch) => {
+    const previous = get().groups
+    set({ groups: previous.map((group) => (group.id === id ? { ...group, ...patch } : group)) })
+    const { error } = await supabase.from('email_groups').update(patch).eq('id', id)
+    if (error) {
+      set({ groups: previous, error: error.message })
+      notifySaveError(error.message)
+      return
+    }
+    if (patch.environment && patch.environment !== getActiveEnvironment()) {
+      set({ groups: get().groups.filter((group) => group.id !== id) })
+    }
+    notifySaved()
   },
 
   removeGroup: async (id) => {
@@ -74,6 +91,7 @@ export const useEmails = create<EmailsState>((set, get) => ({
       .insert({
         group_id: groupId,
         sort: get().accounts.filter((a) => a.group_id === groupId).length,
+        environment: getActiveEnvironment(),
         ...fields,
       })
       .select('*')
@@ -96,6 +114,9 @@ export const useEmails = create<EmailsState>((set, get) => ({
       set({ accounts: previous, error: error.message })
       notifySaveError(error.message)
       return { error: error.message }
+    }
+    if (patch.environment && patch.environment !== getActiveEnvironment()) {
+      set({ accounts: get().accounts.filter((account) => account.id !== id) })
     }
     notifySaved()
     return { error: null }

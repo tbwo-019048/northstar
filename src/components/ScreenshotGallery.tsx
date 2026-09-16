@@ -12,6 +12,7 @@ import { NorthStarIcon } from '@/components/NorthStarIcon'
 import { useConfirm } from '@/store/useConfirm'
 import { Safari } from '@/components/ui/safari-browser'
 import type { Project } from '@/lib/types'
+import { StateSelect } from '@/components/StateSelect'
 
 interface Entry {
   key: string
@@ -60,7 +61,7 @@ function PreviewSkeleton() {
 
 export function ScreenshotGallery({ project }: { project: Project }) {
   const rows = useProjectData((s) => s.rows.project_screenshots)
-  const { add, del } = useProjectData()
+  const { add, patch, del } = useProjectData()
   const { update } = useProjects()
   const confirm = useConfirm()
   const screenshots = asScreenshots(rows).slice().sort((a, b) => a.sort - b.sort)
@@ -291,7 +292,20 @@ export function ScreenshotGallery({ project }: { project: Project }) {
           }}
         />
       </div>
-      {active && <p className="text-[11px] text-muted-foreground">{active.label}</p>}
+      {active && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] text-muted-foreground">{active.label}</p>
+          {active.deletable && screenshots.find((shot) => shot.id === active.key) && (
+            <StateSelect
+              value={screenshots.find((shot) => shot.id === active.key)!.environment}
+              labelled={false}
+              onChange={(environment) =>
+                void patch('project_screenshots', active.key, { environment })
+              }
+            />
+          )}
+        </div>
+      )}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )

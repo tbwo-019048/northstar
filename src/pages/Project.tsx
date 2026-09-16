@@ -19,6 +19,7 @@ import { AnalysisTab } from '@/pages/project/AnalysisTab'
 import { GitTab } from '@/pages/project/GitTab'
 import { ProjectSettingsTab } from '@/pages/project/ProjectSettingsTab'
 import { AssetsTab } from '@/pages/project/AssetsTab'
+import { StateSelect } from '@/components/StateSelect'
 
 const TABS = [
   { key: 'summary', label: 'Summary' },
@@ -100,6 +101,12 @@ export function Project() {
             />
           )}
         </div>
+        {project && (
+          <StateSelect
+            value={project.environment}
+            onChange={(environment) => void update(project.id, { environment })}
+          />
+        )}
         {project && (
           <Select
             value={project.type}

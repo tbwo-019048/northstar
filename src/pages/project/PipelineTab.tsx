@@ -26,6 +26,7 @@ import { useProjects } from '@/store/useProjects'
 import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useConfirm } from '@/store/useConfirm'
 import type { PipelineItem, Project } from '@/lib/types'
+import { StateSelect } from '@/components/StateSelect'
 
 export function PipelineTab({ project }: { project: Project }) {
   const projectId = project.id
@@ -218,6 +219,11 @@ export function PipelineTab({ project }: { project: Project }) {
                 {current.status}
               </span>
             )}
+            <StateSelect
+              value={current.environment}
+              labelled={false}
+              onChange={(environment) => void patch('pipelines', current.id, { environment })}
+            />
             <div className="flex-1" />
             <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
               Estimate
@@ -402,6 +408,12 @@ function PipelineRow({
         />
         h
       </label>
+      <StateSelect
+        value={item.environment}
+        labelled={false}
+        onChange={(environment) => patch({ environment })}
+        className="h-6 min-w-[6.5rem] text-xs"
+      />
       {editable && (
         <IconButton onClick={remove} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
           <TrashIcon size={14} />

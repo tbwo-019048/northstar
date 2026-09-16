@@ -13,6 +13,7 @@ import { useItems } from '@/store/useItems'
 import { useProjects } from '@/store/useProjects'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { useConfirm } from '@/store/useConfirm'
+import { StateSelect } from '@/components/StateSelect'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { visibleRows } from '@/lib/hidden'
 import {
@@ -848,6 +849,11 @@ function ItemEditor({
           )}
         </div>
 
+        <StateSelect
+          value={item.environment}
+          onChange={(environment) => set({ environment })}
+        />
+
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="text-[11px] font-medium uppercase text-muted-foreground">Point</span>
@@ -859,7 +865,7 @@ function ItemEditor({
             />
           </label>
           <label className="block">
-            <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
+            <span className="text-[11px] font-medium uppercase text-muted-foreground">Status</span>
             <Select
               value={item.done ? 'done' : 'open'}
               onChange={(e) => set({ done: e.target.value === 'done' })}
@@ -913,6 +919,8 @@ function ItemEditor({
         )}
       </div>
 
+      <StateSelect value={item.environment} onChange={(environment) => set({ environment })} />
+
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2">
           <label className="block">
@@ -957,7 +965,7 @@ function ItemEditor({
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
-              <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Status</span>
               <Select
                 value={item.status}
                 onChange={(e) => set({ status: e.target.value })}

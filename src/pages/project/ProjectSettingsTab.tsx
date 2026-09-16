@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/velobits/dialog'
 import { parseCSV, downloadText } from '@/lib/csv'
 import { resolveTechIds } from '@/lib/techStack'
+import { StateSelect } from '@/components/StateSelect'
 import {
   SHEET_NAMES,
   buildProjectWorkbook,
@@ -315,6 +316,11 @@ function TemplatesSection({ project }: { project: Project }) {
                 {t.description ? ` — ${t.description}` : ''}
               </span>
             </div>
+            <StateSelect
+              value={t.environment}
+              labelled={false}
+              onChange={(environment) => void update(t.id, { environment })}
+            />
             <button
               type="button"
               onClick={async () => {

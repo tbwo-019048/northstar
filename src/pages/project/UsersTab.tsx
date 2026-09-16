@@ -17,6 +17,7 @@ import type { Person, PersonColumn, Project } from '@/lib/types'
 import { Chip, EditableText, IconButton, Input, SecretField, Textarea } from '@/components/ui-lite'
 import { PersonAvatar } from '@/components/PersonAvatar'
 import { useConfirm } from '@/store/useConfirm'
+import { StateSelect } from '@/components/StateSelect'
 import {
   Dialog,
   DialogContent,
@@ -201,6 +202,11 @@ export function UsersTab({
               </div>
             </DialogHeader>
 
+            <StateSelect
+              value={open.environment}
+              onChange={(environment) => void patch('project_people', open.id, { environment })}
+            />
+
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Username">
                 <Input
@@ -304,6 +310,7 @@ function SimpleUsers({
               <th className="px-2 py-1 font-medium">Name</th>
               <th className="px-2 py-1 font-medium">Contact</th>
               <th className="px-2 py-1 font-medium">Notes</th>
+              <th className="px-2 py-1 font-medium">State</th>
               <th className="w-8" />
             </tr>
           </thead>
@@ -316,6 +323,13 @@ function SimpleUsers({
                     placeholder="Name"
                     onSave={(v) => patch('project_people', p.id, { name: v })}
                     className="font-medium"
+                  />
+                </td>
+                <td className="px-2 py-0.5 align-top">
+                  <StateSelect
+                    value={p.environment}
+                    labelled={false}
+                    onChange={(environment) => void patch('project_people', p.id, { environment })}
                   />
                 </td>
                 <td className="px-2 py-0.5 align-top">
@@ -349,7 +363,7 @@ function SimpleUsers({
             ))}
             {people.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-2 py-6 text-center text-xs text-muted-foreground">
+                <td colSpan={5} className="px-2 py-6 text-center text-xs text-muted-foreground">
                   No {heading.toLowerCase()} yet.
                 </td>
               </tr>

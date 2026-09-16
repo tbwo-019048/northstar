@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { Project, ProjectType } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
+import { getActiveEnvironment } from '@/store/useSettings'
 
 interface ProjectsState {
   projects: Project[]
@@ -28,6 +29,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     const { data, error } = await supabase
       .from('projects')
       .select('*')
+      .eq('environment', getActiveEnvironment())
       .order('position', { ascending: true })
       .order('created_at', { ascending: true })
     set({
@@ -42,7 +44,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     const position = get().projects.length
     const { data, error } = await supabase
       .from('projects')
-      .insert({ name, type, position })
+      .insert({ name, type, position, environment: getActiveEnvironment() })
       .select('*')
       .single()
     if (error) {
@@ -65,6 +67,9 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       set({ projects: previous, error: error.message }) // roll back the optimistic write
       notifySaveError(error.message)
       return { error: error.message }
+    }
+    if (patch.environment && patch.environment !== getActiveEnvironment()) {
+      set({ projects: get().projects.filter((project) => project.id !== id) })
     }
     notifySaved()
     return { error: null }

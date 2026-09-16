@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Feature } from '@/lib/types'
+import type { WorkspaceState } from '@/lib/workspaceState'
+import { getActiveEnvironment } from '@/store/useSettings'
 
 /**
  * Record a completed To-Do as a Feature row — exactly once per To-Do.
@@ -17,6 +19,7 @@ export async function ensureTodoFeature(todo: {
   project_id: string
   title: string
   description?: string | null
+  environment?: WorkspaceState
 }): Promise<Feature | null> {
   const { data: existing } = await supabase
     .from('features')
@@ -39,6 +42,7 @@ export async function ensureTodoFeature(todo: {
       source: 'todo',
       source_todo_id: todo.id,
       sort: count ?? 0,
+      environment: todo.environment ?? getActiveEnvironment(),
     })
     .select('*')
     .single()

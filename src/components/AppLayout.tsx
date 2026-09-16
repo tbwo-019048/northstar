@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/store/useAuth'
 import { useProjects } from '@/store/useProjects'
@@ -11,6 +11,12 @@ import { CloudArrowDownIcon, type CloudArrowDownIconHandle } from '@/components/
 import { CheckIcon, type CheckIconHandle } from '@/components/ui/check'
 import { ArrowRightStartOnRectangleIcon } from '@/components/ui/arrow-right-start-on-rectangle'
 import { notifySaved } from '@/store/useChangeNotifications'
+import { useSettings } from '@/store/useSettings'
+import { useClients } from '@/store/useClients'
+import { useEmails } from '@/store/useEmails'
+import { useItems } from '@/store/useItems'
+import { useTemplates } from '@/store/useTemplates'
+import { WORKSPACE_STATE_LABEL } from '@/lib/workspaceState'
 
 /** Everything here already autosaves — every field write goes straight to
  * Supabase. This button gives an explicit, reassuring action anyway: it
@@ -57,6 +63,22 @@ export function AppLayout() {
   const { pathname } = useLocation()
   const isHome = pathname === '/app/landing'
   const { user, signOut, lockGate } = useAuth()
+  const { activeEnvironment, loaded: settingsLoaded, load: loadSettings } = useSettings()
+
+  useEffect(() => {
+    if (!settingsLoaded) void loadSettings()
+  }, [settingsLoaded, loadSettings])
+
+  useEffect(() => {
+    if (!settingsLoaded) return
+    if (useProjects.getState().loaded) void useProjects.getState().load()
+    if (useClients.getState().loaded) void useClients.getState().load()
+    if (useEmails.getState().loaded) void useEmails.getState().load()
+    if (useItems.getState().loaded) void useItems.getState().load()
+    if (useTemplates.getState().loaded) void useTemplates.getState().load()
+    const projectId = useProjectData.getState().projectId
+    if (projectId) void useProjectData.getState().load(projectId)
+  }, [activeEnvironment, settingsLoaded])
 
   const initials = (user?.email ?? '?')
     .split('@')[0]
@@ -79,6 +101,18 @@ export function AppLayout() {
           NorthStar
         </Link>
         <div className="flex-1" />
+        <Link
+          to="/app/settings"
+          title="Change workspace state in Settings"
+          className={
+            'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ' +
+            (activeEnvironment === 'production'
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300')
+          }
+        >
+          {WORKSPACE_STATE_LABEL[activeEnvironment]}
+        </Link>
         <div
           className="grid size-7 place-items-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary"
           title={user?.email ?? ''}

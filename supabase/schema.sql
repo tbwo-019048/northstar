@@ -411,8 +411,10 @@ end $$;
 create table if not exists app_settings (
   id           text primary key default 'default',
   github_token text,
+  active_environment text not null default 'staging',
   updated_at   timestamptz not null default now()
 );
+alter table app_settings add column if not exists active_environment text not null default 'staging';
 
 -- ---------------------------------------------------------------------------
 -- Project templates — reusable starting points. Picking one in the New-project
@@ -746,6 +748,36 @@ begin
   end loop;
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- Workspace state — all existing content begins in Staging. `projects.state`
+-- remains the separate project-lifecycle field.
+-- ---------------------------------------------------------------------------
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'projects', 'project_people', 'person_columns', 'env_vars', 'todos', 'features',
+    'details', 'requests', 'pipelines', 'project_screenshots', 'project_assets',
+    'pipeline_items', 'plan_items', 'project_templates', 'clients',
+    'client_companies', 'email_groups', 'email_accounts'
+  ] loop
+    execute format(
+      'alter table %I add column if not exists environment text not null default ''staging''', t);
+    execute format('update %I set environment = ''staging'' where environment is null', t);
+    begin
+      execute format(
+        'alter table %I add constraint %I check (environment in (''staging'', ''production''))',
+        t, t || '_environment_check');
+    exception when duplicate_object then null;
+    end;
+    execute format('create index if not exists %I on %I (environment)', t || '_environment_idx', t);
+  end loop;
+end $$;
+
+alter table app_settings drop constraint if exists app_settings_active_environment_check;
+alter table app_settings add constraint app_settings_active_environment_check
+  check (active_environment in ('staging', 'production'));
+
 do $$
 declare t text;
 begin
@@ -775,6 +807,7 @@ create table if not exists project_credentials (
   password           text not null default '',
   verification_token text not null default '',
   sort               integer not null default 0,
+  environment        text not null default 'staging',
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
@@ -789,6 +822,7 @@ create table if not exists project_supabase (
   password     text not null default '',
   project_name text not null default '',
   sort         integer not null default 0,
+  environment  text not null default 'staging',
   created_at   timestamptz not null default now()
 );
 
@@ -796,6 +830,15 @@ do $$
 declare t text;
 begin
   foreach t in array array['project_credentials', 'project_supabase'] loop
+    execute format(
+      'alter table %I add column if not exists environment text not null default ''staging''', t);
+    begin
+      execute format(
+        'alter table %I add constraint %I check (environment in (''staging'', ''production''))',
+        t, t || '_environment_check');
+    exception when duplicate_object then null;
+    end;
+    execute format('create index if not exists %I on %I (environment)', t || '_environment_idx', t);
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
     execute format(

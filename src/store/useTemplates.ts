@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { ProjectTemplate, ProjectType, TemplatePayload } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
+import { getActiveEnvironment } from '@/store/useSettings'
 
 interface TemplatesState {
   templates: ProjectTemplate[]
@@ -31,6 +32,7 @@ export const useTemplates = create<TemplatesState>((set, get) => ({
     const { data, error } = await supabase
       .from('project_templates')
       .select('*')
+      .eq('environment', getActiveEnvironment())
       .order('created_at', { ascending: true })
     set({
       templates: (data as ProjectTemplate[]) ?? [],
@@ -43,7 +45,7 @@ export const useTemplates = create<TemplatesState>((set, get) => ({
   create: async (name, description, type, payload) => {
     const { data, error } = await supabase
       .from('project_templates')
-      .insert({ name, description, type, payload })
+      .insert({ name, description, type, payload, environment: getActiveEnvironment() })
       .select('*')
       .single()
     if (error) {
@@ -66,6 +68,9 @@ export const useTemplates = create<TemplatesState>((set, get) => ({
       set({ templates: previous, error: error.message })
       notifySaveError(error.message)
       return { error: error.message }
+    }
+    if (patch.environment && patch.environment !== getActiveEnvironment()) {
+      set({ templates: get().templates.filter((template) => template.id !== id) })
     }
     notifySaved()
     return { error: null }
@@ -104,6 +109,7 @@ export async function seedProjectFromTemplate(
   payload: TemplatePayload,
 ): Promise<{ failed: number }> {
   let failed = 0
+  const environment = getActiveEnvironment()
   const run = async (p: PromiseLike<{ error: unknown }>) => {
     const { error } = await p
     if (error) {
@@ -121,6 +127,7 @@ export async function seedProjectFromTemplate(
           label: d.label ?? '',
           value: d.value ?? '',
           sort: i,
+          environment,
         })),
       ),
     )
@@ -135,6 +142,7 @@ export async function seedProjectFromTemplate(
           description: f.description ?? '',
           source: 'manual',
           sort: i,
+          environment,
         })),
       ),
     )
@@ -152,6 +160,7 @@ export async function seedProjectFromTemplate(
           status: 'todo',
           description: t.description ?? '',
           sort: i,
+          environment,
         })),
       ),
     )
@@ -167,6 +176,7 @@ export async function seedProjectFromTemplate(
           status: p.status || 'requested',
           priority: typeof p.priority === 'number' ? p.priority : 5,
           sort: i,
+          environment,
         })),
       ),
     )
@@ -181,6 +191,7 @@ export async function seedProjectFromTemplate(
         status: 'active',
         estimate_hours: pipe.estimate_hours || 0,
         sort: i,
+        environment,
       })
       .select('id')
       .single()
@@ -192,7 +203,12 @@ export async function seedProjectFromTemplate(
     if (pipe.items?.length) {
       await run(
         supabase.from('pipeline_items').insert(
-          pipe.items.map((body, j) => ({ pipeline_id: (data as { id: string }).id, body, sort: j })),
+          pipe.items.map((body, j) => ({
+            pipeline_id: (data as { id: string }).id,
+            body,
+            sort: j,
+            environment,
+          })),
         ),
       )
     }

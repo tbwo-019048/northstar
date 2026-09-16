@@ -21,6 +21,7 @@ import type {
 } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 import { ensureTodoFeature } from '@/lib/todoToFeature'
+import { getActiveEnvironment } from '@/store/useSettings'
 
 type Row = { id: string; [k: string]: unknown }
 
@@ -58,6 +59,8 @@ const PROJECT_TABLES: TableName[] = [
   'project_credentials',
   'project_supabase',
 ]
+
+const STATE_TABLES = new Set<TableName>([...PROJECT_TABLES, 'pipeline_items'])
 
 interface ProjectDataState {
   projectId: string | null
@@ -119,6 +122,7 @@ async function todoToFeature(get: Get, set: Set, todoId: string) {
     project_id: projectId,
     title: (todo.title as string) || 'Feature',
     description: (todo.description as string) ?? '',
+    environment: (todo.environment as import('@/lib/workspaceState').WorkspaceState) ?? getActiveEnvironment(),
   })
   if (created)
     set((s) => ({ rows: { ...s.rows, features: [...s.rows.features, created as unknown as Row] } }))
@@ -140,7 +144,12 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
     set({ loading: true, projectId, ...(switching ? { rows: empty() } : {}) })
     const base = await Promise.all(
       PROJECT_TABLES.map((t) =>
-        supabase.from(t).select('*').eq('project_id', projectId).order('sort', { ascending: true }),
+        supabase
+          .from(t)
+          .select('*')
+          .eq('project_id', projectId)
+          .eq('environment', getActiveEnvironment())
+          .order('sort', { ascending: true }),
       ),
     )
     const rows = empty()
@@ -165,6 +174,7 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
             .from('pipeline_items')
             .select('*')
             .in('pipeline_id', pipelineIds)
+            .eq('environment', getActiveEnvironment())
             .order('sort', { ascending: true })
         : Promise.resolve({ data: [] }),
       planIds.length
@@ -180,7 +190,10 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
   },
 
   add: async (table, values) => {
-    const { data, error } = await supabase.from(table).insert(values).select('*').single()
+    const scopedValues = STATE_TABLES.has(table)
+      ? { environment: getActiveEnvironment(), ...values }
+      : values
+    const { data, error } = await supabase.from(table).insert(scopedValues).select('*').single()
     if (error || !data) {
       console.error('[NorthStar] add failed', table, error)
       notifySaveError(error?.message)
@@ -206,6 +219,11 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       set((s) => ({ rows: { ...s.rows, [table]: previous } })) // roll back
       notifySaveError(error.message)
       return { error: error.message }
+    }
+    if (values.environment && values.environment !== getActiveEnvironment()) {
+      set((s) => ({
+        rows: { ...s.rows, [table]: s.rows[table].filter((row) => row.id !== id) },
+      }))
     }
     markLocalWrite()
     notifySaved()

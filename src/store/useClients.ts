@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type { Client, ClientCompany, ProjectClient } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
+import { getActiveEnvironment } from '@/store/useSettings'
 
 interface ClientsState {
   clients: Client[]
@@ -37,8 +38,8 @@ export const useClients = create<ClientsState>((set, get) => ({
   load: async () => {
     set({ loading: true })
     const [clientsRes, companiesRes, linksRes] = await Promise.all([
-      supabase.from('clients').select('*').order('sort', { ascending: true }),
-      supabase.from('client_companies').select('*').order('sort', { ascending: true }),
+      supabase.from('clients').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
+      supabase.from('client_companies').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
       supabase.from('project_clients').select('*'),
     ])
     set({
@@ -55,7 +56,7 @@ export const useClients = create<ClientsState>((set, get) => ({
   create: async (fields) => {
     const { data, error } = await supabase
       .from('clients')
-      .insert({ sort: get().clients.length, ...fields })
+      .insert({ sort: get().clients.length, environment: getActiveEnvironment(), ...fields })
       .select('*')
       .single()
     if (error || !data) {
@@ -77,6 +78,9 @@ export const useClients = create<ClientsState>((set, get) => ({
       set({ clients: previous, error: error.message })
       notifySaveError(error.message)
       return { error: error.message }
+    }
+    if (patch.environment && patch.environment !== getActiveEnvironment()) {
+      set({ clients: get().clients.filter((client) => client.id !== id) })
     }
     notifySaved()
     return { error: null }
@@ -116,7 +120,7 @@ export const useClients = create<ClientsState>((set, get) => ({
     const sort = get().companies.filter((c) => c.client_id === clientId).length
     const { data, error } = await supabase
       .from('client_companies')
-      .insert({ client_id: clientId, name: '', email_domain: '', sort, ...fields })
+      .insert({ client_id: clientId, name: '', email_domain: '', sort, environment: getActiveEnvironment(), ...fields })
       .select('*')
       .single()
     if (error || !data) {
@@ -137,6 +141,9 @@ export const useClients = create<ClientsState>((set, get) => ({
       set({ companies: previous })
       notifySaveError(error.message)
       return
+    }
+    if (patch.environment && patch.environment !== getActiveEnvironment()) {
+      set({ companies: get().companies.filter((company) => company.id !== id) })
     }
     notifySaved()
   },

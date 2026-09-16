@@ -25,6 +25,7 @@ import { PROJECT_STATES, type Project, type ProjectState } from '@/lib/types'
 import type { DetailsBlock } from '@/lib/projectLayout'
 import { formatState } from '@/lib/projectState'
 import { CountryPicker } from '@/components/CountryPicker'
+import { StateSelect } from '@/components/StateSelect'
 
 export function DetailsTab({ project, blocks }: { project: Project; blocks: DetailsBlock[] }) {
   const projectId = project.id
@@ -76,7 +77,7 @@ export function DetailsTab({ project, blocks }: { project: Project; blocks: Deta
 
           {has('state') && (
             <label className="block">
-              <span className="text-[11px] font-medium uppercase text-muted-foreground">State</span>
+              <span className="text-[11px] font-medium uppercase text-muted-foreground">Lifecycle</span>
               <Select
                 value={project.state}
                 onChange={(e) => update(projectId, { state: e.target.value as ProjectState })}
@@ -212,6 +213,14 @@ export function DetailsTab({ project, blocks }: { project: Project; blocks: Deta
                   <td className="px-2 py-0.5 align-top">
                     <EditableText value={d.value} placeholder="—" multiline onSave={(v) => patch('details', d.id, { value: v })} />
                   </td>
+                  <td className="w-32 px-1 py-0.5 align-top">
+                    <StateSelect
+                      value={d.environment}
+                      labelled={false}
+                      onChange={(environment) => void patch('details', d.id, { environment })}
+                      className="h-6 min-w-[6.5rem] text-xs"
+                    />
+                  </td>
                   <td className="w-8 px-1 py-0.5">
                     <IconButton onClick={() => del('details', d.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
                       <TrashIcon size={14} />
@@ -345,6 +354,14 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
                   className="h-6 border-transparent bg-transparent font-mono text-xs hover:border-border focus:bg-background"
                 />
               </td>
+              <td className="w-32 px-1 py-0.5 align-top">
+                <StateSelect
+                  value={v.environment}
+                  labelled={false}
+                  onChange={(environment) => void patch('env_vars', v.id, { environment })}
+                  className="h-6 min-w-[6.5rem] text-xs"
+                />
+              </td>
               <td className="w-8 px-1 py-0.5">
                 <IconButton onClick={() => del('env_vars', v.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive">
                   <TrashIcon size={14} />
@@ -354,7 +371,7 @@ function EnvVarsSection({ projectId }: { projectId: string }) {
           ))}
           {vars.length === 0 && (
             <tr>
-              <td colSpan={3} className="px-2 py-4 text-center text-xs text-muted-foreground">
+              <td colSpan={4} className="px-2 py-4 text-center text-xs text-muted-foreground">
                 No variables yet — upload a .env file or add one manually.
               </td>
             </tr>

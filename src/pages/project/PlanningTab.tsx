@@ -39,6 +39,7 @@ import {
 import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { useConfirm } from '@/store/useConfirm'
+import { StateSelect } from '@/components/StateSelect'
 import {
   Dialog,
   DialogContent,
@@ -590,6 +591,11 @@ function PlanItemModal({
           className="!text-base font-semibold"
         />
       </DialogHeader>
+
+      <StateSelect
+        value={item.environment}
+        onChange={(environment) => void patch('plan_items', item.id, { environment })}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">

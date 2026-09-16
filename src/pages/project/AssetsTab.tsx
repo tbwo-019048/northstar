@@ -8,6 +8,7 @@ import { TrashIcon } from '@/components/ui/trash'
 import { useProjectData, asAssets } from '@/store/useProjectData'
 import { supabase } from '@/lib/supabase'
 import { Input, IconButton } from '@/components/ui-lite'
+import { StateSelect } from '@/components/StateSelect'
 
 function formatSize(bytes: number | null) {
   if (!bytes) return ''
@@ -18,7 +19,7 @@ function formatSize(bytes: number | null) {
 
 export function AssetsTab({ projectId }: { projectId: string }) {
   const rows = useProjectData((s) => s.rows.project_assets)
-  const { add, del } = useProjectData()
+  const { add, patch, del } = useProjectData()
   const assets = asAssets(rows).slice().sort((a, b) => a.sort - b.sort)
   const fileRef = useRef<HTMLInputElement>(null)
   const [addingLink, setAddingLink] = useState(false)
@@ -149,6 +150,12 @@ export function AssetsTab({ projectId }: { projectId: string }) {
             ) : (
               <ArrowDownTrayIcon size={12} className="shrink-0 text-muted-foreground" />
             )}
+            <StateSelect
+              value={a.environment}
+              labelled={false}
+              onChange={(environment) => void patch('project_assets', a.id, { environment })}
+              className="h-6 min-w-[6.5rem] text-xs"
+            />
             <IconButton
               onClick={() => del('project_assets', a.id)}
               className="opacity-0 group-hover:opacity-100 hover:text-destructive"

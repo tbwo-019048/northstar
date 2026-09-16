@@ -31,6 +31,7 @@ import { useAuth } from '@/store/useAuth'
 import { PRIORITIES, TODO_TYPES, type Todo, type TodoStatus } from '@/lib/types'
 import { Chip, EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
+import { StateSelect } from '@/components/StateSelect'
 
 export function TodoTab({ projectId, label }: { projectId: string; label?: string }) {
   const rows = useProjectData((s) => s.rows.todos)
@@ -403,6 +404,10 @@ function TodoDetail({ todo, patch }: { todo: Todo; patch: PatchFn }) {
   return (
     <div className="grid gap-3 md:grid-cols-2">
       <div className="space-y-1">
+        <StateSelect
+          value={todo.environment}
+          onChange={(environment) => void patch('todos', todo.id, { environment })}
+        />
         <span className="text-[11px] font-medium uppercase text-muted-foreground">
           Description {status !== 'idle' && <em className="not-italic text-primary">· {status}</em>}
         </span>

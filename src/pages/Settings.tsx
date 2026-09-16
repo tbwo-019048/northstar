@@ -15,6 +15,8 @@ import { SITE_TYPES } from '@/lib/types'
 import { IconButton, Input, PasswordInput } from '@/components/ui-lite'
 import { MembersSettings } from '@/components/MembersSettings'
 import { useConfirm } from '@/store/useConfirm'
+import { StateSelect } from '@/components/StateSelect'
+import { WORKSPACE_STATE_LABEL } from '@/lib/workspaceState'
 
 export function Settings() {
   const confirm = useConfirm()
@@ -25,7 +27,15 @@ export function Settings() {
   const setDiagnostic = useDiagnostic((s) => s.setOn)
   const gridCols = useGridCols((s) => s.cols)
   const setGridCols = useGridCols((s) => s.setCols)
-  const { githubTokenSet, loaded, load, saveGithubToken, clearGithubToken } = useSettings()
+  const {
+    githubTokenSet,
+    activeEnvironment,
+    loaded,
+    load,
+    saveGithubToken,
+    clearGithubToken,
+    setActiveEnvironment,
+  } = useSettings()
   const [token, setToken] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +99,23 @@ export function Settings() {
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
         <div className="space-y-4">
+          <section className="space-y-3 rounded-xl border border-border bg-panel p-4 shadow-sm">
+            <div>
+              <h2 className="text-sm font-semibold">Workspace state</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Only {WORKSPACE_STATE_LABEL[activeEnvironment]} records are visible. New projects,
+                clients, accounts, and project items are created in this state.
+              </p>
+            </div>
+            <StateSelect
+              value={activeEnvironment}
+              onChange={(environment) => void setActiveEnvironment(environment)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Changing this switch reloads every page with the selected state. Change an individual
+              record's State inside that record to move it between views.
+            </p>
+          </section>
           <MembersSettings />
           <RepoTable />
         </div>

@@ -31,13 +31,14 @@ import { useGridCols } from '@/store/useGridCols'
 import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
 import { useConfirm } from '@/store/useConfirm'
 import type { EmailAccount } from '@/lib/types'
+import { StateSelect } from '@/components/StateSelect'
 
 type EmailView = 'table' | 'byGroup' | 'grid'
 const VIEW_KEY = 'northstar.emails.view'
 
 export function Emails() {
   const {
-    groups, accounts, loaded, load, subscribe, addGroup, removeGroup,
+    groups, accounts, loaded, load, subscribe, addGroup, updateGroup, removeGroup,
     addAccount, updateAccount, removeAccount, reorderGroups, reorderAccounts,
   } = useEmails()
   const diagnostic = useDiagnostic((s) => s.on)
@@ -174,6 +175,12 @@ export function Emails() {
       ) : (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
+            {active && groups.find((group) => group.id === active) && (
+              <StateSelect
+                value={groups.find((group) => group.id === active)!.environment}
+                onChange={(environment) => void updateGroup(active, { environment })}
+              />
+            )}
             <button
               type="button"
               onClick={() => active && addAccount(active, { name: 'New account', sort: accounts.filter((account) => account.group_id === active).length })}
@@ -233,6 +240,10 @@ export function Emails() {
                     <IconButton onClick={() => removeAccount(account.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive"><TrashIcon size={14} /></IconButton>
                   </div>
                   <div className="mt-4 space-y-2">
+                    <StateSelect
+                      value={account.environment}
+                      onChange={(environment) => void updateAccount(account.id, { environment })}
+                    />
                     <label className="block">
                       <span className="text-[10px] font-medium uppercase text-muted-foreground">Domain</span>
                       <EditableText value={account.domain} placeholder="—" onSave={(value) => updateAccount(account.id, { domain: value })} />
@@ -341,6 +352,13 @@ function EmailRow({
       <td className="px-2 py-1 align-top"><EditableText value={account.domain} onSave={(value) => updateAccount(account.id, { domain: value })} /></td>
       <td className="px-2 py-1 align-top"><SecretField value={account.password} onChange={(event) => updateAccount(account.id, { password: event.target.value })} className="h-7" /></td>
       <td className="px-2 py-1 align-top"><EditableText value={account.notes} placeholder="—" onSave={(value) => updateAccount(account.id, { notes: value })} /></td>
+      <td className="px-2 py-1 align-top">
+        <StateSelect
+          value={account.environment}
+          labelled={false}
+          onChange={(environment) => void updateAccount(account.id, { environment })}
+        />
+      </td>
       <td className="px-1 py-1 align-top">
         <IconButton onClick={() => removeAccount(account.id)} className="opacity-0 group-hover:opacity-100 hover:text-destructive"><TrashIcon size={14} /></IconButton>
       </td>
@@ -367,7 +385,7 @@ function EmailTable({
   onReorder?: (ids: string[]) => void
   emptyText: string
 }) {
-  const cols = (reorderable ? 1 : 0) + (diagnostic ? 1 : 0) + 6
+  const cols = (reorderable ? 1 : 0) + (diagnostic ? 1 : 0) + 7
   const body = (
     <tbody>
       {accounts.map((account) => (
@@ -396,7 +414,7 @@ function EmailTable({
           {reorderable && <col className="w-7" />}
           {diagnostic && <col className="w-8" />}
           <col className="w-40" /><col className="w-48" /><col className="w-32" />
-          <col className="w-32" /><col /><col className="w-8" />
+          <col className="w-32" /><col /><col className="w-32" /><col className="w-8" />
         </colgroup>
         <thead>
           <tr className="border-b border-border bg-muted/40 text-left text-[11px] uppercase text-muted-foreground">
@@ -404,7 +422,7 @@ function EmailTable({
             {diagnostic && <th />}
             <th className="px-2 py-1 font-medium">Name</th><th className="px-2 py-1 font-medium">Email</th>
             <th className="px-2 py-1 font-medium">Domain</th><th className="px-2 py-1 font-medium">Password</th>
-            <th className="px-2 py-1 font-medium">Notes</th><th />
+            <th className="px-2 py-1 font-medium">Notes</th><th className="px-2 py-1 font-medium">State</th><th />
           </tr>
         </thead>
         {reorderable && sensors && onReorder ? (

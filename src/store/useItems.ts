@@ -5,6 +5,7 @@ import type { ItemSource } from '@/lib/unifiedItem'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 import { useAuth } from '@/store/useAuth'
 import { ensureTodoFeature } from '@/lib/todoToFeature'
+import { getActiveEnvironment } from '@/store/useSettings'
 
 type ItemComment = TodoComment | PlanComment
 
@@ -62,10 +63,10 @@ export const useItems = create<ItemsState>((set, get) => ({
     // No project_id filter — the project-data tables are `for all to
     // authenticated using (true)`, so a global select is intended here.
     const [t, p, pl, pli] = await Promise.all([
-      supabase.from('todos').select('*').order('updated_at', { ascending: false }),
-      supabase.from('plan_items').select('*').order('updated_at', { ascending: false }),
-      supabase.from('pipelines').select('id, project_id'),
-      supabase.from('pipeline_items').select('*').order('sort', { ascending: true }),
+      supabase.from('todos').select('*').eq('environment', getActiveEnvironment()).order('updated_at', { ascending: false }),
+      supabase.from('plan_items').select('*').eq('environment', getActiveEnvironment()).order('updated_at', { ascending: false }),
+      supabase.from('pipelines').select('id, project_id').eq('environment', getActiveEnvironment()),
+      supabase.from('pipeline_items').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
     ])
     const pipelineProjectById: Record<string, string> = {}
     for (const row of (pl.data as { id: string; project_id: string }[]) ?? []) {
@@ -83,7 +84,11 @@ export const useItems = create<ItemsState>((set, get) => ({
   },
 
   add: async (source, values) => {
-    const { data, error } = await supabase.from(TABLE(source)).insert(values).select('*').single()
+    const { data, error } = await supabase
+      .from(TABLE(source))
+      .insert({ environment: getActiveEnvironment(), ...values })
+      .select('*')
+      .single()
     if (error || !data) {
       console.error('[NorthStar] add item failed', source, error)
       notifySaveError(error?.message)
@@ -117,6 +122,12 @@ export const useItems = create<ItemsState>((set, get) => ({
       set(before) // roll back
       notifySaveError(error.message)
       return { error: error.message }
+    }
+    if (values.environment && values.environment !== getActiveEnvironment()) {
+      if (source === 'todo') set((s) => ({ todos: s.todos.filter((row) => row.id !== id) }))
+      else if (source === 'pipeline')
+        set((s) => ({ pipelineItems: s.pipelineItems.filter((row) => row.id !== id) }))
+      else set((s) => ({ planItems: s.planItems.filter((row) => row.id !== id) }))
     }
     markLocalWrite()
     notifySaved()

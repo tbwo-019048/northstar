@@ -9,6 +9,7 @@ import {
   type Todo,
   type TodoStatus,
 } from '@/lib/types'
+import type { WorkspaceState } from '@/lib/workspaceState'
 
 /**
  * The Items page surfaces two different underlying records — `todos` and
@@ -46,6 +47,7 @@ export interface UnifiedItem {
   createdAt: string
   updatedAt: string
   hidden: boolean
+  environment: WorkspaceState
 }
 
 export const TODO_PRIORITY_RANK: Record<Priority, number> = {
@@ -102,6 +104,7 @@ export function toUnifiedFromTodo(t: Todo): UnifiedItem {
     createdAt: t.created_at,
     updatedAt: t.updated_at,
     hidden: t.hidden ?? false,
+    environment: t.environment,
   }
 }
 
@@ -130,6 +133,7 @@ export function toUnifiedFromPlan(p: PlanItem): UnifiedItem {
     createdAt: p.created_at,
     updatedAt: p.updated_at,
     hidden: p.hidden ?? false,
+    environment: p.environment,
   }
 }
 
@@ -158,6 +162,7 @@ export function toUnifiedFromPipeline(p: PipelineItem, projectId: string): Unifi
     createdAt: p.created_at,
     updatedAt: p.created_at,
     hidden: false,
+    environment: p.environment,
   }
 }
 

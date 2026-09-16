@@ -31,6 +31,7 @@ import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgres
 import { STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
 import { APP_PLATFORMS, SITE_TYPES, type Project } from '@/lib/types'
 import type { SummaryBlock } from '@/lib/projectLayout'
+import { StateSelect } from '@/components/StateSelect'
 import {
   Dialog,
   DialogContent,
@@ -447,6 +448,12 @@ function LoginSection({ projectId }: { projectId: string }) {
         </button>
       ) : (
         <div className="grid gap-3 rounded-md border border-border bg-muted/20 p-2 sm:grid-cols-3">
+          <div className="sm:col-span-3">
+            <StateSelect
+              value={cred.environment}
+              onChange={(environment) => void patch('project_credentials', cred.id, { environment })}
+            />
+          </div>
           <label className="block">
             <span className="text-[11px] font-medium uppercase text-muted-foreground">
               Username / email
@@ -530,6 +537,11 @@ function SupabaseSection({ projectId }: { projectId: string }) {
               onChange={(e) => patch('project_supabase', acc.id, { password: e.target.value })}
               placeholder="password"
               className="max-w-[180px]"
+            />
+            <StateSelect
+              value={acc.environment}
+              labelled={false}
+              onChange={(environment) => void patch('project_supabase', acc.id, { environment })}
             />
             <IconButton
               onClick={async () => {
