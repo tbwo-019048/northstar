@@ -17,8 +17,9 @@ export type TabKey =
   | 'locations'
   | 'albumArt'
   | 'album'
+  | 'mindmap'
 
-export type SummaryBlock = 'url' | 'image' | 'progress' | 'summary' | 'clients' | 'stats' | 'topTodos' | 'graph'
+export type SummaryBlock = 'url' | 'image' | 'progress' | 'summary' | 'clients' | 'stats' | 'topTodos'
 
 export type DetailsBlock =
   | 'codename'
@@ -90,11 +91,15 @@ const lean = (featuresLabel: string, extraLabels: Partial<Record<TabKey, string>
   simpleUsers: false,
 })
 
-const GRAPH_SUMMARY: SummaryBlock[] = ['graph']
+/** Just the state gauge (HalfCircleProgress, driven by project.state) — no
+ * links/screenshots/summary text/clients/stats. The free-form mind-map lives
+ * on its own optional "mindmap" tab (see Project.tsx's show_mindmap check),
+ * not on Summary. */
+const STATE_SUMMARY: SummaryBlock[] = ['progress']
 
-/** The shared "standard treatment": Summary is a manually-authored concept
- * graph (nothing else), Details is the lean set, and Planning is the simple
- * Pending/In Progress/Completed board instead of the classic 5-status one. */
+/** The shared "standard treatment": Summary shows only the state gauge,
+ * Details is the lean set, and Planning is the simple Pending/In Progress/
+ * Completed board instead of the classic 5-status one. */
 const standard = (
   featuresLabel: string,
   extraLabels: Partial<Record<TabKey, string>> = {},
@@ -102,7 +107,7 @@ const standard = (
 ): TypeLayout => ({
   hiddenTabs: ['users', 'git'],
   tabLabels: { features: featuresLabel, ...extraLabels },
-  summary: GRAPH_SUMMARY,
+  summary: STATE_SUMMARY,
   details: LEAN_DETAILS,
   simpleUsers: false,
   planningVariant: 'simple',
@@ -115,7 +120,7 @@ export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
   production: {
     hiddenTabs: ['git'],
     tabLabels: { features: 'Store', todo: 'Orders', users: 'Customers' },
-    summary: GRAPH_SUMMARY,
+    summary: STATE_SUMMARY,
     details: LEAN_DETAILS,
     simpleUsers: true,
     planningVariant: 'simple',
@@ -128,7 +133,7 @@ export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
   game: {
     hiddenTabs: [],
     tabLabels: {},
-    summary: GRAPH_SUMMARY,
+    summary: STATE_SUMMARY,
     details: LEAN_DETAILS,
     simpleUsers: false,
     planningVariant: 'simple',

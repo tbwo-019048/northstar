@@ -22,6 +22,7 @@ import { AssetsTab } from '@/pages/project/AssetsTab'
 import { LocationsTab } from '@/pages/project/LocationsTab'
 import { AlbumArtTab } from '@/pages/project/AlbumArtTab'
 import { AlbumTab } from '@/pages/project/AlbumTab'
+import { ConceptGraphTab } from '@/pages/project/ConceptGraphTab'
 import { StateSelect } from '@/components/StateSelect'
 
 const TABS = [
@@ -71,10 +72,16 @@ export function Project() {
   const baseTabs = TABS.filter((t) => !layout?.hiddenTabs.includes(t.key))
   const detailsIdx = baseTabs.findIndex((t) => t.key === 'details')
   const spliced = [...baseTabs.slice(0, detailsIdx + 1), ...extraTabs, ...baseTabs.slice(detailsIdx + 1)]
+  // The mind-map is a per-project opt-in (Settings), not tied to type, so it
+  // splices in next to Summary regardless of which layout the project uses.
+  const summaryIdx = spliced.findIndex((t) => t.key === 'summary')
+  const withMindmap = project?.show_mindmap
+    ? [...spliced.slice(0, summaryIdx + 1), { key: 'mindmap' as const, label: 'Mindmap' }, ...spliced.slice(summaryIdx + 1)]
+    : spliced
   // Type-level hiddenTabs wins first; active_module only narrows further among
   // the governed tabs a type already allows (see moduleConversion.ts).
   const activeModule = project?.active_module
-  const tabs = spliced.filter((t) => !GOVERNED_TABS.includes(t.key) || !activeModule || activeModule === t.key)
+  const tabs = withMindmap.filter((t) => !GOVERNED_TABS.includes(t.key) || !activeModule || activeModule === t.key)
   const labelFor = (key: TabKey, fallback: string) => layout?.tabLabels[key] ?? fallback
 
   if (!id) return <Navigate to="/app" replace />
@@ -92,7 +99,8 @@ export function Project() {
     tab &&
     (layout.hiddenTabs.includes(tab as TabKey) ||
       (ADDITIVE_TABS.includes(tab as TabKey) && !extraKeys.has(tab as TabKey)) ||
-      (GOVERNED_TABS.includes(tab as TabKey) && !!activeModule && activeModule !== tab))
+      (GOVERNED_TABS.includes(tab as TabKey) && !!activeModule && activeModule !== tab) ||
+      (tab === 'mindmap' && !project?.show_mindmap))
   ) {
     return <Navigate to={`/app/project/${id}`} replace />
   }
@@ -188,6 +196,7 @@ export function Project() {
         {active === 'locations' && <LocationsTab projectId={id} />}
         {active === 'albumArt' && project && <AlbumArtTab project={project} />}
         {active === 'album' && <AlbumTab projectId={id} />}
+        {active === 'mindmap' && <ConceptGraphTab projectId={id} />}
         {active === 'requests' && project && (
           <RequestsTab project={project} label={layout?.tabLabels.requests} />
         )}

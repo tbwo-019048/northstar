@@ -793,6 +793,12 @@ exception when duplicate_object then null; end $$;
 alter table projects add column if not exists active_module project_active_module;
 
 -- ---------------------------------------------------------------------------
+-- The free-form mind-map moved off the Summary tab onto its own optional
+-- tab, toggled per project in Settings. Off by default for every project.
+-- ---------------------------------------------------------------------------
+alter table projects add column if not exists show_mindmap boolean not null default false;
+
+-- ---------------------------------------------------------------------------
 -- Clients — a global directory (not scoped to one project), linkable to any
 -- number of projects via project_clients.
 -- ---------------------------------------------------------------------------

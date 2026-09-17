@@ -150,6 +150,8 @@ export interface Project extends StateScoped {
   /** Restricts this project to exactly one of Pipeline/To-Do/Planning/
    * Requests. Null = legacy: show all four (see src/lib/moduleConversion.ts). */
   active_module?: 'pipeline' | 'todo' | 'planning' | 'requests' | null
+  /** Per-project opt-in for the free-form mind-map tab. Off by default. */
+  show_mindmap?: boolean
   platforms: string[]
   tech_stack: string[]
   countries: string[]
