@@ -42,6 +42,11 @@
     background: var(--border);
     border-radius: 999px;
   }
+  /* The type-filter dropdown's own internal scroll (Overview.tsx) gets the
+     primary color on its thumb rather than the app-wide neutral one. */
+  [data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb {
+    background: var(--primary);
+  }
 }
 
 /* Print — used by the project PDF report route (src/pages/ProjectPrint.tsx). */

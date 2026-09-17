@@ -43,6 +43,7 @@ import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgres
 import { useConfirm } from '@/store/useConfirm'
 import { parseCSV, toCSV, downloadText } from '@/lib/csv'
 import { STATE_CHIP_CLASS, STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -128,6 +129,10 @@ export function Overview() {
   // Empty set = no filter applied (every type shown).
   const [typeFilters, setTypeFilters] = useState<Set<ProjectType>>(new Set())
   const [searchOpen, setSearchOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<ProjectType>('website')
@@ -352,32 +357,13 @@ export function Overview() {
 
   return (
     <div className="space-y-3">
-      {error && (
-        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
-          <ExclamationTriangleIcon size={14} className="mt-0.5 shrink-0" />
-          <span className="flex-1">{error}</span>
-          <IconButton onClick={clearError} className="hover:text-destructive">
-            <XMarkIcon size={14} />
-          </IconButton>
-        </div>
-      )}
-      {importMsg && (
-        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs text-muted-foreground">
-          <span className="flex-1">{importMsg}</span>
-          <IconButton onClick={() => setImportMsg(null)}>
-            <XMarkIcon size={14} />
-          </IconButton>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2">
-        <h1 className="text-sm font-semibold">Projects</h1>
-        <span className="text-xs text-muted-foreground">{projects.length}</span>
-      </div>
-
       {/* Full-bleed toolbar, breaking out of the centered content column to
-          span the browser width and read as a continuation of the header. */}
-      <div className="relative left-1/2 right-1/2 mx-[-50vw] w-screen border-b border-border bg-panel/95 px-3 py-2">
+          span the browser width. It's the very first thing rendered (no
+          space-y gap above it) so it reads as a continuation of the header,
+          and every interactive element in it shares one height (h-7) so the
+          filter dropdown's sideOffset below lines up exactly with its own
+          bottom edge. */}
+      <div className="relative left-1/2 right-1/2 mx-[-50vw] w-screen border-b border-border bg-panel/95 px-3 py-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <IconButton
             title="Search"
@@ -387,13 +373,18 @@ export function Overview() {
                 return !open
               })
             }
-            className={'border border-border ' + (searchOpen ? 'bg-muted text-foreground' : '')}
+            className={'h-7 w-7 border border-border ' + (searchOpen ? 'bg-muted text-foreground' : '')}
           >
             <MagnifyingGlassIcon size={14} />
           </IconButton>
-          {searchOpen && (
+          <div
+            className={cn(
+              'overflow-hidden transition-all duration-300 ease-out',
+              searchOpen ? 'w-40 opacity-100' : 'w-0 opacity-0',
+            )}
+          >
             <Input
-              autoFocus
+              ref={searchInputRef}
               value={q}
               onChange={(e) => {
                 setQ(e.target.value)
@@ -408,27 +399,27 @@ export function Overview() {
               placeholder="Search"
               className="h-7 w-40"
             />
-          )}
+          </div>
 
           <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
             <IconButton
               title="Descriptions"
               onClick={() => setShowDescriptions((v) => !v)}
-              className={showDescriptions ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (showDescriptions ? 'bg-muted text-foreground' : '')}
             >
               <AlignLeft size={14} />
             </IconButton>
             <IconButton
               title="Codenames"
               onClick={() => setCodenames((v) => !v)}
-              className={codenames ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (codenames ? 'bg-muted text-foreground' : '')}
             >
               <Tag size={14} />
             </IconButton>
             <IconButton
               title="Retired"
               onClick={() => setShowRetired((v) => !v)}
-              className={showRetired ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (showRetired ? 'bg-muted text-foreground' : '')}
             >
               <Archive size={14} />
             </IconButton>
@@ -438,7 +429,7 @@ export function Overview() {
                 setPaginate((v) => !v)
                 setTablePage(0)
               }}
-              className={paginate ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (paginate ? 'bg-muted text-foreground' : '')}
             >
               <LayoutList size={14} />
             </IconButton>
@@ -448,13 +439,17 @@ export function Overview() {
             <DropdownMenuTrigger
               title="Filter by type"
               className={
-                'grid size-6 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ' +
+                'grid h-7 w-7 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ' +
                 (typeFilters.size > 0 ? 'bg-primary/10 text-primary' : '')
               }
             >
               <ListFilter size={14} />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            {/* sideOffset={6} matches the bar's own py-1.5 (6px) bottom
+                padding exactly, so — with every toolbar control the same
+                h-7 height above — the dropdown's top edge lines up flush
+                with the bar's bottom edge instead of floating below it. */}
+            <DropdownMenuContent align="start" sideOffset={6} className="w-64">
               <DropdownMenuLabel>Filter by type</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {typeFilters.size > 0 && (
@@ -471,26 +466,28 @@ export function Overview() {
                   <DropdownMenuSeparator />
                 </>
               )}
-              {allTypes.map((t) => (
-                <DropdownMenuCheckboxItem
-                  key={t}
-                  checked={typeFilters.has(t)}
-                  onSelect={(e) => e.preventDefault()}
-                  onCheckedChange={() => toggleTypeFilter(t)}
-                >
-                  {t}
-                </DropdownMenuCheckboxItem>
-              ))}
+              <div className="grid grid-cols-2 gap-x-1">
+                {allTypes.map((t) => (
+                  <DropdownMenuCheckboxItem
+                    key={t}
+                    checked={typeFilters.has(t)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => toggleTypeFilter(t)}
+                  >
+                    {t}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <IconButton title="Export CSV" onClick={exportCsv} className="border border-border">
+          <IconButton title="Export CSV" onClick={exportCsv} className="h-7 w-7 border border-border">
             <ArrowDownTrayIcon size={14} />
           </IconButton>
           <IconButton
             title="Import CSV"
             onClick={() => fileRef.current?.click()}
-            className="border border-border"
+            className="h-7 w-7 border border-border"
           >
             <ArrowUpTrayIcon size={14} />
           </IconButton>
@@ -512,7 +509,7 @@ export function Overview() {
               if (!unlocked) setView('table')
               setUnlocked(!unlocked)
             }}
-            className={'border border-border ' + (unlocked ? 'bg-primary/10 text-primary' : '')}
+            className={'h-7 w-7 border border-border ' + (unlocked ? 'bg-primary/10 text-primary' : '')}
           >
             {unlocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
           </IconButton>
@@ -531,40 +528,63 @@ export function Overview() {
             <IconButton
               title="Table"
               onClick={() => setView('table')}
-              className={view === 'table' ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (view === 'table' ? 'bg-muted text-foreground' : '')}
             >
               <ListBulletIcon size={14} />
             </IconButton>
             <IconButton
               title="Grouped by type"
               onClick={() => setView('byType')}
-              className={view === 'byType' ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (view === 'byType' ? 'bg-muted text-foreground' : '')}
             >
               <Bars3Icon size={14} />
             </IconButton>
             <IconButton
               title="Grouped by client"
               onClick={() => setView('byClient')}
-              className={view === 'byClient' ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (view === 'byClient' ? 'bg-muted text-foreground' : '')}
             >
               <UsersIcon size={14} />
             </IconButton>
             <IconButton
               title="Grid"
               onClick={() => setView('grid')}
-              className={view === 'grid' ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (view === 'grid' ? 'bg-muted text-foreground' : '')}
             >
               <Squares2X2Icon size={14} />
             </IconButton>
             <IconButton
               title="Progress"
               onClick={() => setView('progress')}
-              className={view === 'progress' ? 'bg-muted text-foreground' : ''}
+              className={'h-7 w-7 ' + (view === 'progress' ? 'bg-muted text-foreground' : '')}
             >
               <ChartPieIcon size={14} />
             </IconButton>
           </div>
         </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
+          <ExclamationTriangleIcon size={14} className="mt-0.5 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <IconButton onClick={clearError} className="hover:text-destructive">
+            <XMarkIcon size={14} />
+          </IconButton>
+        </div>
+      )}
+      {importMsg && (
+        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs text-muted-foreground">
+          <span className="flex-1">{importMsg}</span>
+          <IconButton onClick={() => setImportMsg(null)}>
+            <XMarkIcon size={14} />
+          </IconButton>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <h1 className="text-sm font-semibold">Projects</h1>
+        <span className="text-xs text-muted-foreground">{projects.length}</span>
       </div>
 
       {adding && (
