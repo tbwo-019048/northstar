@@ -94,7 +94,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col bg-background text-foreground">
+    <div className="flex min-h-svh flex-col overflow-x-hidden bg-background text-foreground">
       <header className="sticky top-0 z-20 flex h-11 items-center gap-3 border-b border-border bg-panel/95 px-3 shadow-sm backdrop-blur">
         <Link to="/app" className="flex items-center gap-1.5 text-sm font-semibold">
           <NorthStarIcon className="size-4 text-primary" />

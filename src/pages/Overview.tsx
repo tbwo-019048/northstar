@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GripVertical, Lock, LockOpen } from 'lucide-react'
+import { AlignLeft, Archive, GripVertical, LayoutList, ListFilter, Lock, LockOpen, Tag } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -43,6 +43,15 @@ import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgres
 import { useConfirm } from '@/store/useConfirm'
 import { parseCSV, toCSV, downloadText } from '@/lib/csv'
 import { STATE_CHIP_CLASS, STATE_TEXT_CLASS, formatState } from '@/lib/projectState'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/velobits/dropdown-menu'
 
 const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   website: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
@@ -116,7 +125,9 @@ export function Overview() {
       return false
     }
   })
-  const [filter, setFilter] = useState<ProjectType | 'all'>('all')
+  // Empty set = no filter applied (every type shown).
+  const [typeFilters, setTypeFilters] = useState<Set<ProjectType>>(new Set())
+  const [searchOpen, setSearchOpen] = useState(false)
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<ProjectType>('website')
@@ -200,13 +211,13 @@ export function Overview() {
   const rows = useMemo(() => {
     const matched = projects.filter(
       (p) =>
-        (filter === 'all' || p.type === filter) &&
+        (typeFilters.size === 0 || typeFilters.has(p.type)) &&
         (showRetired || p.state !== 'retired') &&
         (p.name.toLowerCase().includes(q.toLowerCase()) ||
           (p.codename ?? '').toLowerCase().includes(q.toLowerCase())),
     )
     return visibleRows(matched, diagnostic)
-  }, [projects, q, filter, diagnostic, showRetired])
+  }, [projects, q, typeFilters, diagnostic, showRetired])
 
   // A project's `type` can hold a value the current build doesn't know about
   // (e.g. the database enum hasn't been migrated yet) — keep it selectable
@@ -216,6 +227,16 @@ export function Overview() {
     [projects],
   )
   const allTypes = [...PROJECT_TYPES, ...legacyTypes]
+
+  const toggleTypeFilter = (t: ProjectType) => {
+    setTypeFilters((current) => {
+      const next = new Set(current)
+      if (next.has(t)) next.delete(t)
+      else next.add(t)
+      return next
+    })
+    setTablePage(0)
+  }
 
   const byType = useMemo(() => {
     const groups = new Map<string, Project[]>()
@@ -349,154 +370,201 @@ export function Overview() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <h1 className="text-sm font-semibold">Projects</h1>
         <span className="text-xs text-muted-foreground">{projects.length}</span>
-        <div className="flex-1" />
-        <div className="relative">
-          <MagnifyingGlassIcon size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
+      </div>
+
+      {/* Full-bleed toolbar, breaking out of the centered content column to
+          span the browser width and read as a continuation of the header. */}
+      <div className="relative left-1/2 right-1/2 mx-[-50vw] w-screen border-b border-border bg-panel/95 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <IconButton
+            title="Search"
+            onClick={() =>
+              setSearchOpen((open) => {
+                if (open) setQ('')
+                return !open
+              })
+            }
+            className={'border border-border ' + (searchOpen ? 'bg-muted text-foreground' : '')}
+          >
+            <MagnifyingGlassIcon size={14} />
+          </IconButton>
+          {searchOpen && (
+            <Input
+              autoFocus
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value)
+                setTablePage(0)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchOpen(false)
+                  setQ('')
+                }
+              }}
+              placeholder="Search"
+              className="h-7 w-40"
+            />
+          )}
+
+          <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+            <IconButton
+              title="Descriptions"
+              onClick={() => setShowDescriptions((v) => !v)}
+              className={showDescriptions ? 'bg-muted text-foreground' : ''}
+            >
+              <AlignLeft size={14} />
+            </IconButton>
+            <IconButton
+              title="Codenames"
+              onClick={() => setCodenames((v) => !v)}
+              className={codenames ? 'bg-muted text-foreground' : ''}
+            >
+              <Tag size={14} />
+            </IconButton>
+            <IconButton
+              title="Retired"
+              onClick={() => setShowRetired((v) => !v)}
+              className={showRetired ? 'bg-muted text-foreground' : ''}
+            >
+              <Archive size={14} />
+            </IconButton>
+            <IconButton
+              title="Paginate"
+              onClick={() => {
+                setPaginate((v) => !v)
+                setTablePage(0)
+              }}
+              className={paginate ? 'bg-muted text-foreground' : ''}
+            >
+              <LayoutList size={14} />
+            </IconButton>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              title="Filter by type"
+              className={
+                'grid size-6 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ' +
+                (typeFilters.size > 0 ? 'bg-primary/10 text-primary' : '')
+              }
+            >
+              <ListFilter size={14} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Filter by type</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {typeFilters.size > 0 && (
+                <>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      setTypeFilters(new Set())
+                      setTablePage(0)
+                    }}
+                  >
+                    Clear filters
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {allTypes.map((t) => (
+                <DropdownMenuCheckboxItem
+                  key={t}
+                  checked={typeFilters.has(t)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={() => toggleTypeFilter(t)}
+                >
+                  {t}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <IconButton title="Export CSV" onClick={exportCsv} className="border border-border">
+            <ArrowDownTrayIcon size={14} />
+          </IconButton>
+          <IconButton
+            title="Import CSV"
+            onClick={() => fileRef.current?.click()}
+            className="border border-border"
+          >
+            <ArrowUpTrayIcon size={14} />
+          </IconButton>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
             onChange={(e) => {
-              setQ(e.target.value)
-              setTablePage(0)
+              const file = e.target.files?.[0]
+              if (file) void importCsv(file)
+              e.target.value = ''
             }}
-            placeholder="Search"
-            className="h-7 w-40 pl-7"
           />
-        </div>
-        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
-          <input
-            type="checkbox"
-            checked={showDescriptions}
-            onChange={(event) => setShowDescriptions(event.target.checked)}
-            className="size-3.5 accent-primary"
-          />
-          Descriptions
-        </label>
-        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
-          <input
-            type="checkbox"
-            checked={codenames}
-            onChange={(event) => setCodenames(event.target.checked)}
-            className="size-3.5 accent-primary"
-          />
-          Codenames
-        </label>
-        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
-          <input
-            type="checkbox"
-            checked={showRetired}
-            onChange={(event) => setShowRetired(event.target.checked)}
-            className="size-3.5 accent-primary"
-          />
-          Retired
-        </label>
-        <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground">
-          <input
-            type="checkbox"
-            checked={paginate}
-            onChange={(event) => {
-              setPaginate(event.target.checked)
-              setTablePage(0)
+
+          <IconButton
+            title={unlocked ? 'Lock order' : 'Unlock to reorder (table view)'}
+            onClick={() => {
+              if (!unlocked) setView('table')
+              setUnlocked(!unlocked)
             }}
-            className="size-3.5 accent-primary"
-          />
-          Paginate
-        </label>
-        <Select
-          value={filter}
-          onChange={(e) => {
-            setFilter(e.target.value as ProjectType | 'all')
-            setTablePage(0)
-          }}
-        >
-          <option value="all">All types</option>
-          {allTypes.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </Select>
+            className={'border border-border ' + (unlocked ? 'bg-primary/10 text-primary' : '')}
+          >
+            {unlocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
+          </IconButton>
 
-        <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
-          <IconButton
-            title="Table"
-            onClick={() => setView('table')}
-            className={view === 'table' ? 'bg-muted text-foreground' : ''}
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
           >
-            <ListBulletIcon size={14} />
-          </IconButton>
-          <IconButton
-            title="Grouped by type"
-            onClick={() => setView('byType')}
-            className={view === 'byType' ? 'bg-muted text-foreground' : ''}
-          >
-            <Bars3Icon size={14} />
-          </IconButton>
-          <IconButton
-            title="Grouped by client"
-            onClick={() => setView('byClient')}
-            className={view === 'byClient' ? 'bg-muted text-foreground' : ''}
-          >
-            <UsersIcon size={14} />
-          </IconButton>
-          <IconButton
-            title="Grid"
-            onClick={() => setView('grid')}
-            className={view === 'grid' ? 'bg-muted text-foreground' : ''}
-          >
-            <Squares2X2Icon size={14} />
-          </IconButton>
-          <IconButton
-            title="Progress"
-            onClick={() => setView('progress')}
-            className={view === 'progress' ? 'bg-muted text-foreground' : ''}
-          >
-            <ChartPieIcon size={14} />
-          </IconButton>
+            <PlusIcon size={14} /> New
+          </button>
+
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+            <IconButton
+              title="Table"
+              onClick={() => setView('table')}
+              className={view === 'table' ? 'bg-muted text-foreground' : ''}
+            >
+              <ListBulletIcon size={14} />
+            </IconButton>
+            <IconButton
+              title="Grouped by type"
+              onClick={() => setView('byType')}
+              className={view === 'byType' ? 'bg-muted text-foreground' : ''}
+            >
+              <Bars3Icon size={14} />
+            </IconButton>
+            <IconButton
+              title="Grouped by client"
+              onClick={() => setView('byClient')}
+              className={view === 'byClient' ? 'bg-muted text-foreground' : ''}
+            >
+              <UsersIcon size={14} />
+            </IconButton>
+            <IconButton
+              title="Grid"
+              onClick={() => setView('grid')}
+              className={view === 'grid' ? 'bg-muted text-foreground' : ''}
+            >
+              <Squares2X2Icon size={14} />
+            </IconButton>
+            <IconButton
+              title="Progress"
+              onClick={() => setView('progress')}
+              className={view === 'progress' ? 'bg-muted text-foreground' : ''}
+            >
+              <ChartPieIcon size={14} />
+            </IconButton>
+          </div>
         </div>
-
-        <IconButton title="Export CSV" onClick={exportCsv} className="border border-border">
-          <ArrowDownTrayIcon size={14} />
-        </IconButton>
-        <IconButton
-          title="Import CSV"
-          onClick={() => fileRef.current?.click()}
-          className="border border-border"
-        >
-          <ArrowUpTrayIcon size={14} />
-        </IconButton>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) void importCsv(file)
-            e.target.value = ''
-          }}
-        />
-
-        <IconButton
-          title={unlocked ? 'Lock order' : 'Unlock to reorder (table view)'}
-          onClick={() => {
-            if (!unlocked) setView('table')
-            setUnlocked(!unlocked)
-          }}
-          className={'border border-border ' + (unlocked ? 'bg-primary/10 text-primary' : '')}
-        >
-          {unlocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
-        </IconButton>
-
-        <button
-          type="button"
-          onClick={() => setAdding((v) => !v)}
-          className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <PlusIcon size={14} /> New
-        </button>
       </div>
 
       {adding && (
