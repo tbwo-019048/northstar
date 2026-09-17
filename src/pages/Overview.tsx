@@ -56,6 +56,8 @@ const TYPE_TONE: Partial<Record<ProjectType, string>> = {
   game: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
   novel: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
   music: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300',
+  '3d_print': 'bg-teal-500/15 text-teal-700 dark:text-teal-300',
+  laser_engrave: 'bg-red-500/15 text-red-700 dark:text-red-300',
   other: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
 }
 const FALLBACK_TONE = 'bg-muted text-muted-foreground'

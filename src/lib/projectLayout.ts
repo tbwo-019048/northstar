@@ -101,6 +101,8 @@ export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
   game: DEFAULT_LAYOUT,
   novel: lean('Chapters'),
   music: lean('Tracks'),
+  '3d_print': lean('Prints'),
+  laser_engrave: lean('Engravings'),
   other: DEFAULT_LAYOUT,
 }
 

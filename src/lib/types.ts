@@ -10,6 +10,8 @@ export type ProjectType =
   | 'game'
   | 'novel'
   | 'music'
+  | '3d_print'
+  | 'laser_engrave'
   | 'other'
 export type ProjectState =
   | 'concept'
@@ -58,6 +60,8 @@ export const PROJECT_TYPES: ProjectType[] = [
   'game',
   'novel',
   'music',
+  '3d_print',
+  'laser_engrave',
   'other',
 ]
 export const PROJECT_STATES: ProjectState[] = [
