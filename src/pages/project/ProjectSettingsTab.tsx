@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from '@/components/ui/velobits/dialog'
 import { parseCSV, downloadText } from '@/lib/csv'
+import { ACTIVE_MODULE_LABEL, convertActiveModule, type ActiveModule } from '@/lib/moduleConversion'
 import { resolveTechIds } from '@/lib/techStack'
 import { StateSelect } from '@/components/StateSelect'
 import {
@@ -58,6 +59,8 @@ const FALLBACK_PRIORITY_COLOR: Record<Priority, string> = {
 
 export function ProjectSettingsTab({ project }: { project: Project }) {
   const { update } = useProjects()
+  const confirm = useConfirm()
+  const [moduleBusy, setModuleBusy] = useState(false)
   const peopleRows = useProjectData((s) => s.rows.project_people)
   const usedPositions = useMemo(
     () => [...new Set(asPeople(peopleRows).map((p) => p.position).filter(Boolean))],
@@ -83,8 +86,72 @@ export function ProjectSettingsTab({ project }: { project: Project }) {
   const setPriorityColor = (p: Priority, color: string) =>
     update(project.id, { priority_colors: { ...project.priority_colors, [p]: color } })
 
+  const chooseModule = async (choice: ActiveModule | null) => {
+    if (choice === null) {
+      if (await confirm({ title: 'Show all four modules again?' })) void update(project.id, { active_module: null })
+      return
+    }
+    if (choice === project.active_module) return
+    const verb = project.active_module ? 'convert its existing items into' : 'restrict this project to'
+    if (
+      !(await confirm({
+        title: `Switch to ${ACTIVE_MODULE_LABEL[choice]}?`,
+        message: `This will ${verb} ${ACTIVE_MODULE_LABEL[choice]}. Items from the other modules are mapped over best-effort, not deleted outright, but this can't be undone automatically.`,
+        tone: 'danger',
+      }))
+    )
+      return
+    setModuleBusy(true)
+    try {
+      await convertActiveModule(project, choice)
+    } finally {
+      setModuleBusy(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <section className="space-y-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Active module
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Restrict this project to one of Pipeline / To-Do / Planning / Requests. Switching converts
+          the other three modules' existing items into the newly-selected one — titles, notes and
+          dates are mapped best-effort, and a few fields with no equivalent (like a request's
+          "requested by", or a pipeline point's estimate) are folded into the new item's description
+          rather than lost. This cannot be undone automatically.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            disabled={moduleBusy}
+            onClick={() => void chooseModule(null)}
+            className={
+              'inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs disabled:opacity-50 ' +
+              (!project.active_module ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted')
+            }
+          >
+            Show all (legacy)
+          </button>
+          {(Object.keys(ACTIVE_MODULE_LABEL) as ActiveModule[]).map((mod) => (
+            <button
+              key={mod}
+              type="button"
+              disabled={moduleBusy}
+              onClick={() => void chooseModule(mod)}
+              className={
+                'inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs disabled:opacity-50 ' +
+                (project.active_module === mod ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted')
+              }
+            >
+              {ACTIVE_MODULE_LABEL[mod]}
+            </button>
+          ))}
+        </div>
+        {moduleBusy && <p className="text-xs text-muted-foreground">Converting…</p>}
+      </section>
+
       <section className="space-y-2">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Position colors

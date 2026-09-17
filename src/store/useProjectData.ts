@@ -1,9 +1,14 @@
 import { create, type StoreApi } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import type {
+  AlbumArt,
+  AlbumTrack,
+  ConceptEdge,
+  ConceptNode,
   Detail,
   EnvVar,
   Feature,
+  Location,
   Person,
   PersonColumn,
   PersonComment,
@@ -43,6 +48,11 @@ export type TableName =
   | 'project_assets'
   | 'project_credentials'
   | 'project_supabase'
+  | 'concept_nodes'
+  | 'concept_edges'
+  | 'locations'
+  | 'album_art'
+  | 'album_tracks'
 
 const PROJECT_TABLES: TableName[] = [
   'project_people',
@@ -58,6 +68,11 @@ const PROJECT_TABLES: TableName[] = [
   'project_assets',
   'project_credentials',
   'project_supabase',
+  'concept_nodes',
+  'concept_edges',
+  'locations',
+  'album_art',
+  'album_tracks',
 ]
 
 const STATE_TABLES = new Set<TableName>([...PROJECT_TABLES, 'pipeline_items'])
@@ -97,6 +112,11 @@ const empty = (): Record<TableName, Row[]> => ({
   project_assets: [],
   project_credentials: [],
   project_supabase: [],
+  concept_nodes: [],
+  concept_edges: [],
+  locations: [],
+  album_art: [],
+  album_tracks: [],
 })
 
 type Get = () => ProjectDataState
@@ -299,6 +319,11 @@ export const useProjectData = create<ProjectDataState>((set, get) => ({
       'project_assets',
       'project_credentials',
       'project_supabase',
+      'concept_nodes',
+      'concept_edges',
+      'locations',
+      'album_art',
+      'album_tracks',
     ]
     ALL.forEach((table) =>
       ch.on('postgres_changes', { event: '*', schema: 'public', table }, bump),
@@ -329,3 +354,8 @@ export const asScreenshots = (r: Row[]) => r as unknown as ProjectScreenshot[]
 export const asAssets = (r: Row[]) => r as unknown as ProjectAsset[]
 export const asCredentials = (r: Row[]) => r as unknown as ProjectCredentials[]
 export const asSupabaseAccounts = (r: Row[]) => r as unknown as ProjectSupabaseAccount[]
+export const asConceptNodes = (r: Row[]) => r as unknown as ConceptNode[]
+export const asConceptEdges = (r: Row[]) => r as unknown as ConceptEdge[]
+export const asLocations = (r: Row[]) => r as unknown as Location[]
+export const asAlbumArt = (r: Row[]) => r as unknown as AlbumArt[]
+export const asAlbumTracks = (r: Row[]) => r as unknown as AlbumTrack[]

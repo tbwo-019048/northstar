@@ -19,6 +19,9 @@ import { AnalysisTab } from '@/pages/project/AnalysisTab'
 import { GitTab } from '@/pages/project/GitTab'
 import { ProjectSettingsTab } from '@/pages/project/ProjectSettingsTab'
 import { AssetsTab } from '@/pages/project/AssetsTab'
+import { LocationsTab } from '@/pages/project/LocationsTab'
+import { AlbumArtTab } from '@/pages/project/AlbumArtTab'
+import { AlbumTab } from '@/pages/project/AlbumTab'
 import { StateSelect } from '@/components/StateSelect'
 
 const TABS = [
@@ -35,6 +38,10 @@ const TABS = [
   { key: 'analysis', label: 'Analysis' },
   { key: 'settings', label: 'Settings' },
 ] as const
+
+/** The four modules a project can restrict itself to one of, via its own
+ * active_module setting (see src/lib/moduleConversion.ts). */
+const GOVERNED_TABS: TabKey[] = ['pipeline', 'todo', 'planning', 'requests']
 
 export function Project() {
   const { id, tab } = useParams()
@@ -60,7 +67,14 @@ export function Project() {
   const project = useMemo(() => projects.find((p) => p.id === id), [projects, id])
   const active = tab ?? 'summary'
   const layout = project ? layoutFor(project.type) : null
-  const tabs = TABS.filter((t) => !layout?.hiddenTabs.includes(t.key))
+  const extraTabs = layout?.extraTabs ?? []
+  const baseTabs = TABS.filter((t) => !layout?.hiddenTabs.includes(t.key))
+  const detailsIdx = baseTabs.findIndex((t) => t.key === 'details')
+  const spliced = [...baseTabs.slice(0, detailsIdx + 1), ...extraTabs, ...baseTabs.slice(detailsIdx + 1)]
+  // Type-level hiddenTabs wins first; active_module only narrows further among
+  // the governed tabs a type already allows (see moduleConversion.ts).
+  const activeModule = project?.active_module
+  const tabs = spliced.filter((t) => !GOVERNED_TABS.includes(t.key) || !activeModule || activeModule === t.key)
   const labelFor = (key: TabKey, fallback: string) => layout?.tabLabels[key] ?? fallback
 
   if (!id) return <Navigate to="/app" replace />
@@ -71,7 +85,15 @@ export function Project() {
       </div>
     )
   }
-  if (layout && tab && layout.hiddenTabs.includes(tab as TabKey)) {
+  const extraKeys = new Set(extraTabs.map((t) => t.key))
+  const ADDITIVE_TABS: TabKey[] = ['locations', 'albumArt', 'album']
+  if (
+    layout &&
+    tab &&
+    (layout.hiddenTabs.includes(tab as TabKey) ||
+      (ADDITIVE_TABS.includes(tab as TabKey) && !extraKeys.has(tab as TabKey)) ||
+      (GOVERNED_TABS.includes(tab as TabKey) && !!activeModule && activeModule !== tab))
+  ) {
     return <Navigate to={`/app/project/${id}`} replace />
   }
 
@@ -163,6 +185,9 @@ export function Project() {
           <DetailsTab project={project} blocks={layout.details} />
         )}
         {active === 'assets' && <AssetsTab projectId={id} />}
+        {active === 'locations' && <LocationsTab projectId={id} />}
+        {active === 'albumArt' && project && <AlbumArtTab project={project} />}
+        {active === 'album' && <AlbumTab projectId={id} />}
         {active === 'requests' && project && (
           <RequestsTab project={project} label={layout?.tabLabels.requests} />
         )}

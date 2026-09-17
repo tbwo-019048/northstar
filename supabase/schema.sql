@@ -8,7 +8,8 @@
 -- ---------------------------------------------------------------------------
 do $$ begin
   create type project_type as enum
-    ('website', 'app', 'production', 'physical', 'mechanical', 'location', 'written', 'writing', 'game', 'novel', 'music', '3d_print', 'laser_engrave', 'other');
+    ('website', 'app', 'production', 'physical', 'mechanical', 'location', 'written', 'writing', 'game', 'novel', 'music', '3d_print', 'laser_engrave',
+     'grand_tour', 'national_red_plaque', 'merch', 'red_knights', 'updates', 'sorting', 'information', 'technical', 'research_development', 'tools', 'other');
 exception when duplicate_object then null; end $$;
 
 -- Migration for a database created before 'website'/'app'/'production' existed:
@@ -90,6 +91,76 @@ begin
     where t.typname = 'project_type' and e.enumlabel = 'laser_engrave'
   ) then
     alter type project_type add value 'laser_engrave';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'grand_tour'
+  ) then
+    alter type project_type add value 'grand_tour';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'national_red_plaque'
+  ) then
+    alter type project_type add value 'national_red_plaque';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'merch'
+  ) then
+    alter type project_type add value 'merch';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'red_knights'
+  ) then
+    alter type project_type add value 'red_knights';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'updates'
+  ) then
+    alter type project_type add value 'updates';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'sorting'
+  ) then
+    alter type project_type add value 'sorting';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'information'
+  ) then
+    alter type project_type add value 'information';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'technical'
+  ) then
+    alter type project_type add value 'technical';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'research_development'
+  ) then
+    alter type project_type add value 'research_development';
+  end if;
+
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'project_type' and e.enumlabel = 'tools'
+  ) then
+    alter type project_type add value 'tools';
   end if;
 end $$;
 
@@ -450,6 +521,26 @@ create trigger trg_project_templates_updated before update on project_templates
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- Notes — global notepad. Each note has a rich text body (HTML, see
+-- src/components/NoteEditor.tsx) and a separate checklist section (jsonb
+-- array of ChecklistItem, see src/lib/types.ts).
+-- ---------------------------------------------------------------------------
+create table if not exists notes (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null default '',
+  body        text not null default '',
+  checklist   jsonb not null default '[]'::jsonb,
+  sort        integer not null default 0,
+  environment text not null default 'staging',
+  created_by  uuid references auth.users(id) on delete set null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_notes_updated on notes;
+create trigger trg_notes_updated before update on notes
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------------
 -- Project links — symmetric "related projects", one row per unordered pair.
 -- ---------------------------------------------------------------------------
 create table if not exists project_links (
@@ -536,7 +627,7 @@ begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets',
-    'project_templates','project_links'
+    'project_templates','project_links','notes'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
@@ -572,7 +663,7 @@ begin
   foreach t in array array[
     'projects','project_people','person_comments','person_columns','env_vars','todos','todo_comments',
     'features','details','requests','pipelines','pipeline_items','plan_items','plan_comments','project_screenshots','project_assets',
-    'project_templates','project_links'
+    'project_templates','project_links','notes'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table %I', t);
@@ -665,6 +756,41 @@ create policy "project assets auth write" on storage.objects
   for all to authenticated
   using (bucket_id = 'project-assets')
   with check (bucket_id = 'project-assets');
+
+insert into storage.buckets (id, name, public)
+values ('project-album-art', 'project-album-art', true), ('project-album-tracks', 'project-album-tracks', true)
+on conflict (id) do nothing;
+
+drop policy if exists "project album art public read" on storage.objects;
+create policy "project album art public read" on storage.objects
+  for select using (bucket_id = 'project-album-art');
+
+drop policy if exists "project album art auth write" on storage.objects;
+create policy "project album art auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'project-album-art')
+  with check (bucket_id = 'project-album-art');
+
+drop policy if exists "project album tracks public read" on storage.objects;
+create policy "project album tracks public read" on storage.objects
+  for select using (bucket_id = 'project-album-tracks');
+
+drop policy if exists "project album tracks auth write" on storage.objects;
+create policy "project album tracks auth write" on storage.objects
+  for all to authenticated
+  using (bucket_id = 'project-album-tracks')
+  with check (bucket_id = 'project-album-tracks');
+
+-- ---------------------------------------------------------------------------
+-- Per-project single active module: a project can be restricted to exactly
+-- one of Pipeline/To-Do/Planning/Requests, switchable in its Settings tab.
+-- Null (the default) means "legacy: show all four".
+-- ---------------------------------------------------------------------------
+do $$ begin
+  create type project_active_module as enum ('pipeline', 'todo', 'planning', 'requests');
+exception when duplicate_object then null; end $$;
+
+alter table projects add column if not exists active_module project_active_module;
 
 -- ---------------------------------------------------------------------------
 -- Clients — a global directory (not scoped to one project), linkable to any
@@ -853,6 +979,149 @@ begin
     exception when duplicate_object then null;
     end;
     execute format('create index if not exists %I on %I (environment)', t || '_environment_idx', t);
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists "auth full access" on %I', t);
+    execute format(
+      'create policy "auth full access" on %I for all to authenticated using (true) with check (true)', t);
+    begin
+      execute format('alter publication supabase_realtime add table %I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Concept graph — a free-form mind-map per project (manually placed nodes,
+-- manually drawn edges), used as the Summary tab for "standard treatment"
+-- project types.
+-- ---------------------------------------------------------------------------
+create table if not exists concept_nodes (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  label       text not null default 'New idea',
+  x           numeric not null default 40,
+  y           numeric not null default 40,
+  sort        integer not null default 0,
+  environment text not null default 'staging',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_concept_nodes_updated on concept_nodes;
+create trigger trg_concept_nodes_updated before update on concept_nodes
+  for each row execute function set_updated_at();
+
+create table if not exists concept_edges (
+  id            uuid primary key default gen_random_uuid(),
+  project_id    uuid not null references projects(id) on delete cascade,
+  from_node_id  uuid not null references concept_nodes(id) on delete cascade,
+  to_node_id    uuid not null references concept_nodes(id) on delete cascade,
+  sort          integer not null default 0,
+  environment   text not null default 'staging',
+  created_at    timestamptz not null default now()
+);
+
+do $$
+declare t text;
+begin
+  foreach t in array array['concept_nodes', 'concept_edges'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists "auth full access" on %I', t);
+    execute format(
+      'create policy "auth full access" on %I for all to authenticated using (true) with check (true)', t);
+    begin
+      execute format('alter publication supabase_realtime add table %I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Simple Planning variant — a Pending/In Progress/Completed board, additive
+-- alongside the existing 5-status Planning board. Null means "not part of
+-- the simple board", so untouched project types are unaffected.
+-- ---------------------------------------------------------------------------
+do $$ begin
+  create type simple_plan_status as enum ('pending', 'in_progress', 'completed');
+exception when duplicate_object then null; end $$;
+
+alter table plan_items add column if not exists simple_status simple_plan_status;
+
+-- ---------------------------------------------------------------------------
+-- Grand Tour's Locations tab: a table of locations (address/date/letter/
+-- state), with the Planning tab showing the same rows as a Pending/Visited/
+-- Submitted kanban.
+-- ---------------------------------------------------------------------------
+do $$ begin
+  create type location_state as enum ('pending', 'visited', 'submitted');
+exception when duplicate_object then null; end $$;
+
+create table if not exists locations (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  address     text not null default '',
+  visit_date  date,
+  letter      text not null default '',
+  state       location_state not null default 'pending',
+  sort        integer not null default 0,
+  environment text not null default 'staging',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_locations_updated on locations;
+create trigger trg_locations_updated before update on locations
+  for each row execute function set_updated_at();
+
+do $$
+declare t text;
+begin
+  foreach t in array array['locations'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists "auth full access" on %I', t);
+    execute format(
+      'create policy "auth full access" on %I for all to authenticated using (true) with check (true)', t);
+    begin
+      execute format('alter publication supabase_realtime add table %I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Music project type: an Album Art tab (uploaded images, one can be set as
+-- the project's icon) and a separate Album tab (song rows with lyrics/style/
+-- an attached mp3), alongside the existing Features tab (still "Tracks").
+-- ---------------------------------------------------------------------------
+create table if not exists album_art (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  url         text not null,
+  sort        integer not null default 0,
+  environment text not null default 'staging',
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists album_tracks (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references projects(id) on delete cascade,
+  title       text not null default 'Untitled track',
+  lyrics      text not null default '',
+  style       text not null default '',
+  mp3_url     text,
+  mp3_name    text,
+  mp3_size    integer,
+  sort        integer not null default 0,
+  environment text not null default 'staging',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_album_tracks_updated on album_tracks;
+create trigger trg_album_tracks_updated before update on album_tracks
+  for each row execute function set_updated_at();
+
+do $$
+declare t text;
+begin
+  foreach t in array array['album_art', 'album_tracks'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "auth full access" on %I', t);
     execute format(

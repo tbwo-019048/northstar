@@ -40,6 +40,9 @@ import { EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { useConfirm } from '@/store/useConfirm'
 import { StateSelect } from '@/components/StateSelect'
+import { layoutFor } from '@/lib/projectLayout'
+import { SimplePlanBoard } from '@/pages/project/SimplePlanBoard'
+import { LocationsPlanBoard } from '@/pages/project/LocationsPlanBoard'
 import {
   Dialog,
   DialogContent,
@@ -91,7 +94,19 @@ function fmtDate(d: string | null) {
   })
 }
 
+/** Dispatches to whichever Planning UI this project's type uses — the classic
+ * 5-status board, or the new additive simple Pending/In Progress/Completed
+ * one. Kept as a thin wrapper (rather than an early-return inside the classic
+ * component) so switching variants can never skip a hook call mid-mount. */
 export function PlanningTab({ projectId }: { projectId: string }) {
+  const project = useProjects((s) => s.projects.find((p) => p.id === projectId))
+  const variant = project ? (layoutFor(project.type).planningVariant ?? 'full') : 'full'
+  if (variant === 'simple') return <SimplePlanBoard projectId={projectId} />
+  if (variant === 'locations') return <LocationsPlanBoard projectId={projectId} />
+  return <ClassicPlanningTab projectId={projectId} />
+}
+
+function ClassicPlanningTab({ projectId }: { projectId: string }) {
   const rows = useProjectData((s) => s.rows.plan_items)
   const { add, patch, del, reorder } = useProjectData()
   const diagnostic = useDiagnostic((s) => s.on)

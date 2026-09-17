@@ -29,13 +29,13 @@ import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
 import { useAuth } from '@/store/useAuth'
 import { PRIORITIES, TODO_TYPES, type Todo, type TodoStatus } from '@/lib/types'
+import { ensureActivePipeline } from '@/lib/moduleConversion'
 import { Chip, EditableText, IconButton, Input, Select } from '@/components/ui-lite'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { StateSelect } from '@/components/StateSelect'
 
 export function TodoTab({ projectId, label }: { projectId: string; label?: string }) {
   const rows = useProjectData((s) => s.rows.todos)
-  const pipelineRows = useProjectData((s) => s.rows.pipelines)
   const pipelineItemRows = useProjectData((s) => s.rows.pipeline_items)
   const { add, patch, del, reorder } = useProjectData()
   const diagnostic = useDiagnostic((s) => s.on)
@@ -46,21 +46,11 @@ export function TodoTab({ projectId, label }: { projectId: string; label?: strin
   )
   const addToPipeline = async (todo: Todo) => {
     if (sentToPipeline.has(todo.id)) return
-    let pipeline: { id: string } | null | undefined =
-      pipelineRows.find((p) => p.status === 'active') ?? pipelineRows[0]
-    if (!pipeline) {
-      pipeline = await add('pipelines', {
-        project_id: projectId,
-        name: 'Pipeline 1',
-        status: 'active',
-        sort: 0,
-      })
-    }
-    if (!pipeline) return
-    const pid = pipeline.id
-    const count = pipelineItemRows.filter((i) => i.pipeline_id === pid).length
+    const pipelineId = await ensureActivePipeline(projectId)
+    if (!pipelineId) return
+    const count = pipelineItemRows.filter((i) => i.pipeline_id === pipelineId).length
     await add('pipeline_items', {
-      pipeline_id: pid,
+      pipeline_id: pipelineId,
       body: todo.title,
       done: false,
       source_todo_id: todo.id,

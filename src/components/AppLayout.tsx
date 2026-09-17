@@ -101,18 +101,23 @@ export function AppLayout() {
           NorthStar
         </Link>
         <div className="flex-1" />
-        <Link
-          to="/app/settings"
-          title="Change workspace state in Settings"
+        <button
+          type="button"
+          onClick={() =>
+            void useSettings
+              .getState()
+              .setActiveEnvironment(activeEnvironment === 'production' ? 'staging' : 'production')
+          }
+          title="Click to switch workspace state"
           className={
-            'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ' +
+            'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors ' +
             (activeEnvironment === 'production'
               ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
               : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300')
           }
         >
           {WORKSPACE_STATE_LABEL[activeEnvironment]}
-        </Link>
+        </button>
         <div
           className="grid size-7 place-items-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary"
           title={user?.email ?? ''}

@@ -217,6 +217,11 @@ export function AnalysisTab({ project }: { project: Project }) {
     ['GitHub commits (1y)', ghTile],
   ]
 
+  const sameTypeProjects = useMemo(
+    () => projects.filter((p) => p.type === project.type),
+    [projects, project.type],
+  )
+
   const chartFor = (
     label: string,
     valueFor: (p: Project) => number,
@@ -224,7 +229,7 @@ export function AnalysisTab({ project }: { project: Project }) {
   ) => ({
     label,
     format,
-    series: projects.map((p) => ({ id: p.id, name: p.name, value: valueFor(p) })),
+    series: sameTypeProjects.map((p) => ({ id: p.id, name: p.name, value: valueFor(p) })),
   })
 
   const charts = cross
@@ -299,9 +304,9 @@ export function AnalysisTab({ project }: { project: Project }) {
           <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
             Loading cross-project stats…
           </p>
-        ) : projects.length < 2 ? (
+        ) : sameTypeProjects.length < 2 ? (
           <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-            Add another project to see comparisons.
+            Add another project of this type to see comparisons.
           </p>
         ) : (
           <div className="grid gap-2 lg:grid-cols-2">

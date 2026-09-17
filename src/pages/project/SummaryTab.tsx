@@ -38,10 +38,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/velobits/dialog'
+import { ConceptGraphTab } from '@/pages/project/ConceptGraphTab'
 
 type SiteField = 'website_url' | 'test_site_url'
 
+/** Standard-treatment types show ONLY a manually-authored concept graph on
+ * Summary — nothing else from the block list below renders for them. */
 export function SummaryTab({ project, blocks }: { project: Project; blocks: SummaryBlock[] }) {
+  if (blocks.includes('graph')) return <ConceptGraphTab projectId={project.id} />
+  return <DefaultSummary project={project} blocks={blocks} />
+}
+
+function DefaultSummary({ project, blocks }: { project: Project; blocks: SummaryBlock[] }) {
   const rows = useProjectData((s) => s.rows)
   const nav = useNavigate()
   const { id } = useParams()

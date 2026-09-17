@@ -14,8 +14,11 @@ export type TabKey =
   | 'git'
   | 'analysis'
   | 'settings'
+  | 'locations'
+  | 'albumArt'
+  | 'album'
 
-export type SummaryBlock = 'url' | 'image' | 'progress' | 'summary' | 'clients' | 'stats' | 'topTodos'
+export type SummaryBlock = 'url' | 'image' | 'progress' | 'summary' | 'clients' | 'stats' | 'topTodos' | 'graph'
 
 export type DetailsBlock =
   | 'codename'
@@ -40,6 +43,10 @@ export interface TypeLayout {
   details: DetailsBlock[]
   /** Trim the Users tab to a name / contact / notes list. */
   simpleUsers: boolean
+  /** Which Planning UI renders. Omitted/'full' = today's 5-status board. */
+  planningVariant?: 'full' | 'simple' | 'locations'
+  /** Extra tabs appended after Details, only for this type. Omitted = none. */
+  extraTabs?: { key: TabKey; label: string }[]
 }
 
 const FULL_SUMMARY: SummaryBlock[] = ['url', 'image', 'progress', 'summary', 'clients']
@@ -83,26 +90,74 @@ const lean = (featuresLabel: string, extraLabels: Partial<Record<TabKey, string>
   simpleUsers: false,
 })
 
+const GRAPH_SUMMARY: SummaryBlock[] = ['graph']
+
+/** The shared "standard treatment": Summary is a manually-authored concept
+ * graph (nothing else), Details is the lean set, and Planning is the simple
+ * Pending/In Progress/Completed board instead of the classic 5-status one. */
+const standard = (
+  featuresLabel: string,
+  extraLabels: Partial<Record<TabKey, string>> = {},
+  extraTabs: { key: TabKey; label: string }[] = [],
+): TypeLayout => ({
+  hiddenTabs: ['users', 'git'],
+  tabLabels: { features: featuresLabel, ...extraLabels },
+  summary: GRAPH_SUMMARY,
+  details: LEAN_DETAILS,
+  simpleUsers: false,
+  planningVariant: 'simple',
+  extraTabs,
+})
+
 export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
   website: DEFAULT_LAYOUT,
   app: DEFAULT_LAYOUT,
   production: {
     hiddenTabs: ['git'],
     tabLabels: { features: 'Store', todo: 'Orders', users: 'Customers' },
-    summary: LEAN_SUMMARY,
+    summary: GRAPH_SUMMARY,
     details: LEAN_DETAILS,
     simpleUsers: true,
+    planningVariant: 'simple',
   },
-  physical: lean('Goals'),
-  mechanical: lean('Targets'),
-  location: lean('Destinations', { requests: 'Locations' }),
+  physical: standard('Goals'),
+  mechanical: standard('Targets'),
+  location: standard('Destinations', { requests: 'Locations' }),
   written: lean('Targets'),
-  writing: lean('Targets'),
-  game: DEFAULT_LAYOUT,
+  writing: standard('Targets'),
+  game: {
+    hiddenTabs: [],
+    tabLabels: {},
+    summary: GRAPH_SUMMARY,
+    details: LEAN_DETAILS,
+    simpleUsers: false,
+    planningVariant: 'simple',
+  },
   novel: lean('Chapters'),
-  music: lean('Tracks'),
+  music: standard('Tracks', {}, [
+    { key: 'albumArt', label: 'Album Art' },
+    { key: 'album', label: 'Album' },
+  ]),
   '3d_print': lean('Prints'),
   laser_engrave: lean('Engravings'),
+  grand_tour: {
+    hiddenTabs: ['users', 'git'],
+    tabLabels: {},
+    summary: LEAN_SUMMARY,
+    details: LEAN_DETAILS,
+    simpleUsers: false,
+    planningVariant: 'locations',
+    extraTabs: [{ key: 'locations', label: 'Locations' }],
+  },
+  national_red_plaque: standard('Features'),
+  merch: standard('Features'),
+  red_knights: standard('Features'),
+  updates: standard('Features'),
+  sorting: standard('Features'),
+  information: standard('Features'),
+  technical: standard('Features'),
+  research_development: standard('Features'),
+  tools: DEFAULT_LAYOUT,
   other: DEFAULT_LAYOUT,
 }
 

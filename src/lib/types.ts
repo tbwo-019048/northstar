@@ -12,6 +12,16 @@ export type ProjectType =
   | 'music'
   | '3d_print'
   | 'laser_engrave'
+  | 'grand_tour'
+  | 'national_red_plaque'
+  | 'merch'
+  | 'red_knights'
+  | 'updates'
+  | 'sorting'
+  | 'information'
+  | 'technical'
+  | 'research_development'
+  | 'tools'
   | 'other'
 export type ProjectState =
   | 'concept'
@@ -26,6 +36,7 @@ export type TodoStatus = 'todo' | 'completed'
 export type Priority = 'urgent' | 'high' | 'medium' | 'low'
 export type PipelineStatus = 'active' | 'completed' | 'archived'
 export type PlanStatus = 'requested' | 'in_progress' | 'delayed' | 'completed' | 'failed'
+export type SimplePlanStatus = 'pending' | 'in_progress' | 'completed'
 export type { WorkspaceState } from '@/lib/workspaceState'
 import type { WorkspaceState } from '@/lib/workspaceState'
 
@@ -48,6 +59,12 @@ export const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
   completed: 'Completed',
   failed: 'Failed',
 }
+export const SIMPLE_PLAN_STATUSES: SimplePlanStatus[] = ['pending', 'in_progress', 'completed']
+export const SIMPLE_PLAN_STATUS_LABEL: Record<SimplePlanStatus, string> = {
+  pending: 'Pending',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+}
 export const PROJECT_TYPES: ProjectType[] = [
   'website',
   'app',
@@ -62,6 +79,16 @@ export const PROJECT_TYPES: ProjectType[] = [
   'music',
   '3d_print',
   'laser_engrave',
+  'grand_tour',
+  'national_red_plaque',
+  'merch',
+  'red_knights',
+  'updates',
+  'sorting',
+  'information',
+  'technical',
+  'research_development',
+  'tools',
   'other',
 ]
 export const PROJECT_STATES: ProjectState[] = [
@@ -120,6 +147,9 @@ export interface Project extends StateScoped {
   position_colors: Record<string, string>
   priority_colors: Partial<Record<Priority, string>>
   planning_prefs: PlanningPrefs
+  /** Restricts this project to exactly one of Pipeline/To-Do/Planning/
+   * Requests. Null = legacy: show all four (see src/lib/moduleConversion.ts). */
+  active_module?: 'pipeline' | 'todo' | 'planning' | 'requests' | null
   platforms: string[]
   tech_stack: string[]
   countries: string[]
@@ -270,6 +300,7 @@ export interface PlanItem extends StateScoped {
   title: string
   description: string
   status: PlanStatus
+  simple_status?: SimplePlanStatus | null
   priority: number // 0..10
   start_date: string | null
   due_date: string | null
@@ -452,6 +483,86 @@ export interface ProjectTemplate extends StateScoped {
   type: ProjectType | null
   payload: TemplatePayload
   created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ChecklistItem {
+  id: string
+  text: string
+  done: boolean
+  order: number
+}
+
+export interface Note extends StateScoped {
+  id: string
+  title: string
+  body: string
+  checklist: ChecklistItem[]
+  sort: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ConceptNode extends StateScoped {
+  id: string
+  project_id: string
+  label: string
+  x: number
+  y: number
+  sort: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ConceptEdge extends StateScoped {
+  id: string
+  project_id: string
+  from_node_id: string
+  to_node_id: string
+  sort: number
+  created_at: string
+}
+
+export type LocationState = 'pending' | 'visited' | 'submitted'
+export const LOCATION_STATES: LocationState[] = ['pending', 'visited', 'submitted']
+export const LOCATION_STATE_LABEL: Record<LocationState, string> = {
+  pending: 'Pending',
+  visited: 'Visited',
+  submitted: 'Submitted',
+}
+
+export interface Location extends StateScoped {
+  id: string
+  project_id: string
+  address: string
+  visit_date: string | null
+  letter: string
+  state: LocationState
+  sort: number
+  created_at: string
+  updated_at: string
+}
+
+export interface AlbumArt extends StateScoped {
+  id: string
+  project_id: string
+  url: string
+  sort: number
+  created_at: string
+}
+
+export interface AlbumTrack extends StateScoped {
+  id: string
+  project_id: string
+  title: string
+  lyrics: string
+  style: string
+  mp3_url: string | null
+  mp3_name: string | null
+  mp3_size: number | null
+  sort: number
   created_at: string
   updated_at: string
 }

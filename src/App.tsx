@@ -9,6 +9,7 @@ import { Settings } from '@/pages/Settings'
 import { Clients } from '@/pages/Clients'
 import { Emails } from '@/pages/Emails'
 import { Items } from '@/pages/Items'
+import { Notes } from '@/pages/Notes'
 import { AppHome } from '@/pages/AppHome'
 import { ProjectPrint } from '@/pages/ProjectPrint'
 import { AppLayout } from '@/components/AppLayout'
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/app/items" element={<Items />} />
         <Route path="/app/clients" element={<Clients />} />
         <Route path="/app/emails" element={<Emails />} />
+        <Route path="/app/notes" element={<Notes />} />
         <Route path="/app/project/:id" element={<Project />} />
         <Route path="/app/project/:id/:tab" element={<Project />} />
       </Route>
