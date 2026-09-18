@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { Client, ClientCompany, ProjectClient } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 import { getActiveEnvironment } from '@/store/useSettings'
+import { useProjects } from '@/store/useProjects'
 
 interface ClientsState {
   clients: Client[]
@@ -174,8 +175,27 @@ export const useClients = create<ClientsState>((set, get) => ({
       ],
     })
     const { error } = await supabase.from('project_clients').insert({ project_id: projectId, client_id: clientId })
-    if (error) notifySaveError(error.message)
-    else notifySaved('Client linked to project.')
+    if (error) {
+      notifySaveError(error.message)
+      return
+    }
+    notifySaved('Client linked to project.')
+    // Projects automatically inherit the countries of the client they're
+    // assigned to - merged into (not replacing) whatever the project already
+    // has. Fetched fresh rather than trusting useProjects' local cache, since
+    // this can be called from pages that never loaded that store.
+    const clientCountries = get().clients.find((c) => c.id === clientId)?.countries ?? []
+    if (clientCountries.length === 0) return
+    const { data: projectRow } = await supabase
+      .from('projects')
+      .select('countries')
+      .eq('id', projectId)
+      .single()
+    const existing: string[] = projectRow?.countries ?? []
+    const merged = Array.from(new Set([...existing, ...clientCountries]))
+    if (merged.length !== existing.length) {
+      await useProjects.getState().update(projectId, { countries: merged })
+    }
   },
 
   unlinkFromProject: async (projectId, clientId) => {

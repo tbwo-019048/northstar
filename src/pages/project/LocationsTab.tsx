@@ -14,7 +14,13 @@ export function LocationsTab({ projectId }: { projectId: string }) {
     .sort((a, b) => (a.visit_date ?? '9999').localeCompare(b.visit_date ?? '9999') || a.created_at.localeCompare(b.created_at))
 
   const addLocation = () =>
-    add('locations', { project_id: projectId, address: '', state: 'pending', sort: locations.length })
+    add('locations', {
+      project_id: projectId,
+      address: '',
+      location_address: '',
+      state: 'pending',
+      sort: locations.length,
+    })
 
   return (
     <div className="space-y-2">
@@ -32,19 +38,25 @@ export function LocationsTab({ projectId }: { projectId: string }) {
       </div>
 
       <div className="divide-y divide-border rounded-md border border-border">
-        <div className="hidden grid-cols-[1fr_9rem_1fr_8rem_2rem] gap-2 px-2 py-1.5 text-[11px] font-medium uppercase text-muted-foreground sm:grid">
+        <div className="hidden grid-cols-[1fr_1fr_9rem_1fr_8rem_2rem] gap-2 px-2 py-1.5 text-[11px] font-medium uppercase text-muted-foreground sm:grid">
+          <span>Name</span>
           <span>Address</span>
           <span>Date</span>
-          <span>Letter</span>
+          <span>Position</span>
           <span>State</span>
           <span />
         </div>
         {locations.map((location) => (
-          <div key={location.id} className="grid grid-cols-1 gap-2 px-2 py-1.5 sm:grid-cols-[1fr_9rem_1fr_8rem_2rem] sm:items-center">
+          <div key={location.id} className="grid grid-cols-1 gap-2 px-2 py-1.5 sm:grid-cols-[1fr_1fr_9rem_1fr_8rem_2rem] sm:items-center">
             <EditableText
               value={location.address}
-              placeholder="Address"
+              placeholder="Name"
               onSave={(v) => void patch('locations', location.id, { address: v })}
+            />
+            <EditableText
+              value={location.location_address}
+              placeholder="Address"
+              onSave={(v) => void patch('locations', location.id, { location_address: v })}
             />
             <Input
               type="date"
@@ -53,7 +65,7 @@ export function LocationsTab({ projectId }: { projectId: string }) {
             />
             <EditableText
               value={location.letter}
-              placeholder="Letter"
+              placeholder="Position"
               onSave={(v) => void patch('locations', location.id, { letter: v })}
             />
             <Select

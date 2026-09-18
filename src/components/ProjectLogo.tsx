@@ -16,19 +16,32 @@ export function ProjectLogo({
   editable = false,
   onChange,
   className,
+  overrideUrl,
 }: {
   project: Pick<Project, 'id' | 'name' | 'logo_url'>
-  size?: 'xs' | 'sm' | 'md' | 'lg'
+  /** 'fill' grows/shrinks with its parent (e.g. a grid cell whose width
+   * depends on the column count) instead of a fixed pixel size. */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'fill'
   editable?: boolean
   onChange?: (url: string) => void
   className?: string
+  /** Private Mode etc.: shows this image instead of the project's own logo. */
+  overrideUrl?: string | null
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const dims =
-    size === 'lg' ? 'size-16' : size === 'sm' ? 'size-6' : size === 'xs' ? 'size-4' : 'size-9'
+    size === 'lg'
+      ? 'size-16'
+      : size === 'sm'
+        ? 'size-6'
+        : size === 'xs'
+          ? 'size-4'
+          : size === 'fill'
+            ? 'aspect-square w-full'
+            : 'size-9'
 
   const upload = async (file: File) => {
     setBusy(true)
@@ -48,8 +61,9 @@ export function ProjectLogo({
     setBusy(false)
   }
 
-  const content = project.logo_url ? (
-    <img src={project.logo_url} alt="" className={cn(dims, 'rounded-md object-cover')} />
+  const shownUrl = overrideUrl !== undefined ? overrideUrl : project.logo_url
+  const content = shownUrl ? (
+    <img src={shownUrl} alt="" className={cn(dims, 'rounded-md object-cover')} />
   ) : (
     <div
       className={cn(

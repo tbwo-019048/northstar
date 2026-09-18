@@ -135,7 +135,7 @@ export function SummaryTab({ project, blocks }: { project: Project; blocks: Summ
         </>
       )}
 
-      {!hasSites && (
+      {!hasSites && has('pipeline') && (
         <div className="space-y-1.5">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Pipeline

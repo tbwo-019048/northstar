@@ -1,11 +1,9 @@
-import { useRef, useState } from 'react'
-import { Music2, Plus, Trash2, Upload, X } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Music2, Plus, Trash2 } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/velobits/accordion'
-import { Input, IconButton } from '@/components/ui-lite'
+import { Input } from '@/components/ui-lite'
 import { useProjectData, asAlbumTracks } from '@/store/useProjectData'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
-import { supabase } from '@/lib/supabase'
-import type { AlbumTrack } from '@/lib/types'
+import { isTrackDone, type AlbumTrack } from '@/lib/types'
 
 /** One accordion row per song: title in the trigger, lyrics/style/mp3 in the
  * expanded content. A separate, additional tab alongside Features ("Tracks")
@@ -16,7 +14,14 @@ export function AlbumTab({ projectId }: { projectId: string }) {
   const tracks = asAlbumTracks(rows).slice().sort((a, b) => a.sort - b.sort)
 
   const addTrack = () =>
-    add('album_tracks', { project_id: projectId, title: 'Untitled track', sort: tracks.length })
+    add('album_tracks', {
+      project_id: projectId,
+      title: 'Untitled track',
+      mp3_generated: false,
+      lyrics_finalised: false,
+      style_finalised: false,
+      sort: tracks.length,
+    })
 
   return (
     <div className="space-y-2">
@@ -45,6 +50,11 @@ export function AlbumTab({ projectId }: { projectId: string }) {
                 <span className="flex items-center gap-2 text-sm">
                   <Music2 size={14} className="shrink-0 text-muted-foreground" />
                   {track.title || 'Untitled track'}
+                  {isTrackDone(track) ? (
+                    <CheckCircle2 size={14} className="shrink-0 text-emerald-500" aria-label="Done" />
+                  ) : (
+                    <AlertCircle size={14} className="shrink-0 text-amber-500" aria-label="Not done" />
+                  )}
                 </span>
               </AccordionTrigger>
               <AccordionContent>
@@ -60,29 +70,9 @@ export function AlbumTab({ projectId }: { projectId: string }) {
 
 function TrackEditor({ track }: { track: AlbumTrack }) {
   const { patch, del } = useProjectData()
-  const fileRef = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [lyrics, setLyrics, lyricsStatus] = useDebouncedSave(track.lyrics, async (v) => {
     await patch('album_tracks', track.id, { lyrics: v })
   })
-
-  const uploadMp3 = async (file: File) => {
-    setBusy(true)
-    setError(null)
-    const path = `${track.project_id}/${track.id}/${Date.now()}-${file.name}`
-    const { error: upErr } = await supabase.storage
-      .from('project-album-tracks')
-      .upload(path, file, { upsert: true, cacheControl: '3600' })
-    if (upErr) {
-      setError(upErr.message)
-      setBusy(false)
-      return
-    }
-    const { data } = supabase.storage.from('project-album-tracks').getPublicUrl(path)
-    await patch('album_tracks', track.id, { mp3_url: data.publicUrl, mp3_name: file.name, mp3_size: file.size })
-    setBusy(false)
-  }
 
   return (
     <div className="space-y-3 px-5 pb-4 sm:px-6">
@@ -119,40 +109,33 @@ function TrackEditor({ track }: { track: AlbumTrack }) {
       </label>
 
       <div className="space-y-1.5">
-        <span className="text-[11px] font-medium uppercase text-muted-foreground">MP3</span>
-        {track.mp3_url ? (
-          <div className="flex items-center gap-2">
-            <audio controls src={track.mp3_url} className="h-8 max-w-full" />
-            <IconButton
-              onClick={() => void patch('album_tracks', track.id, { mp3_url: null, mp3_name: null, mp3_size: null })}
-              aria-label="Remove mp3"
-              className="hover:text-destructive"
-            >
-              <X size={13} />
-            </IconButton>
-          </div>
-        ) : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            className="inline-flex h-6 items-center gap-1 rounded-md border border-border px-1.5 text-xs hover:bg-muted disabled:opacity-50"
-          >
-            <Upload size={12} /> {busy ? 'Uploading…' : 'Attach mp3'}
-          </button>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="audio/mpeg,.mp3"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) void uploadMp3(file)
-            e.target.value = ''
-          }}
-        />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        <span className="text-[11px] font-medium uppercase text-muted-foreground">Progress</span>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={track.mp3_generated}
+              onChange={(e) => void patch('album_tracks', track.id, { mp3_generated: e.target.checked })}
+            />
+            MP3 Generated
+          </label>
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={track.lyrics_finalised}
+              onChange={(e) => void patch('album_tracks', track.id, { lyrics_finalised: e.target.checked })}
+            />
+            Lyrics Finalised
+          </label>
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={track.style_finalised}
+              onChange={(e) => void patch('album_tracks', track.id, { style_finalised: e.target.checked })}
+            />
+            Style Finalised
+          </label>
+        </div>
       </div>
 
       <div className="flex justify-end border-t border-border pt-3">

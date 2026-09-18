@@ -585,8 +585,13 @@ export const LOCATION_STATE_LABEL: Record<LocationState, string> = {
 export interface Location extends StateScoped {
   id: string
   project_id: string
+  /** Shown in the UI as "Name" (originally "Address" - see location_address
+   * for the actual street address, added alongside it). */
   address: string
+  /** The location's actual street address - shown in the UI as "Address". */
+  location_address: string
   visit_date: string | null
+  /** Shown in the UI as "Position". */
   letter: string
   state: LocationState
   sort: number
@@ -608,10 +613,20 @@ export interface AlbumTrack extends StateScoped {
   title: string
   lyrics: string
   style: string
+  /** @deprecated replaced by the mp3_generated/lyrics_finalised/style_finalised
+   * checkboxes below - kept only so any already-uploaded files aren't dropped. */
   mp3_url: string | null
   mp3_name: string | null
   mp3_size: number | null
+  mp3_generated: boolean
+  lyrics_finalised: boolean
+  style_finalised: boolean
   sort: number
   created_at: string
   updated_at: string
+}
+
+/** A track counts as "done" once every completion checkbox is ticked. */
+export function isTrackDone(track: Pick<AlbumTrack, 'mp3_generated' | 'lyrics_finalised' | 'style_finalised'>) {
+  return track.mp3_generated && track.lyrics_finalised && track.style_finalised
 }

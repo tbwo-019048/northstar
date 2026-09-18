@@ -19,6 +19,20 @@ function projectBlue(i: number, n: number): string {
   return `color-mix(in srgb, var(--primary) ${Math.round(100 - (t - 0.5) * 80)}%, black)`
 }
 
+/** One headline figure in the stats row — number in blue, label unchanged. */
+function HomeStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-5xl font-semibold leading-none tabular-nums text-primary">
+        {value.toLocaleString()}
+      </span>
+      <span className="text-xs uppercase leading-tight tracking-wide text-muted-foreground">
+        {label}
+      </span>
+    </div>
+  )
+}
+
 /** Authenticated home — where your projects are (left) and your GitHub
  * activity (right). */
 export function AppHome() {
@@ -66,6 +80,11 @@ export function AppHome() {
     if (repos.length) void loadGithub(repos)
   }, [repos, loadGithub])
 
+  const totalHours = useMemo(
+    () => Math.round(projects.reduce((sum, p) => sum + (p.hours_worked || 0), 0)),
+    [projects],
+  )
+
   const name = member?.display_name?.trim() || user?.email?.split('@')[0] || 'there'
   const counts = mergeCounts(byRepo, repos)
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
@@ -81,11 +100,14 @@ export function AppHome() {
 
       <div className="grid flex-1 gap-8 lg:grid-cols-[3fr_2fr]">
         <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-5xl font-semibold leading-none tabular-nums">{clients.length}</span>
-            <span className="text-xs uppercase leading-tight tracking-wide text-muted-foreground">
-              client{clients.length === 1 ? '' : 's'}
-            </span>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <HomeStat value={projects.length} label="projects (all)" />
+            <HomeStat value={clients.length} label={clients.length === 1 ? 'client' : 'clients'} />
+            <HomeStat
+              value={projectCountries.length}
+              label={projectCountries.length === 1 ? 'country' : 'countries'}
+            />
+            <HomeStat value={totalHours} label="total hours" />
           </div>
           <div className="flex-1 text-muted-foreground">
             <WorldMap
@@ -118,7 +140,7 @@ export function AppHome() {
 
         <section className="flex flex-col justify-center gap-3">
           <div className="flex items-center justify-center py-2">
-            <NorthStarIcon className="size-20" />
+            <NorthStarIcon className="size-48" />
           </div>
           <p className="text-sm text-muted-foreground">
             {pending ? (

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlignLeft, Archive, GripVertical, LayoutList, ListFilter, Lock, LockOpen, Tag } from 'lucide-react'
+import { AlignLeft, Archive, GripVertical, LayoutList, ListFilter, Lock, LockOpen, Shield, Tag } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -75,10 +75,13 @@ const FALLBACK_TONE = 'bg-muted text-muted-foreground'
 type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'progress'
 const VIEW_KEY = 'northstar.overview.view'
 const CODENAME_KEY = 'northstar.overview.codenames'
+const PRIVATE_MODE_KEY = 'northstar.overview.privateMode'
 const PAGINATE_KEY = 'northstar.overview.paginate'
 const RETIRED_KEY = 'northstar.overview.showRetired'
 const TABLEPAGE_KEY = 'northstar.overview.tablepage'
 const TABLE_PAGE_SIZE = 15
+/** Private Mode: every project's own logo is swapped for the app's own icon. */
+const PRIVATE_MODE_LOGO = '/icon.png'
 
 export function Overview() {
   const { projects, loaded, load, create, update, remove, reorder, subscribe, error, clearError } =
@@ -110,6 +113,16 @@ export function Overview() {
       return localStorage.getItem(CODENAME_KEY) !== '0'
     } catch {
       return true
+    }
+  })
+  // Different from the Codenames toggle: Private Mode replaces every logo
+  // with the app's own icon and always shows "PROJECT [CODENAME]" as the
+  // name, regardless of whether Codenames is separately on.
+  const [privateMode, setPrivateMode] = useState(() => {
+    try {
+      return localStorage.getItem(PRIVATE_MODE_KEY) === '1'
+    } catch {
+      return false
     }
   })
   const [paginate, setPaginate] = useState(() => {
@@ -189,6 +202,14 @@ export function Overview() {
 
   useEffect(() => {
     try {
+      localStorage.setItem(PRIVATE_MODE_KEY, privateMode ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [privateMode])
+
+  useEffect(() => {
+    try {
       localStorage.setItem(PAGINATE_KEY, paginate ? '1' : '0')
     } catch {
       /* ignore */
@@ -211,7 +232,12 @@ export function Overview() {
     }
   }, [showRetired])
 
-  const projectLabel = (p: Project) => (codenames && p.codename?.trim() ? p.codename : p.name)
+  const projectLabel = (p: Project) =>
+    privateMode
+      ? `PROJECT ${p.codename?.trim() || p.name}`
+      : codenames && p.codename?.trim()
+        ? p.codename
+        : p.name
 
   const rows = useMemo(() => {
     const matched = projects.filter(
@@ -423,6 +449,13 @@ export function Overview() {
               className={'h-7 w-7 ' + (showRetired ? 'bg-muted text-foreground' : '')}
             >
               <Archive size={14} />
+            </IconButton>
+            <IconButton
+              title="Private Mode"
+              onClick={() => setPrivateMode((v) => !v)}
+              className={'h-7 w-7 ' + (privateMode ? 'bg-muted text-foreground' : '')}
+            >
+              <Shield size={14} />
             </IconButton>
             <IconButton
               title="Paginate"
@@ -659,6 +692,7 @@ export function Overview() {
             onOpen={openProject}
             onDelete={deleteProject}
             onReorder={(ids) => reorder(ids)}
+            logoOverride={privateMode ? PRIVATE_MODE_LOGO : undefined}
           />
         ) : (
           <TablePage
@@ -673,6 +707,7 @@ export function Overview() {
             paginate={paginate}
             page={tablePage}
             setPage={setTablePage}
+            logoOverride={privateMode ? PRIVATE_MODE_LOGO : undefined}
           />
         ))}
 
@@ -693,6 +728,7 @@ export function Overview() {
                 showDescriptions={showDescriptions}
                 diagnostic={diagnostic}
                 onToggleHidden={(pid, hidden) => update(pid, { hidden })}
+                logoOverride={privateMode ? PRIVATE_MODE_LOGO : undefined}
               />
             </div>
           ))}
@@ -721,6 +757,7 @@ export function Overview() {
                 showDescriptions={showDescriptions}
                 diagnostic={diagnostic}
                 onToggleHidden={(pid, hidden) => update(pid, { hidden })}
+                logoOverride={privateMode ? PRIVATE_MODE_LOGO : undefined}
               />
             </div>
           ))}
@@ -741,7 +778,7 @@ export function Overview() {
                 onClick={() => openProject(p.id)}
                 className="flex w-full flex-col items-center gap-1.5 rounded-md p-2 text-center"
               >
-                <ProjectLogo project={p} size="lg" />
+                <ProjectLogo project={p} size="fill" overrideUrl={privateMode ? PRIVATE_MODE_LOGO : undefined} />
                 <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
                   {projectLabel(p)}
                 </span>
@@ -824,12 +861,14 @@ function ReorderList({
   onOpen,
   onDelete,
   onReorder,
+  logoOverride,
 }: {
   rows: Project[]
   nameFor: (p: Project) => string
   onOpen: (id: string) => void
   onDelete: (project: Project) => void
   onReorder: (ids: string[]) => void
+  logoOverride?: string
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const ids = rows.map((r) => r.id)
@@ -846,7 +885,7 @@ function ReorderList({
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         <div className="divide-y divide-border rounded-md border border-border">
           {rows.map((p) => (
-            <ReorderRow key={p.id} p={p} label={nameFor(p)} onOpen={onOpen} onDelete={onDelete} />
+            <ReorderRow key={p.id} p={p} label={nameFor(p)} onOpen={onOpen} onDelete={onDelete} logoOverride={logoOverride} />
           ))}
           {rows.length === 0 && (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">No projects.</p>
@@ -857,7 +896,19 @@ function ReorderList({
   )
 }
 
-function ReorderRow({ p, label, onOpen, onDelete }: { p: Project; label: string; onOpen: (id: string) => void; onDelete: (project: Project) => void }) {
+function ReorderRow({
+  p,
+  label,
+  onOpen,
+  onDelete,
+  logoOverride,
+}: {
+  p: Project
+  label: string
+  onOpen: (id: string) => void
+  onDelete: (project: Project) => void
+  logoOverride?: string
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: p.id,
   })
@@ -872,7 +923,7 @@ function ReorderRow({ p, label, onOpen, onDelete }: { p: Project; label: string;
       >
         <GripVertical className="size-3.5" />
       </button>
-      <ProjectLogo project={p} size="xs" />
+      <ProjectLogo project={p} size="xs" overrideUrl={logoOverride} />
       <button type="button" onClick={() => onOpen(p.id)} className="min-w-0 flex-1 truncate text-left font-medium hover:underline">
         {label}
       </button>
@@ -897,6 +948,7 @@ function TablePage({
   paginate,
   page,
   setPage,
+  logoOverride,
 }: {
   rows: Project[]
   loaded: boolean
@@ -909,6 +961,7 @@ function TablePage({
   paginate: boolean
   page: number
   setPage: (n: number) => void
+  logoOverride?: string
 }) {
   if (!paginate) {
     return (
@@ -921,6 +974,7 @@ function TablePage({
         showDescriptions={showDescriptions}
         diagnostic={diagnostic}
         onToggleHidden={onToggleHidden}
+        logoOverride={logoOverride}
       />
     )
   }
@@ -941,6 +995,7 @@ function TablePage({
         showDescriptions={showDescriptions}
         diagnostic={diagnostic}
         onToggleHidden={onToggleHidden}
+        logoOverride={logoOverride}
       />
       {rows.length > TABLE_PAGE_SIZE && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -984,6 +1039,7 @@ function ProjectTable({
   showDescriptions,
   diagnostic,
   onToggleHidden,
+  logoOverride,
 }: {
   rows: Project[]
   loaded: boolean
@@ -994,6 +1050,7 @@ function ProjectTable({
   showDescriptions: boolean
   diagnostic: boolean
   onToggleHidden: (id: string, hidden: boolean) => void
+  logoOverride?: string
 }) {
   // A shared <colgroup> (identical whether or not the header row renders)
   // is what keeps columns lined up across the separate <table> elements in
@@ -1043,7 +1100,7 @@ function ProjectTable({
               )}
               <td className="truncate px-2.5 py-1">
                 <span className="flex items-center gap-1.5 truncate font-medium group-hover:underline">
-                  <ProjectLogo project={p} size="xs" />
+                  <ProjectLogo project={p} size="xs" overrideUrl={logoOverride} />
                   <span className="truncate">{nameFor(p)}</span>
                 </span>
                 {showDescriptions && p.summary && (

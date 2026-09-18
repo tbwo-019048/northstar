@@ -1116,16 +1116,17 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 create table if not exists locations (
-  id          uuid primary key default gen_random_uuid(),
-  project_id  uuid not null references projects(id) on delete cascade,
-  address     text not null default '',
-  visit_date  date,
-  letter      text not null default '',
-  state       location_state not null default 'pending',
-  sort        integer not null default 0,
-  environment text not null default 'staging',
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  project_id        uuid not null references projects(id) on delete cascade,
+  address           text not null default '', -- shown in the UI as "Name"
+  location_address  text not null default '', -- shown in the UI as "Address"
+  visit_date        date,
+  letter            text not null default '', -- shown in the UI as "Position"
+  state             location_state not null default 'pending',
+  sort              integer not null default 0,
+  environment       text not null default 'staging',
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
 );
 drop trigger if exists trg_locations_updated on locations;
 create trigger trg_locations_updated before update on locations
@@ -1161,18 +1162,21 @@ create table if not exists album_art (
 );
 
 create table if not exists album_tracks (
-  id          uuid primary key default gen_random_uuid(),
-  project_id  uuid not null references projects(id) on delete cascade,
-  title       text not null default 'Untitled track',
-  lyrics      text not null default '',
-  style       text not null default '',
-  mp3_url     text,
-  mp3_name    text,
-  mp3_size    integer,
-  sort        integer not null default 0,
-  environment text not null default 'staging',
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  project_id        uuid not null references projects(id) on delete cascade,
+  title             text not null default 'Untitled track',
+  lyrics            text not null default '',
+  style             text not null default '',
+  mp3_url           text, -- deprecated, kept so any already-uploaded files aren't dropped
+  mp3_name          text,
+  mp3_size          integer,
+  mp3_generated     boolean not null default false,
+  lyrics_finalised  boolean not null default false,
+  style_finalised   boolean not null default false,
+  sort              integer not null default 0,
+  environment       text not null default 'staging',
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
 );
 drop trigger if exists trg_album_tracks_updated on album_tracks;
 create trigger trg_album_tracks_updated before update on album_tracks

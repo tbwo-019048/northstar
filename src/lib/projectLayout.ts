@@ -19,7 +19,15 @@ export type TabKey =
   | 'album'
   | 'mindmap'
 
-export type SummaryBlock = 'url' | 'image' | 'progress' | 'summary' | 'clients' | 'stats' | 'topTodos'
+export type SummaryBlock =
+  | 'url'
+  | 'image'
+  | 'progress'
+  | 'summary'
+  | 'clients'
+  | 'stats'
+  | 'topTodos'
+  | 'pipeline'
 
 export type DetailsBlock =
   | 'codename'
@@ -50,8 +58,13 @@ export interface TypeLayout {
   extraTabs?: { key: TabKey; label: string }[]
 }
 
-const FULL_SUMMARY: SummaryBlock[] = ['url', 'image', 'progress', 'summary', 'clients']
-const LEAN_SUMMARY: SummaryBlock[] = ['image', 'progress', 'summary', 'clients']
+// 'pipeline' is appended to every shared summary preset so existing types keep
+// their previous behaviour (Summary always showed the Pipeline section for any
+// project without a live site - see SummaryTab.tsx - now it's an explicit,
+// type-configurable block instead of an unconditional one). Types that want it
+// gone (e.g. grand_tour) just build their own array without it.
+const FULL_SUMMARY: SummaryBlock[] = ['url', 'image', 'progress', 'summary', 'clients', 'pipeline']
+const LEAN_SUMMARY: SummaryBlock[] = ['image', 'progress', 'summary', 'clients', 'pipeline']
 const FULL_DETAILS: DetailsBlock[] = [
   'codename',
   'state',
@@ -95,7 +108,7 @@ const lean = (featuresLabel: string, extraLabels: Partial<Record<TabKey, string>
  * links/screenshots/summary text/clients/stats. The free-form mind-map lives
  * on its own optional "mindmap" tab (see Project.tsx's show_mindmap check),
  * not on Summary. */
-const STATE_SUMMARY: SummaryBlock[] = ['progress']
+const STATE_SUMMARY: SummaryBlock[] = ['progress', 'pipeline']
 
 /** The shared "standard treatment": Summary shows only the state gauge,
  * Details is the lean set, and Planning is the simple Pending/In Progress/
@@ -126,10 +139,21 @@ export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
     planningVariant: 'simple',
   },
   physical: standard('Goals'),
-  mechanical: standard('Targets'),
+  // Only Summary / Targets(features) / Details / Pipeline.
+  mechanical: {
+    ...standard('Targets'),
+    hiddenTabs: ['assets', 'requests', 'todo', 'planning', 'users', 'git', 'analysis'],
+  },
   location: standard('Destinations', { requests: 'Locations' }),
-  written: lean('Targets'),
-  writing: standard('Targets'),
+  // Only Summary / Targets(features) / Details / To-Do.
+  written: {
+    ...lean('Targets'),
+    hiddenTabs: ['assets', 'requests', 'pipeline', 'planning', 'users', 'git', 'analysis'],
+  },
+  writing: {
+    ...standard('Targets'),
+    hiddenTabs: ['assets', 'requests', 'pipeline', 'planning', 'users', 'git', 'analysis'],
+  },
   game: {
     hiddenTabs: [],
     tabLabels: {},
@@ -143,12 +167,18 @@ export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
     { key: 'albumArt', label: 'Album Art' },
     { key: 'album', label: 'Album' },
   ]),
-  '3d_print': lean('Prints'),
+  // Only Summary / Prints(features) / Details / Pipeline.
+  '3d_print': {
+    ...lean('Prints'),
+    hiddenTabs: ['assets', 'requests', 'todo', 'planning', 'users', 'git', 'analysis'],
+  },
   laser_engrave: lean('Engravings'),
+  // Only Summary / Assets / Locations (+ Settings, never hidden). Summary shows
+  // just the state gauge and text summary - no clients, screenshots or pipeline.
   grand_tour: {
-    hiddenTabs: ['users', 'git'],
+    hiddenTabs: ['features', 'details', 'requests', 'todo', 'pipeline', 'planning', 'users', 'git', 'analysis'],
     tabLabels: {},
-    summary: LEAN_SUMMARY,
+    summary: ['progress', 'summary'],
     details: LEAN_DETAILS,
     simpleUsers: false,
     planningVariant: 'locations',
