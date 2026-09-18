@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { Bold, Italic, List, ListOrdered, Underline } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Bold, Check, Italic, List, ListOrdered, Save, Underline } from 'lucide-react'
 import { IconButton } from '@/components/ui-lite'
 import { sanitizeNoteHtml } from '@/lib/sanitizeNoteHtml'
 
@@ -35,6 +35,7 @@ function ToolbarButton({
 export function NoteEditor({ value, onSave }: NoteEditorProps) {
   const ref = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<number | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
 
   useEffect(() => {
     if (ref.current && document.activeElement !== ref.current) {
@@ -56,6 +57,12 @@ export function NoteEditor({ value, onSave }: NoteEditorProps) {
   const flushSave = () => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
     if (ref.current) onSave(ref.current.innerHTML)
+  }
+
+  const manualSave = () => {
+    flushSave()
+    setJustSaved(true)
+    window.setTimeout(() => setJustSaved(false), 1200)
   }
 
   const exec = (command: string) => {
@@ -82,6 +89,10 @@ export function NoteEditor({ value, onSave }: NoteEditorProps) {
         </ToolbarButton>
         <ToolbarButton onClick={() => exec('insertOrderedList')} label="Numbered list">
           <ListOrdered size={15} />
+        </ToolbarButton>
+        <div className="mx-1 h-4 w-px bg-border" />
+        <ToolbarButton onClick={manualSave} label="Save">
+          {justSaved ? <Check size={15} className="text-primary" /> : <Save size={15} />}
         </ToolbarButton>
       </div>
       <div

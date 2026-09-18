@@ -91,8 +91,8 @@ export function Notes() {
               />
               <NoteEditor key={selected.id} value={selected.body} onSave={(body) => update(selected.id, { body })} />
               <div>
-                <h2 className="mb-1.5 text-xs font-medium uppercase text-muted-foreground">Checklist</h2>
-                <NoteChecklist noteId={selected.id} items={selected.checklist} />
+                <h2 className="mb-1.5 text-xs font-medium uppercase text-muted-foreground">Checklists</h2>
+                <NoteChecklist noteId={selected.id} sections={selected.checklist_sections} />
               </div>
             </>
           ) : (

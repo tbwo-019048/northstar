@@ -13,7 +13,7 @@ import { useProjects } from '@/store/useProjects'
 import { useSettings } from '@/store/useSettings'
 import { useGithubActivity, mergeCounts } from '@/store/useGithubActivity'
 import { supabase } from '@/lib/supabase'
-import type { Project } from '@/lib/types'
+import { formatProjectType, type Project } from '@/lib/types'
 
 const DAY_MS = 86_400_000
 
@@ -34,8 +34,6 @@ function weeklyCommits(days: Record<string, number>, weeks: number): { label: st
   }
   return out
 }
-
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 type Tally = Record<string, number>
 type CrossStats = { features: Tally; users: Tally; todos: Tally; plans: Tally; requests: Tally; pipelines: Tally }
@@ -202,7 +200,7 @@ export function AnalysisTab({ project }: { project: Project }) {
   }, [rows, project])
 
   const tiles: [string, string | number][] = [
-    ['Type', cap(project.type)],
+    ['Type', formatProjectType(project.type)],
     ['Hours worked', stats.hours],
     ['Features complete', stats.features],
     ['To-dos open', stats.todosOpen],

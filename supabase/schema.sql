@@ -526,19 +526,24 @@ create trigger trg_project_templates_updated before update on project_templates
 -- array of ChecklistItem, see src/lib/types.ts).
 -- ---------------------------------------------------------------------------
 create table if not exists notes (
-  id          uuid primary key default gen_random_uuid(),
-  title       text not null default '',
-  body        text not null default '',
-  checklist   jsonb not null default '[]'::jsonb,
-  sort        integer not null default 0,
-  environment text not null default 'staging',
-  created_by  uuid references auth.users(id) on delete set null,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  title             text not null default '',
+  body              text not null default '',
+  checklist         jsonb not null default '[]'::jsonb,
+  -- Sectional checklists: ChecklistSection[] (see src/lib/types.ts). The
+  -- older flat `checklist` column above is unused going forward but kept
+  -- so no existing data is destroyed.
+  checklist_sections jsonb not null default '[]'::jsonb,
+  sort              integer not null default 0,
+  environment       text not null default 'staging',
+  created_by        uuid references auth.users(id) on delete set null,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
 );
 drop trigger if exists trg_notes_updated on notes;
 create trigger trg_notes_updated before update on notes
   for each row execute function set_updated_at();
+alter table notes add column if not exists checklist_sections jsonb not null default '[]'::jsonb;
 
 -- ---------------------------------------------------------------------------
 -- Project links — symmetric "related projects", one row per unordered pair.
@@ -881,6 +886,51 @@ create trigger trg_email_accounts_updated before update on email_accounts
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- Emails page: a duplicate of the original Emails feature (now displayed as
+-- "Login" above), with its own separate tables.
+-- ---------------------------------------------------------------------------
+create table if not exists mailbox_groups (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null default 'Group',
+  sort        integer not null default 0,
+  environment text not null default 'staging',
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists mailbox_accounts (
+  id          uuid primary key default gen_random_uuid(),
+  group_id    uuid not null references mailbox_groups(id) on delete cascade,
+  name        text not null default '',
+  email       text not null default '',
+  domain      text not null default '',
+  password    text not null default '',
+  notes       text not null default '',
+  hidden      boolean not null default false,
+  sort        integer not null default 0,
+  environment text not null default 'staging',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+drop trigger if exists trg_mailbox_accounts_updated on mailbox_accounts;
+create trigger trg_mailbox_accounts_updated before update on mailbox_accounts
+  for each row execute function set_updated_at();
+
+do $$
+declare t text;
+begin
+  foreach t in array array['mailbox_groups', 'mailbox_accounts'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists "auth full access" on %I', t);
+    execute format(
+      'create policy "auth full access" on %I for all to authenticated using (true) with check (true)', t);
+    begin
+      execute format('alter publication supabase_realtime add table %I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- Diagnostic mode — a shared `hidden` flag; hidden rows drop out of every
 -- list unless the viewer has diagnostic mode on.
 -- ---------------------------------------------------------------------------
@@ -1007,6 +1057,7 @@ create table if not exists concept_nodes (
   label       text not null default 'New idea',
   x           numeric not null default 40,
   y           numeric not null default 40,
+  color       text,
   sort        integer not null default 0,
   environment text not null default 'staging',
   created_at  timestamptz not null default now(),
@@ -1015,16 +1066,19 @@ create table if not exists concept_nodes (
 drop trigger if exists trg_concept_nodes_updated on concept_nodes;
 create trigger trg_concept_nodes_updated before update on concept_nodes
   for each row execute function set_updated_at();
+alter table concept_nodes add column if not exists color text;
 
 create table if not exists concept_edges (
   id            uuid primary key default gen_random_uuid(),
   project_id    uuid not null references projects(id) on delete cascade,
   from_node_id  uuid not null references concept_nodes(id) on delete cascade,
   to_node_id    uuid not null references concept_nodes(id) on delete cascade,
+  color         text,
   sort          integer not null default 0,
   environment   text not null default 'staging',
   created_at    timestamptz not null default now()
 );
+alter table concept_edges add column if not exists color text;
 
 do $$
 declare t text;

@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeftIcon } from '@/components/ui/chevron-left'
 import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
-import { PROJECT_TYPES, type ProjectType } from '@/lib/types'
+import { PROJECT_TYPES, formatProjectType, type ProjectType } from '@/lib/types'
 import { layoutFor, type TabKey } from '@/lib/projectLayout'
 import { EditableText, Select } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
@@ -149,7 +149,7 @@ export function Project() {
             {[...PROJECT_TYPES, ...(PROJECT_TYPES.includes(project.type) ? [] : [project.type])].map(
               (t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {formatProjectType(t)}
                 </option>
               ),
             )}

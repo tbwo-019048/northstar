@@ -11,6 +11,7 @@ import { useProjects } from '@/store/useProjects'
 import { useProjectLinks } from '@/store/useProjectLinks'
 import { useConfirm } from '@/store/useConfirm'
 import { EditableText, IconButton, Input, Select, SecretField } from '@/components/ui-lite'
+import { ProjectLogo } from '@/components/ProjectLogo'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { parseDotEnv, serializeDotEnv } from '@/lib/dotenv'
 import { downloadText } from '@/lib/csv'
@@ -59,8 +60,24 @@ export function DetailsTab({ project, blocks }: { project: Project; blocks: Deta
   const addRow = (section: string) =>
     add('details', { project_id: projectId, section, label: 'Label', value: '', sort: details.length })
 
+  // Website/App/Tools projects set their icon from a live site's favicon
+  // (Summary tab's "Use as logo" button) or the header's own quick-upload.
+  // Every other type has no such source, so it gets a bigger, more
+  // discoverable upload block here instead.
+  const showLogoUpload = !['website', 'app', 'tools'].includes(project.type)
+
   return (
     <div className="space-y-3">
+      {showLogoUpload && (
+        <div className="flex items-center gap-3 rounded-md border border-border p-3">
+          <ProjectLogo project={project} size="lg" editable onChange={(url) => update(projectId, { logo_url: url })} />
+          <div>
+            <p className="text-sm font-medium">Logo</p>
+            <p className="text-xs text-muted-foreground">Upload a custom image to use as this project's icon.</p>
+          </div>
+        </div>
+      )}
+
       {(has('codename') || has('state') || has('hours')) && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {has('codename') && (

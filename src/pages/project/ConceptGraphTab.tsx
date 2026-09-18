@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react'
-import { Plus, Waypoints, X } from 'lucide-react'
+import { Paintbrush, Plus, Waypoints, X } from 'lucide-react'
 import { EditableText, IconButton } from '@/components/ui-lite'
 import { cn } from '@/lib/utils'
 import { useProjectData, asConceptNodes, asConceptEdges } from '@/store/useProjectData'
 import type { ConceptNode } from '@/lib/types'
 
 const CLAMP = (n: number) => Math.min(98, Math.max(2, n))
+
+const PALETTE = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#64748b']
 
 /** A free-form mind-map: the user manually adds/labels/drags nodes and draws
  * connections between them. Nothing here is auto-generated from project data. */
@@ -17,8 +19,10 @@ export function ConceptGraphTab({ projectId }: { projectId: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [connecting, setConnecting] = useState(false)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
+  const [paintColor, setPaintColor] = useState<string | null>(null)
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null)
   const dragOriginRef = useRef<{ id: string; startX: number; startY: number; x: number; y: number } | null>(null)
+  const customColorRef = useRef<HTMLInputElement>(null)
 
   const addNode = () => {
     // Stagger new nodes diagonally so they don't stack exactly on top of each
@@ -36,10 +40,17 @@ export function ConceptGraphTab({ projectId }: { projectId: string }) {
   const toggleConnecting = () => {
     setConnecting((c) => !c)
     setConnectFrom(null)
+    setPaintColor(null)
+  }
+
+  const pickPaintColor = (color: string) => {
+    setPaintColor((current) => (current === color ? null : color))
+    setConnecting(false)
+    setConnectFrom(null)
   }
 
   const handleNodeMouseDown = (node: ConceptNode) => (e: React.PointerEvent) => {
-    if (connecting) return
+    if (connecting || paintColor) return
     e.stopPropagation()
     const rect = containerRef.current?.getBoundingClientRect()
     if (!rect) return
@@ -68,6 +79,10 @@ export function ConceptGraphTab({ projectId }: { projectId: string }) {
   const positionOf = (node: ConceptNode) => (drag?.id === node.id ? drag : node)
 
   const handleNodeClick = (node: ConceptNode) => {
+    if (paintColor) {
+      void patch('concept_nodes', node.id, { color: paintColor })
+      return
+    }
     if (!connecting) return
     if (!connectFrom) {
       setConnectFrom(node.id)
@@ -106,7 +121,45 @@ export function ConceptGraphTab({ projectId }: { projectId: string }) {
         >
           <Waypoints size={14} /> {connecting ? (connectFrom ? 'Pick target…' : 'Pick source…') : 'Connect'}
         </button>
-        {edges.length > 0 && <span className="text-xs text-muted-foreground">Click a line to remove it.</span>}
+
+        <div className="flex items-center gap-1 rounded-md border border-border bg-muted/40 px-1.5 py-1">
+          <Paintbrush size={13} className="text-muted-foreground" />
+          {PALETTE.map((color) => (
+            <button
+              key={color}
+              type="button"
+              title={`Paint ${color}`}
+              onClick={() => pickPaintColor(color)}
+              style={{ backgroundColor: color }}
+              className={cn(
+                'size-4 shrink-0 rounded-full ring-offset-1 ring-offset-background transition-transform hover:scale-110',
+                paintColor === color && 'ring-2 ring-foreground',
+              )}
+            />
+          ))}
+          <button
+            type="button"
+            title="Custom color"
+            onClick={() => customColorRef.current?.click()}
+            className="grid size-4 shrink-0 place-items-center rounded-full border border-dashed border-muted-foreground text-[8px] text-muted-foreground hover:border-foreground hover:text-foreground"
+          >
+            +
+          </button>
+          <input
+            ref={customColorRef}
+            type="color"
+            className="sr-only"
+            onChange={(e) => pickPaintColor(e.target.value)}
+          />
+        </div>
+
+        <span className="text-xs text-muted-foreground">
+          {paintColor
+            ? 'Click a node or line to color it.'
+            : edges.length > 0
+              ? 'Click a line to remove it.'
+              : null}
+        </span>
       </div>
 
       <div
@@ -121,15 +174,22 @@ export function ConceptGraphTab({ projectId }: { projectId: string }) {
             const from = positionOf(fromNode)
             const to = positionOf(toNode)
             return (
-              <g key={edge.id} className="pointer-events-auto cursor-pointer" onClick={() => void del('concept_edges', edge.id)}>
+              <g
+                key={edge.id}
+                className="pointer-events-auto cursor-pointer"
+                onClick={() =>
+                  paintColor ? void patch('concept_edges', edge.id, { color: paintColor }) : void del('concept_edges', edge.id)
+                }
+              >
                 <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="transparent" strokeWidth={3} vectorEffect="non-scaling-stroke" />
                 <line
                   x1={from.x}
                   y1={from.y}
                   x2={to.x}
                   y2={to.y}
-                  className="stroke-muted-foreground/50 hover:stroke-destructive"
-                  strokeWidth={1}
+                  stroke={edge.color ?? undefined}
+                  className={cn(!edge.color && 'stroke-muted-foreground/50', 'hover:stroke-destructive')}
+                  strokeWidth={edge.color ? 2 : 1}
                   vectorEffect="non-scaling-stroke"
                 />
               </g>
@@ -152,6 +212,8 @@ export function ConceptGraphTab({ projectId }: { projectId: string }) {
               left: `${positionOf(node).x}%`,
               top: `${positionOf(node).y}%`,
               transform: 'translate(-50%, -50%)',
+              borderColor: node.color ?? undefined,
+              backgroundColor: node.color ? `color-mix(in srgb, ${node.color} 18%, var(--background))` : undefined,
             }}
             className={cn(
               'group absolute z-10 flex max-w-56 cursor-grab items-center gap-1 rounded-full border bg-background px-3 py-1.5 shadow-sm active:cursor-grabbing',
@@ -160,7 +222,7 @@ export function ConceptGraphTab({ projectId }: { projectId: string }) {
                 ? 'border-primary ring-2 ring-primary/30'
                 : connecting
                   ? 'border-primary/40 hover:border-primary'
-                  : 'border-border',
+                  : !node.color && 'border-border',
             )}
           >
             <EditableText

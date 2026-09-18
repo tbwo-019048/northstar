@@ -7,6 +7,7 @@ import { useSettings } from '@/store/useSettings'
 import { useGithubActivity, mergeCounts } from '@/store/useGithubActivity'
 import { GithubCalendar } from '@/components/GithubCalendar'
 import { WorldMap } from '@/components/WorldMap'
+import { NorthStarIcon } from '@/components/NorthStarIcon'
 
 /** A ramp of blue "shades" for the map — light tints → brand → deep shades of
  * `var(--primary)`, spread evenly across `n` projects so each project's
@@ -69,6 +70,10 @@ export function AppHome() {
   const counts = mergeCounts(byRepo, repos)
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
   const anyData = repos.some((r) => Array.isArray(byRepo[r]))
+  // Repos fetch 4-at-a-time (see useGithubActivity's `pooled`), so the total
+  // above climbs for a moment after switching environments/projects change —
+  // show a loading state instead of a low, still-growing number.
+  const pending = repos.length > 0 && repos.some((r) => !(r in byRepo))
 
   return (
     <div className="flex min-h-[calc(100svh-8rem)] w-full flex-col gap-6">
@@ -112,8 +117,13 @@ export function AppHome() {
         </section>
 
         <section className="flex flex-col justify-center gap-3">
+          <div className="flex items-center justify-center py-2">
+            <NorthStarIcon className="size-20" />
+          </div>
           <p className="text-sm text-muted-foreground">
-            {anyData ? (
+            {pending ? (
+              <>Loading commit activity across {repos.length} linked repo{repos.length === 1 ? '' : 's'}…</>
+            ) : anyData ? (
               <>
                 {total.toLocaleString()} commit{total === 1 ? '' : 's'} across {repos.length} linked
                 repo{repos.length === 1 ? '' : 's'} in the last year.

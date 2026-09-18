@@ -5,6 +5,7 @@ import { HomeIcon } from '@/components/ui/home'
 import { FolderIcon } from '@/components/ui/folder'
 import { ClipboardDocumentCheckIcon } from '@/components/ui/clipboard-document-check'
 import { EnvelopeIcon } from '@/components/ui/envelope'
+import { KeyIcon } from '@/components/ui/key'
 import { UsersIcon } from '@/components/ui/users'
 import { Cog6ToothIcon } from '@/components/ui/cog-6-tooth'
 import { GradientButtonGroup } from '@/components/ui/gradient-button-group'
@@ -21,6 +22,7 @@ const ITEMS: DockItem[] = [
   { to: '/app/landing', label: 'Home', icon: HomeIcon, end: true },
   { to: '/app', label: 'Projects', icon: FolderIcon, end: true },
   { to: '/app/items', label: 'Items', icon: ClipboardDocumentCheckIcon },
+  { to: '/app/credentials', label: 'Login', icon: KeyIcon },
   { to: '/app/emails', label: 'Emails', icon: EnvelopeIcon },
   { to: '/app/clients', label: 'Clients', icon: UsersIcon },
   { to: '/app/notes', label: 'Notes', icon: NotebookText },

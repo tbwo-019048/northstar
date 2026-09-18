@@ -36,7 +36,7 @@ import { useTemplates, seedProjectFromTemplate } from '@/store/useTemplates'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
 import { useReorderLock } from '@/hooks/useReorderLock'
-import { PROJECT_STATES, PROJECT_TYPES, type Project, type ProjectState, type ProjectType } from '@/lib/types'
+import { PROJECT_STATES, PROJECT_TYPES, formatProjectType, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
 import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
@@ -358,12 +358,13 @@ export function Overview() {
   return (
     <div className="space-y-3">
       {/* Full-bleed toolbar, breaking out of the centered content column to
-          span the browser width. It's the very first thing rendered (no
-          space-y gap above it) so it reads as a continuation of the header,
-          and every interactive element in it shares one height (h-7) so the
-          filter dropdown's sideOffset below lines up exactly with its own
-          bottom edge. */}
-      <div className="relative left-1/2 right-1/2 mx-[-50vw] w-screen border-b border-border bg-panel/95 px-3 py-1.5">
+          span the browser width. It's the very first thing rendered, pulled
+          up by -mt-4 to cancel <main>'s own top padding, so it sits flush
+          against the header with no gap. Background is a separate absolutely
+          positioned layer (brightness-110) so the filter/lighten only touches
+          the bar's own color, not the icons/text sitting on top of it. */}
+      <div className="relative left-1/2 right-1/2 -mt-4 mx-[-50vw] w-screen border-b border-border px-3 py-1.5">
+        <div className="absolute inset-0 -z-10 bg-panel/95 brightness-110" />
         <div className="flex flex-wrap items-center gap-2">
           <IconButton
             title="Search"
@@ -445,11 +446,13 @@ export function Overview() {
             >
               <ListFilter size={14} />
             </DropdownMenuTrigger>
-            {/* sideOffset={6} matches the bar's own py-1.5 (6px) bottom
-                padding exactly, so — with every toolbar control the same
-                h-7 height above — the dropdown's top edge lines up flush
-                with the bar's bottom edge instead of floating below it. */}
-            <DropdownMenuContent align="start" sideOffset={6} className="w-64">
+            {/* sideOffset={9}, measured live against the actual DOM: the
+                icon-group pills (border+p-0.5) are 34px tall vs this lone
+                trigger's 28px, so items-center leaves a ~3px gap above the
+                trigger before you even reach the bar's own 6px (py-1.5)
+                bottom padding — 3 + 6 = 9 is what makes the dropdown's top
+                edge land flush on the bar's bottom edge with no overlap. */}
+            <DropdownMenuContent align="start" sideOffset={9} className="w-96">
               <DropdownMenuLabel>Filter by type</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {typeFilters.size > 0 && (
@@ -466,15 +469,16 @@ export function Overview() {
                   <DropdownMenuSeparator />
                 </>
               )}
-              <div className="grid grid-cols-2 gap-x-1">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                 {allTypes.map((t) => (
                   <DropdownMenuCheckboxItem
                     key={t}
                     checked={typeFilters.has(t)}
                     onSelect={(e) => e.preventDefault()}
                     onCheckedChange={() => toggleTypeFilter(t)}
+                    className="whitespace-nowrap"
                   >
-                    {t}
+                    {formatProjectType(t)}
                   </DropdownMenuCheckboxItem>
                 ))}
               </div>
@@ -602,7 +606,7 @@ export function Overview() {
           <Select value={type} onChange={(e) => setType(e.target.value as ProjectType)}>
             {PROJECT_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {formatProjectType(t)}
               </option>
             ))}
           </Select>
@@ -676,8 +680,8 @@ export function Overview() {
         <div className="space-y-4">
           {byType.map(([t, list]) => (
             <div key={t} className="space-y-1">
-              <h2 className="text-xs font-semibold capitalize text-muted-foreground">
-                {t} · {list.length}
+              <h2 className="text-xs font-semibold text-muted-foreground">
+                {formatProjectType(t)} · {list.length}
               </h2>
               <ProjectTable
                 rows={list}
@@ -751,7 +755,7 @@ export function Overview() {
                 ) : (
                   <div className="flex flex-wrap items-center justify-center gap-1">
                     <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
-                    <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
+                    <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{formatProjectType(p.type)}</Chip>
                   </div>
                 )}
               </button>
@@ -872,7 +876,7 @@ function ReorderRow({ p, label, onOpen, onDelete }: { p: Project; label: string;
       <button type="button" onClick={() => onOpen(p.id)} className="min-w-0 flex-1 truncate text-left font-medium hover:underline">
         {label}
       </button>
-      <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
+      <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{formatProjectType(p.type)}</Chip>
       <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
       <IconButton title={`Delete ${label}`} onClick={() => onDelete(p)} className="hover:text-destructive">
         <TrashIcon size={14} />
@@ -1050,7 +1054,7 @@ function ProjectTable({
               </td>
               {!compact && (
                 <td className="px-2.5 py-1">
-                  <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{p.type}</Chip>
+                  <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{formatProjectType(p.type)}</Chip>
                 </td>
               )}
               <td className="px-2.5 py-1">

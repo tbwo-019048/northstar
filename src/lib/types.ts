@@ -91,6 +91,18 @@ export const PROJECT_TYPES: ProjectType[] = [
   'tools',
   'other',
 ]
+
+/** 'national_red_plaque' -> 'National Red Plaque', '3d_print' -> '3D Print'.
+ * Used everywhere a raw ProjectType value would otherwise be shown verbatim
+ * (dropdowns, chips). */
+export function formatProjectType(type: string): string {
+  return type
+    .split('_')
+    .filter(Boolean)
+    .map((word) => (word === '3d' ? '3D' : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ')
+}
+
 export const PROJECT_STATES: ProjectState[] = [
   'concept',
   'commenced',
@@ -445,6 +457,30 @@ export interface EmailAccount extends StateScoped {
 
 export const DEFAULT_GROUPS = ['User', 'Admin', 'Advanced'] as const
 
+/** Emails page — a duplicate of the Login feature's shape (see EmailGroup/
+ * EmailAccount above, now displayed as "Login"), kept as its own separate
+ * tables/store so the two track genuinely different data. */
+export interface MailboxGroup extends StateScoped {
+  id: string
+  name: string
+  sort: number
+  created_at: string
+}
+
+export interface MailboxAccount extends StateScoped {
+  id: string
+  group_id: string
+  name: string
+  email: string
+  domain: string
+  password: string
+  notes: string
+  hidden?: boolean
+  sort: number
+  created_at: string
+  updated_at: string
+}
+
 export interface MemberGroup {
   name: string
   permissions: Record<string, boolean>
@@ -496,11 +532,20 @@ export interface ChecklistItem {
   order: number
 }
 
+export interface ChecklistSection {
+  id: string
+  title: string
+  items: ChecklistItem[]
+  order: number
+}
+
 export interface Note extends StateScoped {
   id: string
   title: string
   body: string
+  /** Unused going forward — kept only so pre-sectional notes aren't dropped. */
   checklist: ChecklistItem[]
+  checklist_sections: ChecklistSection[]
   sort: number
   created_by: string | null
   created_at: string
@@ -513,6 +558,7 @@ export interface ConceptNode extends StateScoped {
   label: string
   x: number
   y: number
+  color: string | null
   sort: number
   created_at: string
   updated_at: string
@@ -523,6 +569,7 @@ export interface ConceptEdge extends StateScoped {
   project_id: string
   from_node_id: string
   to_node_id: string
+  color: string | null
   sort: number
   created_at: string
 }

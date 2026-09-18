@@ -22,7 +22,7 @@ import { MagnifyingGlassIcon } from '@/components/ui/magnifying-glass'
 import { PlusIcon } from '@/components/ui/plus'
 import { Squares2X2Icon } from '@/components/ui/squares-2x2'
 import { TrashIcon } from '@/components/ui/trash'
-import { useMailboxes } from '@/store/useMailboxes'
+import { useEmails } from '@/store/useEmails'
 import { useDiagnostic } from '@/store/useDiagnostic'
 import { visibleRows } from '@/lib/hidden'
 import { HideToggle } from '@/components/HideToggle'
@@ -30,30 +30,32 @@ import { useReorderLock } from '@/hooks/useReorderLock'
 import { useGridCols } from '@/store/useGridCols'
 import { EditableText, IconButton, Input, SecretField } from '@/components/ui-lite'
 import { useConfirm } from '@/store/useConfirm'
-import type { MailboxAccount } from '@/lib/types'
+import type { EmailAccount } from '@/lib/types'
 import { StateSelect } from '@/components/StateSelect'
 
-type EmailView = 'table' | 'byGroup' | 'grid'
-const VIEW_KEY = 'northstar.emails.view'
+type CredentialsView = 'table' | 'byGroup' | 'grid'
+const VIEW_KEY = 'northstar.credentials.view'
 
-/** A duplicate of the original Emails feature (relabeled "Login" elsewhere),
- * on its own separate tables (mailbox_groups/mailbox_accounts via
- * useMailboxes) so the two track genuinely different data. */
-export function Emails() {
+/** Formerly "Emails" — same underlying data/tables (useEmails, email_groups/
+ * email_accounts), just relabeled "Login" in the nav since this stores login
+ * credentials, not literal email accounts. Named Credentials.tsx (not
+ * Login.tsx) because src/pages/Login.tsx is already the sign-in page. See
+ * Emails.tsx for the separate, actual-email duplicate split off from this. */
+export function Credentials() {
   const {
     groups, accounts, loaded, load, subscribe, addGroup, updateGroup, removeGroup,
     addAccount, updateAccount, removeAccount, reorderGroups, reorderAccounts,
-  } = useMailboxes()
+  } = useEmails()
   const diagnostic = useDiagnostic((s) => s.on)
   const confirm = useConfirm()
-  const [unlocked, setUnlocked] = useReorderLock('emails')
+  const [unlocked, setUnlocked] = useReorderLock('credentials')
   const gridCols = useGridCols((s) => s.cols)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const [active, setActive] = useState<string | null>(null)
   const [q, setQ] = useState('')
-  const [view, setView] = useState<EmailView>(() => {
+  const [view, setView] = useState<CredentialsView>(() => {
     try {
-      return (localStorage.getItem(VIEW_KEY) as EmailView) || 'table'
+      return (localStorage.getItem(VIEW_KEY) as CredentialsView) || 'table'
     } catch {
       return 'table'
     }
@@ -106,7 +108,7 @@ export function Emails() {
     if (
       !(await confirm({
         title: `Delete "${group.name}"?`,
-        message: 'Every email account in this group will be removed.',
+        message: 'Every login in this group will be removed.',
       }))
     )
       return
@@ -116,7 +118,7 @@ export function Emails() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-sm font-semibold">Emails</h1>
+        <h1 className="text-sm font-semibold">Login</h1>
         <span className="text-xs text-muted-foreground">{accounts.length}</span>
         <div className="flex-1" />
         <div className="relative">
@@ -173,7 +175,7 @@ export function Emails() {
 
       {groups.length === 0 ? (
         <p className="rounded-md border border-dashed border-border px-3 py-8 text-center text-xs text-muted-foreground">
-          No groups yet — create one to start storing email accounts.
+          No groups yet — create one to start storing logins.
         </p>
       ) : (
         <div className="space-y-3">
@@ -197,7 +199,7 @@ export function Emails() {
           </div>
 
           {view === 'table' && (
-            <MailboxTable
+            <CredentialsTable
               accounts={current}
               updateAccount={updateAccount}
               removeAccount={removeAccount}
@@ -205,7 +207,7 @@ export function Emails() {
               reorderable={unlocked}
               sensors={sensors}
               onReorder={(ids) => reorderAccounts(ids)}
-              emptyText={q ? 'No accounts match your search in this group.' : 'No accounts in this group yet.'}
+              emptyText={q ? 'No logins match your search in this group.' : 'No logins in this group yet.'}
             />
           )}
 
@@ -220,7 +222,7 @@ export function Emails() {
                       <span className="text-[11px] text-muted-foreground">{groupAccounts.length}</span>
                       <div className="h-px flex-1 bg-border" />
                     </div>
-                    <MailboxTable accounts={groupAccounts} updateAccount={updateAccount} removeAccount={removeAccount} diagnostic={diagnostic} emptyText={q ? 'No matching accounts.' : 'No accounts in this group yet.'} />
+                    <CredentialsTable accounts={groupAccounts} updateAccount={updateAccount} removeAccount={removeAccount} diagnostic={diagnostic} emptyText={q ? 'No matching logins.' : 'No logins in this group yet.'} />
                   </section>
                 )
               })}
@@ -262,7 +264,7 @@ export function Emails() {
                   </div>
                 </article>
               ))}
-              {current.length === 0 && <p className="col-span-full rounded-md border border-border px-3 py-8 text-center text-xs text-muted-foreground">{q ? 'No accounts match your search in this group.' : 'No accounts in this group yet.'}</p>}
+              {current.length === 0 && <p className="col-span-full rounded-md border border-border px-3 py-8 text-center text-xs text-muted-foreground">{q ? 'No logins match your search in this group.' : 'No logins in this group yet.'}</p>}
             </div>
           )}
         </div>
@@ -271,7 +273,7 @@ export function Emails() {
   )
 }
 
-type UpdateAccount = (id: string, patch: Partial<MailboxAccount>) => Promise<{ error: string | null }>
+type UpdateAccount = (id: string, patch: Partial<EmailAccount>) => Promise<{ error: string | null }>
 type Sensors = ReturnType<typeof useSensors>
 
 function GroupTab({
@@ -310,14 +312,14 @@ function GroupTab({
   )
 }
 
-function MailboxRow({
+function CredentialsRow({
   account,
   updateAccount,
   removeAccount,
   diagnostic,
   reorderable,
 }: {
-  account: MailboxAccount
+  account: EmailAccount
   updateAccount: UpdateAccount
   removeAccount: (id: string) => Promise<void>
   diagnostic: boolean
@@ -369,7 +371,7 @@ function MailboxRow({
   )
 }
 
-function MailboxTable({
+function CredentialsTable({
   accounts,
   updateAccount,
   removeAccount,
@@ -379,7 +381,7 @@ function MailboxTable({
   onReorder,
   emptyText,
 }: {
-  accounts: MailboxAccount[]
+  accounts: EmailAccount[]
   updateAccount: UpdateAccount
   removeAccount: (id: string) => Promise<void>
   diagnostic: boolean
@@ -392,7 +394,7 @@ function MailboxTable({
   const body = (
     <tbody>
       {accounts.map((account) => (
-        <MailboxRow
+        <CredentialsRow
           key={account.id}
           account={account}
           updateAccount={updateAccount}

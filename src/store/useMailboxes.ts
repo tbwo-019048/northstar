@@ -1,28 +1,28 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { EmailAccount, EmailGroup } from '@/lib/types'
+import type { MailboxAccount, MailboxGroup } from '@/lib/types'
 import { notifySaved, notifySaveError } from '@/store/useChangeNotifications'
 import { getActiveEnvironment } from '@/store/useSettings'
 
-interface EmailsState {
-  groups: EmailGroup[]
-  accounts: EmailAccount[]
+interface MailboxesState {
+  groups: MailboxGroup[]
+  accounts: MailboxAccount[]
   loading: boolean
   loaded: boolean
   error: string | null
   load: () => Promise<void>
-  addGroup: (name: string) => Promise<EmailGroup | null>
-  updateGroup: (id: string, patch: Partial<EmailGroup>) => Promise<void>
+  addGroup: (name: string) => Promise<MailboxGroup | null>
+  updateGroup: (id: string, patch: Partial<MailboxGroup>) => Promise<void>
   removeGroup: (id: string) => Promise<void>
-  addAccount: (groupId: string, fields: Partial<EmailAccount>) => Promise<EmailAccount | null>
-  updateAccount: (id: string, patch: Partial<EmailAccount>) => Promise<{ error: string | null }>
+  addAccount: (groupId: string, fields: Partial<MailboxAccount>) => Promise<MailboxAccount | null>
+  updateAccount: (id: string, patch: Partial<MailboxAccount>) => Promise<{ error: string | null }>
   removeAccount: (id: string) => Promise<void>
   reorderGroups: (orderedIds: string[]) => Promise<void>
   reorderAccounts: (orderedIds: string[]) => Promise<void>
   subscribe: () => () => void
 }
 
-export const useEmails = create<EmailsState>((set, get) => ({
+export const useMailboxes = create<MailboxesState>((set, get) => ({
   groups: [],
   accounts: [],
   loading: false,
@@ -32,12 +32,12 @@ export const useEmails = create<EmailsState>((set, get) => ({
   load: async () => {
     set({ loading: true })
     const [groupsRes, accountsRes] = await Promise.all([
-      supabase.from('email_groups').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
-      supabase.from('email_accounts').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
+      supabase.from('mailbox_groups').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
+      supabase.from('mailbox_accounts').select('*').eq('environment', getActiveEnvironment()).order('sort', { ascending: true }),
     ])
     set({
-      groups: (groupsRes.data as EmailGroup[]) ?? [],
-      accounts: (accountsRes.data as EmailAccount[]) ?? [],
+      groups: (groupsRes.data as MailboxGroup[]) ?? [],
+      accounts: (accountsRes.data as MailboxAccount[]) ?? [],
       loading: false,
       loaded: true,
       error: groupsRes.error?.message ?? accountsRes.error?.message ?? null,
@@ -46,7 +46,7 @@ export const useEmails = create<EmailsState>((set, get) => ({
 
   addGroup: async (name) => {
     const { data, error } = await supabase
-      .from('email_groups')
+      .from('mailbox_groups')
       .insert({ name, sort: get().groups.length, environment: getActiveEnvironment() })
       .select('*')
       .single()
@@ -55,15 +55,15 @@ export const useEmails = create<EmailsState>((set, get) => ({
       notifySaveError(error?.message)
       return null
     }
-    set({ groups: [...get().groups, data as EmailGroup] })
+    set({ groups: [...get().groups, data as MailboxGroup] })
     notifySaved('Group created.')
-    return data as EmailGroup
+    return data as MailboxGroup
   },
 
   updateGroup: async (id, patch) => {
     const previous = get().groups
     set({ groups: previous.map((group) => (group.id === id ? { ...group, ...patch } : group)) })
-    const { error } = await supabase.from('email_groups').update(patch).eq('id', id)
+    const { error } = await supabase.from('mailbox_groups').update(patch).eq('id', id)
     if (error) {
       set({ groups: previous, error: error.message })
       notifySaveError(error.message)
@@ -80,14 +80,14 @@ export const useEmails = create<EmailsState>((set, get) => ({
       groups: get().groups.filter((g) => g.id !== id),
       accounts: get().accounts.filter((a) => a.group_id !== id),
     })
-    const { error } = await supabase.from('email_groups').delete().eq('id', id)
+    const { error } = await supabase.from('mailbox_groups').delete().eq('id', id)
     if (error) notifySaveError(error.message)
     else notifySaved('Group removed.')
   },
 
   addAccount: async (groupId, fields) => {
     const { data, error } = await supabase
-      .from('email_accounts')
+      .from('mailbox_accounts')
       .insert({
         group_id: groupId,
         sort: get().accounts.filter((a) => a.group_id === groupId).length,
@@ -101,15 +101,15 @@ export const useEmails = create<EmailsState>((set, get) => ({
       notifySaveError(error?.message)
       return null
     }
-    set({ accounts: [...get().accounts, data as EmailAccount] })
-    notifySaved('Account added.')
-    return data as EmailAccount
+    set({ accounts: [...get().accounts, data as MailboxAccount] })
+    notifySaved('Email added.')
+    return data as MailboxAccount
   },
 
   updateAccount: async (id, patch) => {
     const previous = get().accounts
     set({ accounts: previous.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
-    const { error } = await supabase.from('email_accounts').update(patch).eq('id', id)
+    const { error } = await supabase.from('mailbox_accounts').update(patch).eq('id', id)
     if (error) {
       set({ accounts: previous, error: error.message })
       notifySaveError(error.message)
@@ -124,9 +124,9 @@ export const useEmails = create<EmailsState>((set, get) => ({
 
   removeAccount: async (id) => {
     set({ accounts: get().accounts.filter((a) => a.id !== id) })
-    const { error } = await supabase.from('email_accounts').delete().eq('id', id)
+    const { error } = await supabase.from('mailbox_accounts').delete().eq('id', id)
     if (error) notifySaveError(error.message)
-    else notifySaved('Account removed.')
+    else notifySaved('Email removed.')
   },
 
   reorderGroups: async (orderedIds) => {
@@ -138,7 +138,7 @@ export const useEmails = create<EmailsState>((set, get) => ({
         .sort((a, b) => a.sort - b.sort),
     })
     const results = await Promise.all(
-      orderedIds.map((id, i) => supabase.from('email_groups').update({ sort: i }).eq('id', id)),
+      orderedIds.map((id, i) => supabase.from('mailbox_groups').update({ sort: i }).eq('id', id)),
     )
     const error = results.find((r) => r.error)?.error
     if (error) {
@@ -154,7 +154,7 @@ export const useEmails = create<EmailsState>((set, get) => ({
       accounts: previous.map((a) => (pos.has(a.id) ? { ...a, sort: pos.get(a.id)! } : a)),
     })
     const results = await Promise.all(
-      orderedIds.map((id, i) => supabase.from('email_accounts').update({ sort: i }).eq('id', id)),
+      orderedIds.map((id, i) => supabase.from('mailbox_accounts').update({ sort: i }).eq('id', id)),
     )
     const error = results.find((r) => r.error)?.error
     if (error) {
@@ -165,11 +165,11 @@ export const useEmails = create<EmailsState>((set, get) => ({
 
   subscribe: () => {
     const ch = supabase
-      .channel('emails-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_groups' }, () =>
+      .channel('mailboxes-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mailbox_groups' }, () =>
         get().load(),
       )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_accounts' }, () =>
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mailbox_accounts' }, () =>
         get().load(),
       )
       .subscribe()
