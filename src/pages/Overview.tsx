@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlignLeft, Archive, GripVertical, LayoutList, ListFilter, Lock, LockOpen, Shield, Tag } from 'lucide-react'
+import { AlignLeft, Archive, GripVertical, LayoutGrid, LayoutList, ListFilter, Lock, LockOpen, Network, Shield, Tag } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -39,6 +39,7 @@ import { useReorderLock } from '@/hooks/useReorderLock'
 import { PROJECT_STATES, PROJECT_TYPES, formatProjectType, type Project, type ProjectState, type ProjectType } from '@/lib/types'
 import { Input, Select, Chip, IconButton } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
+import { SkillTreeView } from '@/components/SkillTreeView'
 import { HalfCircleProgress, statePercent } from '@/components/HalfCircleProgress'
 import { useConfirm } from '@/store/useConfirm'
 import { parseCSV, toCSV, downloadText } from '@/lib/csv'
@@ -72,7 +73,7 @@ const TYPE_TONE: Partial<Record<ProjectType, string>> = {
 }
 const FALLBACK_TONE = 'bg-muted text-muted-foreground'
 
-type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'progress'
+type ViewMode = 'table' | 'byType' | 'byClient' | 'grid' | 'gridByType' | 'progress' | 'skillTree'
 const VIEW_KEY = 'northstar.overview.view'
 const CODENAME_KEY = 'northstar.overview.codenames'
 const PRIVATE_MODE_KEY = 'northstar.overview.privateMode'
@@ -591,11 +592,25 @@ export function Overview() {
               <Squares2X2Icon size={14} />
             </IconButton>
             <IconButton
+              title="Grid by type"
+              onClick={() => setView('gridByType')}
+              className={'h-7 w-7 ' + (view === 'gridByType' ? 'bg-muted text-foreground' : '')}
+            >
+              <LayoutGrid size={14} />
+            </IconButton>
+            <IconButton
               title="Progress"
               onClick={() => setView('progress')}
               className={'h-7 w-7 ' + (view === 'progress' ? 'bg-muted text-foreground' : '')}
             >
               <ChartPieIcon size={14} />
+            </IconButton>
+            <IconButton
+              title="Skill Tree"
+              onClick={() => setView('skillTree')}
+              className={'h-7 w-7 ' + (view === 'skillTree' ? 'bg-muted text-foreground' : '')}
+            >
+              <Network size={14} />
             </IconButton>
           </div>
         </div>
@@ -770,43 +785,39 @@ export function Overview() {
       )}
 
       {view === 'grid' && (
-        <div className="grid gap-2" style={gridStyle}>
-          {rows.map((p) => (
-            <div key={p.id} className="group relative rounded-md hover:bg-muted/60">
-              <button
-                type="button"
-                onClick={() => openProject(p.id)}
-                className="flex w-full flex-col items-center gap-1.5 rounded-md p-2 text-center"
-              >
-                <ProjectLogo project={p} size="fill" overrideUrl={privateMode ? PRIVATE_MODE_LOGO : undefined} />
-                <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
-                  {projectLabel(p)}
-                </span>
-                {compactGrid ? (
-                  <span
-                    className="line-clamp-2 w-full text-center text-[10px] leading-3 text-muted-foreground"
-                    title={p.countries?.join(', ') || 'No location'}
-                  >
-                    {p.countries?.join(', ') || 'No location'}
-                  </span>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-center gap-1">
-                    <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
-                    <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{formatProjectType(p.type)}</Chip>
-                  </div>
-                )}
-              </button>
-              <IconButton
-                title={`Delete ${projectLabel(p)}`}
-                onClick={() => deleteProject(p)}
-                className="absolute right-1 top-1 bg-background/80 text-muted-foreground opacity-70 shadow-sm hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-              >
-                <TrashIcon size={14} />
-              </IconButton>
+        <ProjectTileGrid
+          rows={rows}
+          loaded={loaded}
+          onOpen={openProject}
+          onDelete={deleteProject}
+          nameFor={projectLabel}
+          compactGrid={compactGrid}
+          gridStyle={gridStyle}
+          logoOverride={privateMode ? PRIVATE_MODE_LOGO : undefined}
+        />
+      )}
+
+      {view === 'gridByType' && (
+        <div className="space-y-4">
+          {byType.map(([t, list]) => (
+            <div key={t} className="space-y-1">
+              <h2 className="text-xs font-semibold text-muted-foreground">
+                {formatProjectType(t)} · {list.length}
+              </h2>
+              <ProjectTileGrid
+                rows={list}
+                loaded={loaded}
+                onOpen={openProject}
+                onDelete={deleteProject}
+                nameFor={projectLabel}
+                compactGrid={compactGrid}
+                gridStyle={gridStyle}
+                logoOverride={privateMode ? PRIVATE_MODE_LOGO : undefined}
+              />
             </div>
           ))}
-          {rows.length === 0 && (
-            <p className="col-span-full px-3 py-6 text-center text-xs text-muted-foreground">
+          {byType.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               {loaded ? 'No projects yet.' : 'Loading…'}
             </p>
           )}
@@ -850,6 +861,80 @@ export function Overview() {
             </p>
           )}
         </div>
+      )}
+
+      {view === 'skillTree' && (
+        <SkillTreeView
+          rows={rows}
+          nameFor={projectLabel}
+          onOpen={openProject}
+          onOpenTab={(id, tabKey) => nav(`/app/project/${id}/${tabKey}`)}
+          logoOverride={privateMode ? PRIVATE_MODE_LOGO : undefined}
+        />
+      )}
+    </div>
+  )
+}
+
+function ProjectTileGrid({
+  rows,
+  loaded,
+  onOpen,
+  onDelete,
+  nameFor,
+  compactGrid,
+  gridStyle,
+  logoOverride,
+}: {
+  rows: Project[]
+  loaded: boolean
+  onOpen: (id: string) => void
+  onDelete: (project: Project) => void
+  nameFor: (p: Project) => string
+  compactGrid: boolean
+  gridStyle: React.CSSProperties
+  logoOverride?: string
+}) {
+  return (
+    <div className="grid gap-2" style={gridStyle}>
+      {rows.map((p) => (
+        <div key={p.id} className="group relative rounded-md hover:bg-muted/60">
+          <button
+            type="button"
+            onClick={() => onOpen(p.id)}
+            className="flex w-full flex-col items-center gap-1.5 rounded-md p-2 text-center"
+          >
+            <ProjectLogo project={p} size="fill" overrideUrl={logoOverride} />
+            <span className="line-clamp-2 h-8 w-full break-words text-center text-xs font-medium leading-4">
+              {nameFor(p)}
+            </span>
+            {compactGrid ? (
+              <span
+                className="line-clamp-2 w-full text-center text-[10px] leading-3 text-muted-foreground"
+                title={p.countries?.join(', ') || 'No location'}
+              >
+                {p.countries?.join(', ') || 'No location'}
+              </span>
+            ) : (
+              <div className="flex flex-wrap items-center justify-center gap-1">
+                <Chip className={STATE_CHIP_CLASS[p.state] ?? FALLBACK_TONE}>{formatState(p.state)}</Chip>
+                <Chip className={TYPE_TONE[p.type] ?? FALLBACK_TONE}>{formatProjectType(p.type)}</Chip>
+              </div>
+            )}
+          </button>
+          <IconButton
+            title={`Delete ${nameFor(p)}`}
+            onClick={() => onDelete(p)}
+            className="absolute right-1 top-1 bg-background/80 text-muted-foreground opacity-70 shadow-sm hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+          >
+            <TrashIcon size={14} />
+          </IconButton>
+        </div>
+      ))}
+      {rows.length === 0 && (
+        <p className="col-span-full px-3 py-6 text-center text-xs text-muted-foreground">
+          {loaded ? 'No projects yet.' : 'Loading…'}
+        </p>
       )}
     </div>
   )

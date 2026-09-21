@@ -33,6 +33,12 @@ function sortChecklist(items: ChecklistItem[]): ChecklistItem[] {
 }
 
 export const useNotes = create<NotesState>((set, get) => {
+  // Bumped on every load() call so an older, slower-to-resolve request can
+  // detect it's been superseded and skip writing its (now stale) result —
+  // multiple triggers (mount, environment switch, realtime, the header Save
+  // button) can all call load() in overlapping succession.
+  let loadToken = 0
+
   /** Shared optimistic-update-then-persist path for every checklist_sections
    * mutation: apply `updater` to the note's sections locally first, persist
    * the whole array, roll back on error. */
@@ -56,12 +62,14 @@ export const useNotes = create<NotesState>((set, get) => {
     error: null,
 
     load: async () => {
+      const token = ++loadToken
       set({ loading: true })
       const { data, error } = await supabase
         .from('notes')
         .select('*')
         .eq('environment', getActiveEnvironment())
         .order('sort', { ascending: true })
+      if (token !== loadToken) return
       set({ notes: (data as Note[]) ?? [], loading: false, loaded: true, error: error?.message ?? null })
     },
 

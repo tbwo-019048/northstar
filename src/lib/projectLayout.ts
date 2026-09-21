@@ -1,4 +1,4 @@
-import type { ProjectType } from '@/lib/types'
+import type { Project, ProjectType } from '@/lib/types'
 
 /** The tab keys used by the project shell (src/pages/Project.tsx). */
 export type TabKey =
@@ -224,4 +224,52 @@ export function applySimpleMode(
 ): { key: TabKey; label: string }[] {
   if (!simpleMode) return tabs
   return SIMPLE_MODE_TABS.map((t) => (t.key === 'todo' ? { ...t, label: todoLabel } : t))
+}
+
+/** The project shell's full tab list (src/pages/Project.tsx) — kept here too
+ * so other views (e.g. the Skill Tree overview) can compute "what tabs does
+ * this project actually show" without duplicating the shell itself. */
+export const TABS: { key: TabKey; label: string }[] = [
+  { key: 'summary', label: 'Summary' },
+  { key: 'features', label: 'Features' },
+  { key: 'details', label: 'Details' },
+  { key: 'assets', label: 'Assets' },
+  { key: 'requests', label: 'Requests' },
+  { key: 'todo', label: 'To-Do' },
+  { key: 'pipeline', label: 'Pipeline' },
+  { key: 'planning', label: 'Planning' },
+  { key: 'users', label: 'Users' },
+  { key: 'git', label: 'Git' },
+  { key: 'analysis', label: 'Analysis' },
+  { key: 'settings', label: 'Settings' },
+]
+
+/** The four modules a project can restrict itself to one of, via its own
+ * active_module setting (see src/lib/moduleConversion.ts). */
+const GOVERNED_TABS: TabKey[] = ['pipeline', 'todo', 'planning', 'requests']
+
+/** Resolves the exact tab list a project's own page (src/pages/Project.tsx)
+ * would show for it — type layout, mind-map opt-in, active_module and Simple
+ * Mode all applied, in order. */
+export function tabsForProject(
+  project: Pick<Project, 'type' | 'show_mindmap' | 'active_module' | 'simple_mode'>,
+): { key: TabKey; label: string }[] {
+  const layout = layoutFor(project.type)
+  const extraTabs = layout.extraTabs ?? []
+  const baseTabs = TABS.filter((t) => !layout.hiddenTabs.includes(t.key))
+  const detailsIdx = baseTabs.findIndex((t) => t.key === 'details')
+  const spliced = [...baseTabs.slice(0, detailsIdx + 1), ...extraTabs, ...baseTabs.slice(detailsIdx + 1)]
+  const summaryIdx = spliced.findIndex((t) => t.key === 'summary')
+  const withMindmap = project.show_mindmap
+    ? [
+        ...spliced.slice(0, summaryIdx + 1),
+        { key: 'mindmap' as const, label: 'Mindmap' },
+        ...spliced.slice(summaryIdx + 1),
+      ]
+    : spliced
+  const typeTabs = withMindmap.filter(
+    (t) => !GOVERNED_TABS.includes(t.key) || !project.active_module || project.active_module === t.key,
+  )
+  const labelFor = (key: TabKey, fallback: string) => layout.tabLabels[key] ?? fallback
+  return applySimpleMode(typeTabs, project.simple_mode, labelFor('todo', 'To-Do'))
 }

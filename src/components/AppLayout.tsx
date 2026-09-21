@@ -16,14 +16,18 @@ import { useClients } from '@/store/useClients'
 import { useEmails } from '@/store/useEmails'
 import { useItems } from '@/store/useItems'
 import { useTemplates } from '@/store/useTemplates'
+import { useNotes } from '@/store/useNotes'
+import { useTopics } from '@/store/useTopics'
+import { useTags } from '@/store/useTags'
 import { WORKSPACE_STATE_LABEL } from '@/lib/workspaceState'
 
 /** Everything here already autosaves — every field write goes straight to
  * Supabase. This button gives an explicit, reassuring action anyway: it
- * force-resyncs whatever's currently open (the active project if you're in
- * one, otherwise the projects list) from the server and confirms when done,
- * rather than being a no-op. */
+ * force-resyncs whatever's currently open (the active project, Notes,
+ * Topics, or otherwise the projects list) from the server and confirms when
+ * done, rather than being a no-op. */
 function SaveButton() {
+  const { pathname } = useLocation()
   const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const cloudRef = useRef<CloudArrowDownIconHandle>(null)
   const checkRef = useRef<CheckIconHandle>(null)
@@ -32,7 +36,10 @@ function SaveButton() {
     setState('saving')
     cloudRef.current?.startAnimation()
     const projectId = useProjectData.getState().projectId
-    if (projectId) await useProjectData.getState().load(projectId)
+    if (pathname.startsWith('/app/notes')) await useNotes.getState().load()
+    else if (pathname.startsWith('/app/topics')) {
+      await Promise.all([useTopics.getState().load(), useTags.getState().load()])
+    } else if (projectId) await useProjectData.getState().load(projectId)
     else await useProjects.getState().load()
     cloudRef.current?.stopAnimation()
     setState('saved')
@@ -76,6 +83,9 @@ export function AppLayout() {
     if (useEmails.getState().loaded) void useEmails.getState().load()
     if (useItems.getState().loaded) void useItems.getState().load()
     if (useTemplates.getState().loaded) void useTemplates.getState().load()
+    if (useNotes.getState().loaded) void useNotes.getState().load()
+    if (useTopics.getState().loaded) void useTopics.getState().load()
+    if (useTags.getState().loaded) void useTags.getState().load()
     const projectId = useProjectData.getState().projectId
     if (projectId) void useProjectData.getState().load(projectId)
   }, [activeEnvironment, settingsLoaded])
@@ -142,7 +152,11 @@ export function AppLayout() {
             : 'mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-20'
         }
       >
-        <Outlet />
+        {settingsLoaded ? (
+          <Outlet />
+        ) : (
+          <div className="grid h-40 place-items-center text-sm text-muted-foreground">Loading…</div>
+        )}
       </main>
       <Footer />
       <Dock />
