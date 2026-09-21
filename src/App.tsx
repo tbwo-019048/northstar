@@ -11,6 +11,7 @@ import { Emails } from '@/pages/Emails'
 import { Credentials } from '@/pages/Credentials'
 import { Items } from '@/pages/Items'
 import { Notes } from '@/pages/Notes'
+import { Topics } from '@/pages/Topics'
 import { AppHome } from '@/pages/AppHome'
 import { ProjectPrint } from '@/pages/ProjectPrint'
 import { AppLayout } from '@/components/AppLayout'
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/app/emails" element={<Emails />} />
         <Route path="/app/credentials" element={<Credentials />} />
         <Route path="/app/notes" element={<Notes />} />
+        <Route path="/app/topics" element={<Topics />} />
         <Route path="/app/project/:id" element={<Project />} />
         <Route path="/app/project/:id/:tab" element={<Project />} />
       </Route>

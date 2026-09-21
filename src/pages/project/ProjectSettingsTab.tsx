@@ -166,6 +166,23 @@ export function ProjectSettingsTab({ project }: { project: Project }) {
       </section>
 
       <section className="space-y-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Simple Mode</h2>
+        <p className="text-xs text-muted-foreground">
+          Collapses this project down to Summary (merged with Details), To-Do and Settings only.
+          Nothing else changes — Summary and Details keep their own data, just shown together.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={!!project.simple_mode}
+            onChange={(e) => void update(project.id, { simple_mode: e.target.checked })}
+            className="size-4 rounded border-border accent-[var(--primary)]"
+          />
+          Enable Simple Mode for this project
+        </label>
+      </section>
+
+      <section className="space-y-2">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Position colors
         </h2>

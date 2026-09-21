@@ -4,7 +4,8 @@ import { ChevronLeftIcon } from '@/components/ui/chevron-left'
 import { useProjects } from '@/store/useProjects'
 import { useProjectData } from '@/store/useProjectData'
 import { PROJECT_TYPES, formatProjectType, type ProjectType } from '@/lib/types'
-import { layoutFor, type TabKey } from '@/lib/projectLayout'
+import { applySimpleMode, layoutFor, SIMPLE_MODE_TAB_KEYS, type TabKey } from '@/lib/projectLayout'
+import { SummaryDetailsMerged } from '@/pages/project/SummaryDetailsMerged'
 import { EditableText, Select } from '@/components/ui-lite'
 import { ProjectLogo } from '@/components/ProjectLogo'
 import { SummaryTab } from '@/pages/project/SummaryTab'
@@ -81,8 +82,12 @@ export function Project() {
   // Type-level hiddenTabs wins first; active_module only narrows further among
   // the governed tabs a type already allows (see moduleConversion.ts).
   const activeModule = project?.active_module
-  const tabs = withMindmap.filter((t) => !GOVERNED_TABS.includes(t.key) || !activeModule || activeModule === t.key)
+  const typeTabs = withMindmap.filter((t) => !GOVERNED_TABS.includes(t.key) || !activeModule || activeModule === t.key)
   const labelFor = (key: TabKey, fallback: string) => layout?.tabLabels[key] ?? fallback
+  // Simple Mode is a project-level override on top of everything above: no
+  // matter what the type's layout or active_module would otherwise show,
+  // a Simple Mode project is always exactly these three tabs.
+  const tabs = applySimpleMode(typeTabs, project?.simple_mode, labelFor('todo', 'To-Do'))
 
   if (!id) return <Navigate to="/app" replace />
   if (loaded && !project) {
@@ -97,10 +102,12 @@ export function Project() {
   if (
     layout &&
     tab &&
-    (layout.hiddenTabs.includes(tab as TabKey) ||
-      (ADDITIVE_TABS.includes(tab as TabKey) && !extraKeys.has(tab as TabKey)) ||
-      (GOVERNED_TABS.includes(tab as TabKey) && !!activeModule && activeModule !== tab) ||
-      (tab === 'mindmap' && !project?.show_mindmap))
+    (project?.simple_mode
+      ? !SIMPLE_MODE_TAB_KEYS.includes(tab as TabKey)
+      : layout.hiddenTabs.includes(tab as TabKey) ||
+        (ADDITIVE_TABS.includes(tab as TabKey) && !extraKeys.has(tab as TabKey)) ||
+        (GOVERNED_TABS.includes(tab as TabKey) && !!activeModule && activeModule !== tab) ||
+        (tab === 'mindmap' && !project?.show_mindmap))
   ) {
     return <Navigate to={`/app/project/${id}`} replace />
   }
@@ -184,7 +191,11 @@ export function Project() {
 
       <div className="pt-1">
         {active === 'summary' && project && layout && (
-          <SummaryTab project={project} blocks={layout.summary} />
+          project.simple_mode ? (
+            <SummaryDetailsMerged project={project} layout={layout} />
+          ) : (
+            <SummaryTab project={project} blocks={layout.summary} />
+          )
         )}
         {active === 'features' && (
           <FeaturesTab projectId={id} label={layout?.tabLabels.features} />

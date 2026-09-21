@@ -164,6 +164,9 @@ export interface Project extends StateScoped {
   active_module?: 'pipeline' | 'todo' | 'planning' | 'requests' | null
   /** Per-project opt-in for the free-form mind-map tab. Off by default. */
   show_mindmap?: boolean
+  /** Per-project opt-in: collapses the project view to Summary+Details
+   * (merged), To-Do and Settings only. Off by default. */
+  simple_mode?: boolean
   platforms: string[]
   tech_stack: string[]
   countries: string[]
@@ -550,6 +553,33 @@ export interface Note extends StateScoped {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+/** Topics: a separate feature cloned from Notes (same shape/behavior), with
+ * search and tags added on top. Its own table (`topics`), not a view over
+ * `notes` — Notes stays completely untouched. */
+export interface Topic extends StateScoped {
+  id: string
+  title: string
+  body: string
+  checklist_sections: ChecklistSection[]
+  sort: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Tag extends StateScoped {
+  id: string
+  name: string
+  created_at: string
+}
+
+/** Many-to-many link between a Topic and a Tag. */
+export interface TopicTag {
+  topic_id: string
+  tag_id: string
+  created_at: string
 }
 
 export interface ConceptNode extends StateScoped {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { NotebookText } from 'lucide-react'
+import { NotebookText, Tags } from 'lucide-react'
 import { HomeIcon } from '@/components/ui/home'
 import { FolderIcon } from '@/components/ui/folder'
 import { ClipboardDocumentCheckIcon } from '@/components/ui/clipboard-document-check'
@@ -26,6 +26,7 @@ const ITEMS: DockItem[] = [
   { to: '/app/emails', label: 'Emails', icon: EnvelopeIcon },
   { to: '/app/clients', label: 'Clients', icon: UsersIcon },
   { to: '/app/notes', label: 'Notes', icon: NotebookText },
+  { to: '/app/topics', label: 'Topics', icon: Tags },
   { to: '/app/settings', label: 'Settings', icon: Cog6ToothIcon },
 ]
 

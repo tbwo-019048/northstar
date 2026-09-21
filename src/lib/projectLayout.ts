@@ -199,3 +199,29 @@ export const TYPE_LAYOUTS: Record<ProjectType, TypeLayout> = {
 export function layoutFor(type: ProjectType): TypeLayout {
   return TYPE_LAYOUTS[type] ?? DEFAULT_LAYOUT
 }
+
+/** Simple Mode (a per-project toggle, not type-based - see Project.simple_mode
+ * and ProjectSettingsTab) collapses a project to exactly these three tabs,
+ * overriding whatever its type's layout would otherwise show. Summary still
+ * renders using the type's own summary/details blocks - it's just merged
+ * with Details in one view instead of two separate tabs (see
+ * src/pages/project/SummaryDetailsMerged.tsx). */
+export const SIMPLE_MODE_TAB_KEYS: TabKey[] = ['summary', 'todo', 'settings']
+export const SIMPLE_MODE_TABS: { key: TabKey; label: string }[] = [
+  { key: 'summary', label: 'Summary' },
+  { key: 'todo', label: 'To-Do' },
+  { key: 'settings', label: 'Settings' },
+]
+
+/** Pure so it's directly testable: `simpleMode` falsy returns `tabs`
+ * unchanged (the project's normal, type-based tab list); truthy returns
+ * exactly the three Simple Mode tabs, with the To-Do label still honouring
+ * whatever the type renamed it to (e.g. production's "Orders"). */
+export function applySimpleMode(
+  tabs: { key: TabKey; label: string }[],
+  simpleMode: boolean | undefined,
+  todoLabel: string,
+): { key: TabKey; label: string }[] {
+  if (!simpleMode) return tabs
+  return SIMPLE_MODE_TABS.map((t) => (t.key === 'todo' ? { ...t, label: todoLabel } : t))
+}
