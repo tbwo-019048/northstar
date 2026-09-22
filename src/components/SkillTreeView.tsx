@@ -14,10 +14,17 @@ const WORLD_HEIGHT = 560
 const COLUMN_WIDTH = 220
 const MIN_RADIAL_SIZE = 360
 const MAX_RADIAL_SIZE = 3000
-// The visible box never grows past this — a bigger canvas just scrolls
-// inside it — so a large project count doesn't turn the page into one
-// enormous box.
+// The visible box never grows past this — the overview canvas is scaled
+// down to fit inside it (see `fitScale` below) rather than scrolled, so a
+// large project count doesn't turn the page into one enormous box.
 const VIEWPORT_CAP = 700
+// Room left around the scaled canvas so nodes at the ring's edge don't touch
+// the panel border.
+const FIT_PADDING = 48
+// Below this scale, project/tab text labels are dropped rather than shown
+// unreadably small — the node dots (and their state colour) still carry the
+// shape of the tree on their own.
+const LABEL_VISIBLE_SCALE = 0.55
 // The name + state pinned at the bottom of an expanded column, and how far
 // above it the project node sits — small on purpose, so the node and its
 // own title read as one connected unit instead of two disconnected pieces.
@@ -158,6 +165,20 @@ export function SkillTreeView({
   const cy0 = radialSize / 2
   const hubPos = expanded ? { x: 44, y: 40 } : { x: cx0, y: cy0 }
 
+  // Overview mode: scale the whole canvas down so it always fits inside the
+  // panel with no scrolling, "zoomed out fully" by default. `wrapWidth` is 0
+  // for one frame before the ResizeObserver first fires, so fall back to 1
+  // rather than dividing by zero.
+  const fitScale =
+    expanded || !wrapWidth
+      ? 1
+      : Math.min(
+          1,
+          (wrapWidth - FIT_PADDING) / worldWidth,
+          (VIEWPORT_CAP - FIT_PADDING) / worldHeight,
+        )
+  const showLabels = expanded || fitScale >= LABEL_VISIBLE_SCALE
+
   const { nodes, edges } = useMemo(() => {
     const n: PosNode[] = []
     const e: PosEdge[] = []
@@ -253,16 +274,39 @@ export function SkillTreeView({
     <div
       ref={wrapRef}
       className={cn(
-        'relative w-full overflow-x-auto rounded-md border border-dashed border-border bg-muted/10',
-        expanded ? 'overflow-y-hidden' : 'overflow-y-auto',
+        'relative w-full rounded-md border border-dashed border-border bg-muted/10',
+        expanded ? 'overflow-x-auto overflow-y-hidden' : 'overflow-hidden',
       )}
-      style={{ height: Math.min(worldHeight, VIEWPORT_CAP) }}
+      style={{ height: expanded ? Math.min(worldHeight, VIEWPORT_CAP) : VIEWPORT_CAP }}
       onClick={() => setSelected(null)}
     >
       {rows.length === 0 ? (
         <p className="grid h-full place-items-center text-xs text-muted-foreground">No projects yet.</p>
       ) : (
-        <div className={cn('relative', !expanded && 'mx-auto')} style={{ width: worldWidth, height: worldHeight }}>
+        <div
+          className={cn('relative', !expanded && 'mx-auto flex h-full items-center justify-center')}
+        >
+        <div
+          className="relative"
+          style={
+            expanded
+              ? { width: worldWidth, height: worldHeight }
+              : { width: worldWidth * fitScale, height: worldHeight * fitScale }
+          }
+        >
+        <div
+          className="absolute left-0 top-0"
+          style={
+            expanded
+              ? { width: worldWidth, height: worldHeight }
+              : {
+                  width: worldWidth,
+                  height: worldHeight,
+                  transform: `scale(${fitScale})`,
+                  transformOrigin: 'top left',
+                }
+          }
+        >
           {/* edges */}
           {edges.map((edge) => {
             const dx = edge.x2 - edge.x1
@@ -310,7 +354,7 @@ export function SkillTreeView({
             <span className="grid size-full place-items-center rounded-full border border-border bg-background shadow-sm">
               <NorthStarIcon className="size-7" />
             </span>
-            {!expanded && (
+            {!expanded && showLabels && (
               <span className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold tracking-wide text-muted-foreground">
                 NORTH STAR
               </span>
@@ -373,20 +417,22 @@ export function SkillTreeView({
                   />
                 )}
                 {isProject ? (
-                  !expanded && (
+                  !expanded && showLabels && (
                     <span className="pointer-events-none absolute left-1/2 top-full mt-1 max-w-24 -translate-x-1/2 truncate text-[10px] leading-none text-foreground/80">
                       {nameFor(node.project)}
                     </span>
                   )
                 ) : (
-                  <span
-                    className={cn(
-                      'pointer-events-none absolute max-w-16 truncate text-[10px] leading-none text-muted-foreground',
-                      LABEL_SIDE_CLASS[node.labelSide],
-                    )}
-                  >
-                    {node.tabLabel}
-                  </span>
+                  showLabels && (
+                    <span
+                      className={cn(
+                        'pointer-events-none absolute max-w-16 truncate text-[10px] leading-none text-muted-foreground',
+                        LABEL_SIDE_CLASS[node.labelSide],
+                      )}
+                    >
+                      {node.tabLabel}
+                    </span>
+                  )
                 )}
               </motion.button>
             )
@@ -411,6 +457,12 @@ export function SkillTreeView({
               style={{
                 left: Math.min(Math.max(popup.node.x, 112), worldWidth - 112),
                 top: Math.min(popup.node.y + 32, worldHeight - 140),
+                // Counter the canvas's own scale-to-fit so the popup itself
+                // always renders at readable size, however zoomed out the
+                // tree is — its left/top above are already in canvas space,
+                // so the parent transform positions it correctly first.
+                transform: expanded || fitScale === 1 ? undefined : `scale(${1 / fitScale})`,
+                transformOrigin: 'top left',
               }}
             >
               <div className="mb-1.5 flex items-start justify-between gap-2">
@@ -459,6 +511,8 @@ export function SkillTreeView({
               </button>
             </div>
           )}
+        </div>
+        </div>
         </div>
       )}
     </div>
